@@ -118,5 +118,5 @@ schedule:
       Three independent secondary sources agree (TaxGuru, A2Z Taxcorp, Mundhra).
       Independently corroborated by observation: against the IBJA 999 PM print of
       142,224 Rs/10g on 2026-07-29, a 15% duty implies a -43bps domestic premium
-      while 6% implies +803bps. See tests/test_parity.py::test_duty_level_is_
-      corroborated_by_observed_ibja_print.
+      while 6% implies +803bps. See tests/test_lens.py::TestDutyLevelCorroboration::
+      test_duty_level_is_corroborated_by_observed_ibja_print.

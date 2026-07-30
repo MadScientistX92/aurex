@@ -93,13 +93,31 @@ def test_chain_requires_at_least_one_loader(cache: CacheStore) -> None:
 
 
 class TestRegistry:
-    def test_every_declared_series_builds_a_chain(self) -> None:
-        from aurex.data.registry import SERIES_IDS, all_chains
+    def test_asset_series_and_referenced_macro_both_resolve(self) -> None:
+        from aurex.assets import GOLD
+        from aurex.data.registry import chains_for
 
-        chains = all_chains(CacheStore())
-        assert set(chains) == set(SERIES_IDS)
+        chains = chains_for([GOLD], CacheStore())
+        assert {"xauusd", "usdinr", "ibja_gold", "xau_futures"} <= set(chains)
+        # Macro series the factor set references.
+        assert {"dxy", "wti", "vix", "real_yield_10y"} <= set(chains)
         for series_id, chain in chains.items():
             assert chain.loaders, f"{series_id} has no loaders"
+
+    def test_unreferenced_macro_series_are_not_loaded(self) -> None:
+        """A self-contained asset must not drag in shared macro series."""
+        from aurex.assets.synthetic import SYNTHETIC
+        from aurex.data.registry import chains_for
+
+        chains = chains_for([SYNTHETIC], CacheStore())
+        assert set(chains) == {"widget_price", "widget_fx", "widget_local"}
+
+    def test_unknown_series_is_rejected(self) -> None:
+        from aurex.assets import GOLD
+        from aurex.data.registry import chain_for
+
+        with pytest.raises(KeyError, match="unknown series"):
+            chain_for("dogecoin", [GOLD], CacheStore())
 
     def test_parity_gold_series_is_spot_not_futures(self) -> None:
         """Regression guard for a real contamination bug.
@@ -110,21 +128,17 @@ class TestRegistry:
         basis varies with rates and time to expiry, it would look like a moving
         domestic-demand signal. Parity must come from the spot fix.
         """
-        from aurex.data.registry import chain_for
+        from aurex.assets import GOLD
 
-        names = [loader.source_name for loader in chain_for("xauusd").loaders]
+        sources = GOLD.price_sources(CacheStore())
+        names = [loader.source_name for loader in sources["xauusd"].loaders]
         assert all("GC=F" not in name for name in names), "parity must not use futures"
         assert any("LBMA" in name for name in names)
 
     def test_futures_are_still_available_for_the_volatility_layer(self) -> None:
         """Step 2 wants true OHLC, which the close-only fix cannot provide."""
-        from aurex.data.registry import chain_for
+        from aurex.assets import GOLD
 
-        names = [loader.source_name for loader in chain_for("xau_futures").loaders]
+        sources = GOLD.price_sources(CacheStore())
+        names = [loader.source_name for loader in sources["xau_futures"].loaders]
         assert any("GC=F" in name for name in names)
-
-    def test_unknown_series_is_rejected(self) -> None:
-        from aurex.data.registry import chain_for
-
-        with pytest.raises(KeyError):
-            chain_for("dogecoin")

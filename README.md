@@ -6,10 +6,10 @@ Aurex does not tell you where the gold price is going. It produces a probability
 distribution, states what you have to beat to break even, and then scores its own
 distributions in public.
 
-> **Build status: step 1 of 7 complete** — data layer, tax schedules, and import
-> parity. The volatility models, distribution engine, scenario tree, dashboard and
-> benchmark results are not built yet. Sections marked *(not built yet)* are
-> commitments, not claims.
+> **Build status: steps 1 and 1.5 of 9 complete** — data layer, tax schedules,
+> import parity, currency lenses, and the asset abstraction. The volatility models,
+> distribution engine, scenario tree, dashboard, benchmark results and the oil module
+> are not built yet. Sections marked *(not built yet)* are commitments, not claims.
 
 ---
 
@@ -75,6 +75,57 @@ would look like a moving domestic-demand signal. Parity uses the London PM fix, 
 same benchmark IBJA prints in its own daily report. Futures are still loaded, as
 `xau_futures`, because step 2's realised-volatility estimators want true OHLC.
 
+## Two lenses, one engine
+
+The same price, seen from two places. A lens is a toggle rather than a second page,
+because two code paths computing the same thing will drift.
+
+| | INR view | USD view |
+|---|---|---|
+| FX exposure | XAU/USD × USD/INR | none — single exposure |
+| Import duty | 15% (dated schedule) | none |
+| Consumption tax | GST 3% | state sales tax, defaults to 0% |
+| Breakeven hurdle | 9.37% | 5.10% (coin) |
+| Local premium | measured vs import parity | not applicable |
+
+The USD path is the cleaner case, and that is the point: the INR price is the USD
+price with currency and policy layered on top. Making the decomposition visible
+teaches something real about why the Indian buyer's distribution is wider.
+
+It is displayed as **measured, never asserted**. XAU/USD and USD/INR are dependent —
+fitting a copula over exactly that dependence is the point of the distribution layer
+— so their variances do not add, and the FX leg can offset rather than compound. The
+INR distribution is usually wider; the interface must still be able to render the
+case where it is not.
+
+A note, not a calculation: US long-term gains on physical gold are taxed as a
+collectible at a higher maximum rate than equities. Aurex links the IRS guidance and
+computes nothing.
+
+## Asset abstraction
+
+Everything asset-specific lives in `engine/aurex/assets/`. Nothing in `vol/`,
+`dist/`, `factors/`, `scenarios/`, `trade/` or `score/` may name an asset. Two tests
+enforce it: a synthetic asset runs the entire pipeline end to end, and a static guard
+fails the build on an asset literal in a downstream package. The behavioural test
+catches leaks that change something; the static one catches leaks that have not
+broken anything yet.
+
+The interface carries two decisions worth knowing about:
+
+**Friction takes a horizon.** Physical friction is paid at the door and is
+horizon-independent; a futures roll drag compounds. A horizon-free interface would
+have forced the second into the shape of the first.
+
+**Return transforms are an internal representation.** Crude settled negative in April
+2020, so log returns need a shift — and a shifted-log transform silently rescales
+anything quoted as a percentage from transform space. On the WTI series Aurex already
+caches, the annualised standard deviation reads 55.2% at a shift of 50 and 24.6% at a
+shift of 100. The number more than halves on a constant that is arbitrary by
+construction. So every reported quantity is mapped back to price space first, and the
+transforms module deliberately exposes no volatility or quantile helper. A round-trip
+test cannot catch this — a badly-scaled transform round-trips perfectly.
+
 ### Structural breaks are recorded, not smoothed
 
 `policy_breaks.yaml` lists every known discontinuity — each duty revision, the 2017
@@ -121,12 +172,14 @@ supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
 
 | Step | Scope |
 |---|---|
-| 2 | GJR-GARCH / HAR-RV / rolling vol; filtered historical simulation; t-copula on XAU × USDINR |
-| 3 | Friction and P&L (retail, ETF, SGB); PIT, CRPS, Kupiec, Christoffersen, Brier; walk-forward from 2015 |
+| 2 | GJR-GARCH / HAR-RV / rolling vol; filtered historical simulation; t-copula on price × FX |
+| 3 | Friction and P&L; PIT, CRPS, Kupiec, Christoffersen, Brier; walk-forward from 2015 |
 | 4 | Elastic-net factor attribution; market-sourced scenario priors |
-| 5 | Next.js dashboard |
+| 5 | Next.js dashboard, currency toggle, uncertainty decomposition |
 | 6 | Benchmark shootout vs random walk, AutoARIMA, NHITS, Chronos — **including the rows where Aurex loses** |
 | 7 | Nightly automation and deploy |
+| 8 | Oil: Brent primary, shifted-log returns, roll friction, curve factors |
+| 9 | Cross-asset scenario view — one geopolitical tree, two conditional distributions |
 
 ---
 
@@ -150,6 +203,20 @@ supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
   volatility estimators must use `xau_futures` and accept the basis.
 - **No calibration evidence exists yet.** Until step 3 lands there is no PIT
   histogram and no CRPS skill score, so nothing here has been shown to be calibrated.
+- **The safe-haven channel is not yet estimated.** The factor set declares a
+  geopolitical-risk regressor, but no source is wired to it, so it currently reports
+  as unavailable. This matters more than it looks: without it, a scenario chain like
+  *escalation → oil up → inflation up → Fed hawkish → gold down* runs entirely
+  through the real-yield and dollar channels, and would very likely produce the wrong
+  sign with honestly-estimated loadings and a clean causal story attached — gold
+  historically rallies on escalation. Omitted-variable bias is more dangerous here
+  than a hand-typed view, because it survives the check against hand-typed views. The
+  cross-asset sign will be validated against an event study of historical escalation
+  episodes before it is published, and a disagreement will be published as a finding
+  rather than tuned away.
+- **Oil will need an optional API key.** EIA's v2 API requires free registration.
+  `EIA_API_KEY` will be optional like `FRED_API_KEY`; without it the inventory
+  factors drop out with the reason recorded. The engine will never require a key.
 
 ---
 
@@ -159,7 +226,7 @@ supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
 cd engine
 uv sync
 
-uv run pytest                                    # 134 tests, no network
+uv run pytest                                    # 221 tests, no network
 uv run aurex schedule                            # duty history with provenance
 uv run aurex duty 2026-07-29                     # rate in force, and its source
 uv run aurex pipeline                            # live run, writes public-data/latest.json
