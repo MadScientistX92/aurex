@@ -1,0 +1,11 @@
+{
+  "end": "2026-07-30",
+  "fallbacks": [],
+  "fetched_at": "2026-07-30T22:34:22.854357+00:00",
+  "has_ohlc": true,
+  "rows": 300,
+  "series_id": "xau_futures",
+  "source_name": "yfinance:GC=F",
+  "source_url": "https://finance.yahoo.com/quote/GC=F/history",
+  "start": "2025-05-21"
+}

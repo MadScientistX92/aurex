@@ -1,0 +1,81 @@
+# Known policy discontinuities in the India gold price series.
+#
+# These are structural breaks, not noise. Downstream layers consume this list so that:
+#
+#   * parity / local_premium_bps  — the series is only comparable WITHIN a regime.
+#     A duty change moves parity mechanically; segment boundaries are marked so the
+#     premium is never compared across one.
+#   * volatility (step 2)         — a policy jump must not be absorbed as a GARCH
+#     volatility shock. Break-aware fitting excludes or dummies the break day.
+#   * factor regression (step 4)  — break dummies, so a duty step does not
+#     contaminate the estimated loadings.
+#
+# `kind` is one of: duty | tax | quantitative_restriction | monetary
+# `expected_effect` describes what the break does MECHANICALLY to the series. It is
+# not a claim about how the market reacted — passthrough is measured, not assumed.
+
+breaks:
+  - date: "2012-01-17"
+    kind: duty
+    description: "Gold import duty moves from specific (Rs 300/10g) to 2% ad valorem."
+    expected_effect: "parity_basis_change"
+    source_url: "https://www.business-standard.com/economy/news/india-raises-import-duties-on-gold-a-timeline-of-hikes-cuts-and-comebacks-126051300426_1.html"
+
+  - date: "2013-08-13"
+    kind: quantitative_restriction
+    description: >-
+      Duty to 10% alongside the 80:20 rule requiring 20% of imports be re-exported.
+      The quantitative restriction, more than the duty, drove the very large domestic
+      premia of 2013-2014.
+    expected_effect: "premium_regime_change"
+    source_url: "https://www.gold.org/goldhub/research/market-update/indian-gold-market-update"
+
+  - date: "2014-11-28"
+    kind: quantitative_restriction
+    description: "80:20 import-linkage rule withdrawn; domestic premia normalise."
+    expected_effect: "premium_regime_change"
+    source_url: "https://www.gold.org/goldhub/research/market-update/indian-gold-market-update"
+
+  - date: "2016-11-08"
+    kind: monetary
+    description: >-
+      Demonetisation. Cash-market disruption produced a sharp, temporary dislocation
+      between official and effective retail gold pricing.
+    expected_effect: "transient_premium_dislocation"
+    source_url: "https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=38520"
+
+  - date: "2017-07-01"
+    kind: tax
+    description: "GST replaces state VAT and excise. Start of the nationally-comparable parity regime."
+    expected_effect: "parity_confidence_change"
+    source_url: "https://cleartax.in/s/gst-impact-on-gold"
+
+  - date: "2019-07-06"
+    kind: duty
+    description: "Import duty 10% -> 12.5% (Budget 2019-20)."
+    expected_effect: "parity_step_up"
+    source_url: "https://www.indiabudget.gov.in/budget2019-20/"
+
+  - date: "2021-02-02"
+    kind: duty
+    description: "Duty restructured to BCD 7.5% + AIDC 2.5%; total payable falls to 10%."
+    expected_effect: "parity_step_down"
+    source_url: "https://www.gold.org/goldhub/gold-focus/2021/02/indias-gold-import-duties-reduced"
+
+  - date: "2022-07-01"
+    kind: duty
+    description: "BCD 7.5% -> 12.5%; total 15%."
+    expected_effect: "parity_step_up"
+    source_url: "https://www.gold.org/goldhub/gold-focus/2022/07/india-raises-gold-import-duty"
+
+  - date: "2024-07-23"
+    kind: duty
+    description: "Duty cut to 6% (BCD 5% + AIDC 1%), lowest in over a decade."
+    expected_effect: "parity_step_down"
+    source_url: "https://www.indiabudget.gov.in/budget2024-25/doc/cen/dojstru1.pdf"
+
+  - date: "2026-05-13"
+    kind: duty
+    description: "Duty raised to 15% (BCD 10% + AIDC 5%) via Notifications 15-18/2026-Customs."
+    expected_effect: "parity_step_up"
+    source_url: "https://taxguru.in/custom-duty/customs-duty-gold-silver-raised-15-percent-effective-13-may-2026.html"

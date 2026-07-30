@@ -1,0 +1,11 @@
+{
+  "end": "2026-07-30",
+  "fallbacks": [],
+  "fetched_at": "2026-07-30T22:34:23.399770+00:00",
+  "has_ohlc": true,
+  "rows": 300,
+  "series_id": "vix",
+  "source_name": "yfinance:^VIX",
+  "source_url": "https://finance.yahoo.com/quote/^VIX/history",
+  "start": "2025-05-21"
+}
