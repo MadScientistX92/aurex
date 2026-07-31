@@ -1,0 +1,40 @@
+# India GST schedule for gold.
+#
+# GST applies to the metal value at 3%. Making charges are taxed separately at 5%,
+# which is why `making_charges` is carried as its own field rather than folded into
+# one blended rate — a 24K bar buyer pays no making charge, a jewellery buyer does.
+#
+# IMPORTANT for parity: IBJA publishes its 999 rate EXCLUSIVE of GST. Comparing an
+# IBJA print against a GST-inclusive parity manufactures a spurious ~-300bps premium.
+# aurex.data.parity keeps the two explicitly separate.
+#
+# PROVENANCE RULE: per-entry source_url and source_confidence, no inheritance.
+
+meta:
+  name: india_gold_gst
+  units: fraction_of_value
+  note: >-
+    Before 2017-07-01 there was no national GST. The regime was state-varying VAT
+    (~1%) plus excise, with no single rate that applies nationally. Parity before
+    this date is tagged confidence: low and is indicative only.
+
+schedule:
+  - effective_from: "2017-07-01"
+    metal: 0.03
+    making_charges: 0.05
+    source_url: "https://cleartax.in/s/gst-impact-on-gold"
+    source_confidence: secondary
+    note: >-
+      GST rollout. Metal at 3%. Making charges were initially notified at 5%,
+      briefly discussed at 18% during rollout, and settled at 5%.
+
+  - effective_from: "2025-09-22"
+    metal: 0.03
+    making_charges: 0.05
+    source_url: "https://cleartax.in/s/gst-impact-on-gold"
+    source_confidence: secondary
+    note: >-
+      GST framework update effective 2025-09-22. Rates on gold were NOT changed by
+      it; this entry exists so the schedule records that the framework was revisited
+      and the gold lines re-affirmed, rather than leaving an eight-year gap that
+      looks like nobody checked.

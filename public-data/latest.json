@@ -1,0 +1,517 @@
+{
+  "assets": {
+    "gold": {
+      "asset": {
+        "base_unit": "troy_ounce",
+        "currency_lenses": [
+          {
+            "code": "USD",
+            "produces_local_premium": false,
+            "requires_fx": false,
+            "unit": "troy_ounce",
+            "units_per_base": 1.0
+          },
+          {
+            "code": "INR",
+            "fx_series_id": "usdinr",
+            "high_confidence_from": "2017-07-01",
+            "notes": [
+              "IBJA publishes its 999 rate exclusive of GST; the domestic premium is measured against price_ex_consumption_tax."
+            ],
+            "produces_local_premium": true,
+            "requires_fx": true,
+            "unit": "10g",
+            "units_per_base": 0.3215074656862798
+          }
+        ],
+        "factors": [
+          {
+            "description": "Change in 10y TIPS real yield. The dominant carry channel.",
+            "id": "d_real_yield",
+            "required": true,
+            "series_id": "real_yield_10y",
+            "transform": "diff"
+          },
+          {
+            "description": "Trade-weighted dollar. Gold is priced in it.",
+            "id": "d_dxy",
+            "required": true,
+            "series_id": "dxy",
+            "transform": "pct_change"
+          },
+          {
+            "description": "Crude, as an inflation-expectations proxy.",
+            "id": "d_oil",
+            "required": true,
+            "series_id": "wti",
+            "transform": "pct_change"
+          },
+          {
+            "description": "Equity volatility, a partial risk-appetite proxy.",
+            "id": "d_vix",
+            "required": true,
+            "series_id": "vix",
+            "transform": "diff"
+          },
+          {
+            "description": "Geopolitical risk. Present so the safe-haven channel is ESTIMATED rather than omitted. Without it the scenario engine reaches 'escalation -> gold down' purely through the real-yield channel, with a clean causal story and very likely the wrong sign, since gold historically rallies on escalation. Omitted-variable bias here is more dangerous than a hand-typed view because it passes the check \u00a76 and \u00a717.7 specify.",
+            "id": "d_geopolitical_risk",
+            "required": false,
+            "series_id": "gpr",
+            "transform": "level"
+          },
+          {
+            "description": "SPDR holdings in tonnes, from the IBJA daily report.",
+            "id": "etf_flow",
+            "required": false,
+            "series_id": "ibja_gold",
+            "transform": "diff"
+          },
+          {
+            "description": "Lagged own return. Attribution only, never a directional signal.",
+            "id": "momentum",
+            "required": true,
+            "series_id": "xauusd",
+            "transform": "pct_change"
+          }
+        ],
+        "friction_profiles": {
+          "inr_etf": {
+            "buyback_discount": 0.005,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.005,
+            "horizon_dependent": false,
+            "id": "inr_etf",
+            "kind": "physical",
+            "label": "India gold ETF",
+            "notes": [
+              "Expense ratio accrues separately and is not in the round-trip spread."
+            ]
+          },
+          "inr_retail": {
+            "buyback_discount": 0.03,
+            "consumption_tax": 0.03,
+            "dealer_premium": 0.03,
+            "horizon_dependent": false,
+            "id": "inr_retail",
+            "kind": "physical",
+            "label": "India retail jeweller",
+            "notes": [
+              "GST on metal is 3%; making charges are taxed separately at 5%."
+            ]
+          },
+          "inr_sgb": {
+            "buyback_discount": 0.0,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.0,
+            "horizon_dependent": false,
+            "id": "inr_sgb",
+            "kind": "physical",
+            "label": "Sovereign gold bond",
+            "notes": [
+              "No GST and no making charge. Liquidity before maturity is the binding constraint rather than spread."
+            ]
+          },
+          "usd_bar": {
+            "buyback_discount": 0.01,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.015,
+            "horizon_dependent": false,
+            "id": "usd_bar",
+            "kind": "physical",
+            "label": "US larger bar",
+            "notes": [
+              "Sales tax defaults to 0% and is user-editable.",
+              "US long-term capital gains on physical gold are taxed as a collectible, at a higher maximum rate than equities. Aurex does not compute tax. See IRS Topic 409: https://www.irs.gov/taxtopics/tc409"
+            ]
+          },
+          "usd_coin": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03,
+            "horizon_dependent": false,
+            "id": "usd_coin",
+            "kind": "physical",
+            "label": "US retail coin",
+            "notes": [
+              "Sales tax defaults to 0% and is user-editable: treatment varies by state and many exempt bullion.",
+              "US long-term capital gains on physical gold are taxed as a collectible, at a higher maximum rate than equities. Aurex does not compute tax. See IRS Topic 409: https://www.irs.gov/taxtopics/tc409"
+            ]
+          }
+        },
+        "id": "gold",
+        "label": "Gold",
+        "ohlc_series_id": "xau_futures",
+        "price_series_id": "xauusd",
+        "quote_currency": "USD",
+        "return_transform": {
+          "formula": "log(P_t) - log(P_{t-1})",
+          "id": "log"
+        },
+        "scenario_axes": [
+          "geopolitics",
+          "cpi",
+          "payrolls"
+        ],
+        "vol_defaults": {
+          "annualisation_days": 252,
+          "break_aware": true,
+          "default_model": "gjr_garch",
+          "min_observations": 500
+        }
+      },
+      "factors": [
+        {
+          "available": true,
+          "id": "d_real_yield",
+          "required": true,
+          "series_id": "real_yield_10y"
+        },
+        {
+          "available": true,
+          "id": "d_dxy",
+          "required": true,
+          "series_id": "dxy"
+        },
+        {
+          "available": true,
+          "id": "d_oil",
+          "required": true,
+          "series_id": "wti"
+        },
+        {
+          "available": true,
+          "id": "d_vix",
+          "required": true,
+          "series_id": "vix"
+        },
+        {
+          "available": false,
+          "id": "d_geopolitical_risk",
+          "reason": "no source is registered for this series",
+          "required": false,
+          "series_id": "gpr"
+        },
+        {
+          "available": true,
+          "id": "etf_flow",
+          "required": false,
+          "series_id": "ibja_gold"
+        },
+        {
+          "available": true,
+          "id": "momentum",
+          "required": true,
+          "series_id": "xauusd"
+        }
+      ],
+      "lenses": {
+        "INR": {
+          "latest": {
+            "as_of": "2026-07-29",
+            "base_quote_per_unit": 1286.3031,
+            "confidence": "high",
+            "consumption_tax": 0.03,
+            "currency": "INR",
+            "duty": 0.15,
+            "fx_rate": 95.59870147705078,
+            "price": 145656.67,
+            "price_ex_consumption_tax": 141414.25,
+            "rate_provenance": {
+              "consumption_tax": {
+                "effective_from": "2025-09-22",
+                "source_confidence": "secondary",
+                "source_url": "https://cleartax.in/s/gst-impact-on-gold"
+              },
+              "duty": {
+                "effective_from": "2026-05-13",
+                "source_confidence": "secondary",
+                "source_url": "https://taxguru.in/custom-duty/customs-duty-gold-silver-raised-15-percent-effective-13-may-2026.html"
+              }
+            },
+            "unit": "10g"
+          },
+          "lens": {
+            "code": "INR",
+            "fx_series_id": "usdinr",
+            "high_confidence_from": "2017-07-01",
+            "notes": [
+              "IBJA publishes its 999 rate exclusive of GST; the domestic premium is measured against price_ex_consumption_tax."
+            ],
+            "produces_local_premium": true,
+            "requires_fx": true,
+            "unit": "10g",
+            "units_per_base": 0.3215074656862798
+          },
+          "local_premium": {
+            "latest_as_of": "2026-07-29",
+            "latest_bps": 62.0,
+            "note": "Observed local reference rate over the modelled tax-exclusive price. NaN where unobserved; the model is never substituted for an observation.",
+            "observations": 8,
+            "observed_from": "2026-07-20"
+          }
+        },
+        "USD": {
+          "latest": {
+            "as_of": "2026-07-29",
+            "base_quote_per_unit": 4000.85,
+            "confidence": "high",
+            "consumption_tax": 0.0,
+            "currency": "USD",
+            "duty": 0.0,
+            "fx_rate": 1.0,
+            "price": 4000.85,
+            "price_ex_consumption_tax": 4000.85,
+            "unit": "troy_ounce"
+          },
+          "lens": {
+            "code": "USD",
+            "produces_local_premium": false,
+            "requires_fx": false,
+            "unit": "troy_ounce",
+            "units_per_base": 1.0
+          },
+          "local_premium": null
+        }
+      }
+    }
+  },
+  "disclaimer": "Aurex is a research and education tool. It produces probability distributions, not advice. Short-horizon price direction is not reliably forecastable, and nothing here changes that.",
+  "engine_version": "0.1.0",
+  "generated_at": "2026-07-30T23:01:25.247207+00:00",
+  "mode": "live",
+  "policy_breaks": [
+    {
+      "date": "2012-01-17",
+      "description": "Gold import duty moves from specific (Rs 300/10g) to 2% ad valorem.",
+      "expected_effect": "parity_basis_change",
+      "kind": "duty",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.business-standard.com/economy/news/india-raises-import-duties-on-gold-a-timeline-of-hikes-cuts-and-comebacks-126051300426_1.html"
+    },
+    {
+      "date": "2013-08-13",
+      "description": "Duty to 10% alongside the 80:20 rule requiring 20% of imports be re-exported. The quantitative restriction, more than the duty, drove the very large domestic premia of 2013-2014.",
+      "expected_effect": "premium_regime_change",
+      "kind": "quantitative_restriction",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.gold.org/goldhub/research/market-update/indian-gold-market-update"
+    },
+    {
+      "date": "2014-11-28",
+      "description": "80:20 import-linkage rule withdrawn; domestic premia normalise.",
+      "expected_effect": "premium_regime_change",
+      "kind": "quantitative_restriction",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.gold.org/goldhub/research/market-update/indian-gold-market-update"
+    },
+    {
+      "date": "2016-11-08",
+      "description": "Demonetisation. Cash-market disruption produced a sharp, temporary dislocation between official and effective retail gold pricing.",
+      "expected_effect": "transient_premium_dislocation",
+      "kind": "monetary",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=38520"
+    },
+    {
+      "date": "2017-07-01",
+      "description": "GST replaces state VAT and excise. Start of the nationally-comparable parity regime.",
+      "expected_effect": "parity_confidence_change",
+      "kind": "tax",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://cleartax.in/s/gst-impact-on-gold"
+    },
+    {
+      "date": "2019-07-06",
+      "description": "Import duty 10% -> 12.5% (Budget 2019-20).",
+      "expected_effect": "parity_step_up",
+      "kind": "duty",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.indiabudget.gov.in/budget2019-20/"
+    },
+    {
+      "date": "2021-02-02",
+      "description": "Duty restructured to BCD 7.5% + AIDC 2.5%; total payable falls to 10%.",
+      "expected_effect": "parity_step_down",
+      "kind": "duty",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.gold.org/goldhub/gold-focus/2021/02/indias-gold-import-duties-reduced"
+    },
+    {
+      "date": "2022-07-01",
+      "description": "BCD 7.5% -> 12.5%; total 15%.",
+      "expected_effect": "parity_step_up",
+      "kind": "duty",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.gold.org/goldhub/gold-focus/2022/07/india-raises-gold-import-duty"
+    },
+    {
+      "date": "2024-07-23",
+      "description": "Duty cut to 6% (BCD 5% + AIDC 1%), lowest in over a decade.",
+      "expected_effect": "parity_step_down",
+      "kind": "duty",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://www.indiabudget.gov.in/budget2024-25/doc/cen/dojstru1.pdf"
+    },
+    {
+      "date": "2026-05-13",
+      "description": "Duty raised to 15% (BCD 10% + AIDC 5%) via Notifications 15-18/2026-Customs.",
+      "expected_effect": "parity_step_up",
+      "kind": "duty",
+      "passthrough": {
+        "mean_bps_after": -28.49974086617329,
+        "mean_bps_before": null,
+        "n_after": 8,
+        "n_before": 0,
+        "shift_bps": null
+      },
+      "source_url": "https://taxguru.in/custom-duty/customs-duty-gold-silver-raised-15-percent-effective-13-may-2026.html"
+    }
+  ],
+  "schema_version": 2,
+  "sources": {
+    "dxy": {
+      "end": "2026-07-24",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:15.656916+00:00",
+      "has_ohlc": false,
+      "rows": 5000,
+      "series_id": "dxy",
+      "source_name": "FRED:DTWEXBGS",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS",
+      "start": "2006-08-04"
+    },
+    "ibja_gold": {
+      "end": "2026-07-30",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:25.229026+00:00",
+      "has_ohlc": false,
+      "rows": 9,
+      "series_id": "ibja_gold",
+      "source_name": "IBJA:daily-bullion-report",
+      "source_url": "https://www.ibja.co/Upload/IBJA_Bullion Daily Report - 30-07-2026.pdf",
+      "start": "2026-07-20"
+    },
+    "real_yield_10y": {
+      "end": "2026-07-29",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:15.017874+00:00",
+      "has_ohlc": false,
+      "rows": 4999,
+      "series_id": "real_yield_10y",
+      "source_name": "FRED:DFII10",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10",
+      "start": "2006-08-04"
+    },
+    "usdinr": {
+      "end": "2026-07-30",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:20.783272+00:00",
+      "has_ohlc": true,
+      "rows": 5181,
+      "series_id": "usdinr",
+      "source_name": "yfinance:INR=X",
+      "source_url": "https://finance.yahoo.com/quote/INR=X/history",
+      "start": "2006-08-04"
+    },
+    "vix": {
+      "end": "2026-07-30",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:14.243399+00:00",
+      "has_ohlc": true,
+      "rows": 5028,
+      "series_id": "vix",
+      "source_name": "yfinance:^VIX",
+      "source_url": "https://finance.yahoo.com/quote/^VIX/history",
+      "start": "2006-08-04"
+    },
+    "wti": {
+      "end": "2026-07-27",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:19.215343+00:00",
+      "has_ohlc": false,
+      "rows": 5013,
+      "series_id": "wti",
+      "source_name": "FRED:DCOILWTICO",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILWTICO",
+      "start": "2006-08-04"
+    },
+    "xau_futures": {
+      "end": "2026-07-30",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:20.500177+00:00",
+      "has_ohlc": true,
+      "rows": 5027,
+      "series_id": "xau_futures",
+      "source_name": "yfinance:GC=F",
+      "source_url": "https://finance.yahoo.com/quote/GC=F/history",
+      "start": "2006-08-04"
+    },
+    "xauusd": {
+      "end": "2026-07-29",
+      "fallbacks": [],
+      "fetched_at": "2026-07-30T23:01:20.192424+00:00",
+      "has_ohlc": false,
+      "rows": 5009,
+      "series_id": "xauusd",
+      "source_name": "LBMA:gold_pm:USD",
+      "source_url": "https://prices.lbma.org.uk/json/gold_pm.json",
+      "start": "2006-08-04"
+    }
+  },
+  "unavailable": {}
+}

@@ -1,0 +1,42 @@
+Daily Bullion Physical Market Report  Date: 30th July 2026
+Description Purity AM PM
+Gold 999 142469 142224
+Gold 995 141899 141654
+Gold 916 130502 130277
+Gold 750 106852 106668
+Gold 585 83344 83201
+Silver 999 218619 217335
+Daily India Spot Market Rates
+Date GOLD* SILVER*
+29th July 2026 142224 217335
+28th July 2026 142291 217349
+27th July 2026 144466 224447
+24th July 2026 143781 222721
+Gold and Silver 999 Watch
+Rate as exclusive of GST as of 29th July 2026 Gold is Rs/10 Gm. & Silver in Rs/Kg The above rates are IBJA PM Rates; *Rates are exclusive of GST
+Description Contract Close Change %Chg
+Gold($/oz) AUG 26 4097.00 -1.60 -0.04
+Silver($/oz) SEPT 26 58.09 0.56 0.97
+COMEX Futures Watch
+Description Contract LTP
+Gold($/oz) AUG 26 4097.3
+Gold Quanto AUG 26 141801
+Silver($/oz) JUL 26 58.09
+Bullion Futures DGCX
+ETFs In Tonnes Net Change
+SPDR Gold 1,008.73 -0.57
+iShares Silver 15,024.77 -19.68
+ETF Holdings as on Previous Close
+Description LTP
+Gold London AM Fix($/oz) 4031.60
+Gold London PM Fix($/oz) 4000.85
+Silver London Fix($/oz) 57.395
+Gold and Silver Fix
+Long Short Net
+Gold($/oz) 141060 17474 123586
+Silver 16800 6797 10003
+Weekly CFTC Positions
+Time Country Event Forecast Previous Impact
+30th July 04:30PM Britain Monetary Policy Summary - - High
+30th July 06:00PM United States Advance GDP q/q 2.1% 2.1% High
+30th July 06:00PM United States Core PCE Price Index m/m 0.2% 0.3% High

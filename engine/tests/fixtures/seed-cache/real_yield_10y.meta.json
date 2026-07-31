@@ -1,0 +1,11 @@
+{
+  "end": "2026-07-29",
+  "fallbacks": [],
+  "fetched_at": "2026-07-30T22:34:24.927072+00:00",
+  "has_ohlc": false,
+  "rows": 300,
+  "series_id": "real_yield_10y",
+  "source_name": "FRED:DFII10",
+  "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10",
+  "start": "2025-05-16"
+}

@@ -1,0 +1,87 @@
+[project]
+name = "aurex"
+version = "0.1.0"
+description = "Calibrated uncertainty engine for gold, priced in INR. Distributions, not point forecasts."
+readme = "../README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+
+dependencies = [
+    "numpy>=2.1",
+    "pandas>=2.2",
+    # Bounded MLE for the GJR-GARCH likelihood and the Student-t CDF the copula
+    # inverts. The alternative was a hand-rolled optimiser and incomplete-beta in
+    # the one layer where a silent numerical error is least likely to be noticed.
+    "scipy>=1.14",
+    "pyarrow>=17.0",
+    "pyyaml>=6.0",
+    "requests>=2.32",
+    "typer>=0.15",
+    "beautifulsoup4>=4.12",
+    "pypdf>=5.1",
+    "yfinance>=0.2.50",
+]
+
+[project.optional-dependencies]
+# Heavy ML stack for the §9 benchmark shootout only. Deliberately NOT a default
+# dependency: torch + foundation models is ~2.5GB and would dominate CI time.
+bench = [
+    "statsforecast>=2.0",
+    "neuralforecast>=2.0",
+    "torch>=2.4",
+    "chronos-forecasting>=1.4",
+]
+
+[project.scripts]
+aurex = "aurex.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pandas-stubs>=2.2",
+    "types-requests>=2.32",
+    "types-pyyaml>=6.0",
+    "responses>=0.25",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aurex"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "network: test requires network access (deselected by default in CI)",
+]
+
+[tool.coverage.run]
+source = ["aurex"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

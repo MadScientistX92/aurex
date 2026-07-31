@@ -1,0 +1,11 @@
+{
+  "end": "2026-07-30",
+  "fallbacks": [],
+  "fetched_at": "2026-07-30T22:34:23.146166+00:00",
+  "has_ohlc": true,
+  "rows": 300,
+  "series_id": "usdinr",
+  "source_name": "yfinance:INR=X",
+  "source_url": "https://finance.yahoo.com/quote/INR=X/history",
+  "start": "2025-06-04"
+}

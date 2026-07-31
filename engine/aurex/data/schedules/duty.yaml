@@ -1,0 +1,122 @@
+# India gold import duty schedule.
+#
+# Applies to gold bullion, HS heading 7108. Note that 7108 is NOT part of the
+# 7107/7109/7110/7111/7112/7118 substitution list in Notification 15/2026-Customs —
+# those cover other precious-metal articles. The bullion rate sits on the main entry
+# and is verified separately.
+#
+# `total` is the fraction of assessable value actually payable on bullion:
+#   total = bcd + aidc + sws_effective
+# SWS is a cascading levy on aggregate customs duty but is NIL on gold bullion, which
+# is the source of the widespread "15% vs 16%" confusion in secondary reporting.
+#
+# PROVENANCE RULE: every entry carries its own source_url and source_confidence.
+# No entry inherits a table-level default. See tests/test_schedules.py, which fails
+# the build if either field is missing on any entry.
+#
+#   primary   = government/gazette document (indiabudget.gov.in, CBIC notification)
+#   secondary = industry body or reputable press reporting the change
+
+meta:
+  name: india_gold_import_duty
+  units: fraction_of_assessable_value
+  applies_to: "gold bullion (HS 7108)"
+  note: >-
+    Pre-2012 duty was a specific levy (Rs 300 per 10g), not ad valorem, so it has no
+    well-defined percentage. Entries before 2012-01-17 are omitted rather than
+    guessed; parity before that date is not computed.
+
+schedule:
+  - effective_from: "2012-01-17"
+    total: 0.02
+    components: {bcd: 0.02, aidc: 0.0, sws: 0.0}
+    source_url: "https://www.business-standard.com/economy/news/india-raises-import-duties-on-gold-a-timeline-of-hikes-cuts-and-comebacks-126051300426_1.html"
+    source_confidence: secondary
+    note: >-
+      Switch from the flat Rs 300/10g specific duty to a 2% ad valorem basis.
+      Effective date is reported at month granularity; treat as approximate.
+
+  - effective_from: "2012-03-17"
+    total: 0.04
+    components: {bcd: 0.04, aidc: 0.0, sws: 0.0}
+    source_url: "https://www.business-standard.com/economy/news/india-raises-import-duties-on-gold-a-timeline-of-hikes-cuts-and-comebacks-126051300426_1.html"
+    source_confidence: secondary
+    note: "Budget 2012-13. Effective date approximate."
+
+  - effective_from: "2013-01-21"
+    total: 0.06
+    components: {bcd: 0.06, aidc: 0.0, sws: 0.0}
+    source_url: "https://www.business-standard.com/economy/news/india-raises-import-duties-on-gold-a-timeline-of-hikes-cuts-and-comebacks-126051300426_1.html"
+    source_confidence: secondary
+
+  - effective_from: "2013-06-05"
+    total: 0.08
+    components: {bcd: 0.08, aidc: 0.0, sws: 0.0}
+    source_url: "https://www.business-standard.com/economy/news/india-raises-import-duties-on-gold-a-timeline-of-hikes-cuts-and-comebacks-126051300426_1.html"
+    source_confidence: secondary
+
+  - effective_from: "2013-08-13"
+    total: 0.10
+    components: {bcd: 0.10, aidc: 0.0, sws: 0.0}
+    source_url: "https://www.business-standard.com/economy/news/india-raises-import-duties-on-gold-a-timeline-of-hikes-cuts-and-comebacks-126051300426_1.html"
+    source_confidence: secondary
+    note: >-
+      Accompanied by the 80:20 import-linkage rule restricting non-exporter imports.
+      Recorded separately in policy_breaks.yaml — the quantitative restriction, not
+      the duty alone, drove the large domestic premium of this era.
+
+  - effective_from: "2019-07-06"
+    total: 0.125
+    components: {bcd: 0.125, aidc: 0.0, sws: 0.0}
+    source_url: "https://www.indiabudget.gov.in/budget2019-20/"
+    source_confidence: secondary
+    note: >-
+      Union Budget 2019-20. Marked secondary: the budget portal is primary but the
+      specific gold line was not re-verified against the notification text.
+
+  - effective_from: "2021-02-02"
+    total: 0.10
+    components: {bcd: 0.075, aidc: 0.025, sws: 0.0}
+    source_url: "https://www.gold.org/goldhub/gold-focus/2021/02/indias-gold-import-duties-reduced"
+    source_confidence: secondary
+    note: >-
+      Budget 2021-22 cut BCD 12.5% -> 7.5% and introduced AIDC at 2.5%. Gold was
+      simultaneously exempted from SWS, so the payable total is 10.0%, not the 11.0%
+      that appears in sources which add SWS on top.
+
+  - effective_from: "2022-07-01"
+    total: 0.15
+    components: {bcd: 0.125, aidc: 0.025, sws: 0.0}
+    source_url: "https://www.gold.org/goldhub/gold-focus/2022/07/india-raises-gold-import-duty"
+    source_confidence: secondary
+    note: "BCD raised 7.5% -> 12.5% to defend the current account deficit."
+
+  - effective_from: "2024-07-23"
+    total: 0.06
+    components: {bcd: 0.05, aidc: 0.01, sws: 0.0}
+    source_url: "https://www.indiabudget.gov.in/budget2024-25/doc/cen/dojstru1.pdf"
+    source_confidence: primary
+    note: >-
+      Union Budget 2024-25, Annexure to the JS(TRU) letter. Lowest level in over a
+      decade. Cross-checked against World Gold Council commentary.
+
+  - effective_from: "2026-05-13"
+    total: 0.15
+    components: {bcd: 0.10, aidc: 0.05, sws: 0.0}
+    source_url: "https://taxguru.in/custom-duty/customs-duty-gold-silver-raised-15-percent-effective-13-may-2026.html"
+    source_confidence: secondary
+    note: >-
+      Notifications 15-18/2026-Customs dated 2026-05-12, effective 2026-05-13.
+      15/2026 amends 45/2025-Customs; 16/2026 restructures SWS/AIDC and widens the
+      SWS exemption. Marked SECONDARY: the CBIC primary document could not be
+      retrieved. Verified 2026-07-31 — legacy PDF paths under cbic.gov.in/htdocs-cbec/
+      return 404 for 2026; taxinformation.cbic.gov.in exposes PDFs only via
+      non-guessable numeric IDs; its notification search API returns HTTP 401
+      (authentication required); and /view-pdf/<id> serves an HTML shell rather than
+      the PDF to non-browser clients. Upgrade to `primary` if a retrievable gazette
+      URL appears.
+      Three independent secondary sources agree (TaxGuru, A2Z Taxcorp, Mundhra).
+      Independently corroborated by observation: against the IBJA 999 PM print of
+      142,224 Rs/10g on 2026-07-29, a 15% duty implies a -43bps domestic premium
+      while 6% implies +803bps. See tests/test_lens.py::TestDutyLevelCorroboration::
+      test_duty_level_is_corroborated_by_observed_ibja_print.
