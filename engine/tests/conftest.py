@@ -65,6 +65,51 @@ def sample_series() -> LoadedSeries:
     return make_series()
 
 
+def simulate_gjr_path(
+    *,
+    periods: int = 2_000,
+    omega: float = 2.0e-6,
+    alpha: float = 0.04,
+    gamma: float = 0.08,
+    beta: float = 0.88,
+    seed: int = 7,
+    start: str = "2016-01-01",
+) -> pd.DataFrame:
+    """Returns *and* the latent sigma that generated them, from a known GJR process.
+
+    The sigma column is what makes a recovery test meaningful: a fitted conditional
+    sigma correlates only about 0.2 with the absolute return, because ``|r|`` is a
+    single noisy draw from the variance rather than the variance itself. Checking the
+    fit against ``|r|`` would therefore fail on correct code.
+
+    Normal innovations, deliberately: the recursion is what is under test, and a
+    fat-tailed innovation makes parameter recovery noisy for unrelated reasons.
+    """
+    rng = np.random.default_rng(seed)
+    variance = omega / (1.0 - (alpha + gamma / 2.0 + beta))
+    returns = np.empty(periods)
+    sigma = np.empty(periods)
+
+    for t in range(periods):
+        sigma[t] = np.sqrt(variance)
+        shock = sigma[t] * rng.standard_normal()
+        returns[t] = shock
+        variance = omega + (alpha + gamma * (shock < 0.0)) * shock**2 + beta * variance
+
+    index = pd.bdate_range(start, periods=periods, name="date")
+    return pd.DataFrame({"returns": returns, "sigma": sigma}, index=index)
+
+
+def simulate_gjr_returns(**kwargs: object) -> pd.Series:
+    """Just the return series from :func:`simulate_gjr_path`."""
+    return simulate_gjr_path(**kwargs)["returns"].rename("returns")  # type: ignore[arg-type]
+
+
+@pytest.fixture
+def gjr_returns() -> pd.Series:
+    return simulate_gjr_returns()
+
+
 class StubLoader:
     """A loader that returns a canned series or raises on demand."""
 

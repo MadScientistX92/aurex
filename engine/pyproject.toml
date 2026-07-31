@@ -9,6 +9,10 @@ license = { text = "MIT" }
 dependencies = [
     "numpy>=2.1",
     "pandas>=2.2",
+    # Bounded MLE for the GJR-GARCH likelihood and the Student-t CDF the copula
+    # inverts. The alternative was a hand-rolled optimiser and incomplete-beta in
+    # the one layer where a silent numerical error is least likely to be noticed.
+    "scipy>=1.14",
     "pyarrow>=17.0",
     "pyyaml>=6.0",
     "requests>=2.32",

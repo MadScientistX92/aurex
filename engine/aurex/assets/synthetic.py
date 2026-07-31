@@ -25,6 +25,7 @@ from aurex.assets.transforms import ReturnTransform, ShiftedLogReturn
 from aurex.data.base import LoadedSeries, build_meta
 from aurex.data.cache import CacheStore
 from aurex.data.chain import SourceChain
+from aurex.vol.limits import SessionLimit
 
 #: ISO 4217 reserves XTS for testing, so it can never collide with a real currency.
 TEST_CURRENCY = "XTS"
@@ -69,13 +70,24 @@ class SyntheticAsset:
     quote_currency = TEST_CURRENCY
     base_unit = "unit"
     price_series_id = "widget_price"
+    # No OHLC anywhere, so the range-based model is unavailable to this asset — the
+    # case a close-only pricing series puts every asset in until a second one exists.
+    ohlc_series_id = None
     reference_rate_series = "widget_local"
     reference_rate_column = "close"
 
     # Not log returns: proves the transform is genuinely pluggable.
     return_transform: ReturnTransform = ShiftedLogReturn(shift=25.0)
 
-    vol_defaults = VolConfig(default_model="rolling_std", min_observations=10)
+    # A short window and a session limit, so the leak test exercises the whole
+    # distribution path — including the branch a venue-capped instrument takes —
+    # over the three months of prices this asset generates.
+    vol_defaults = VolConfig(
+        default_model="rolling_std",
+        min_observations=10,
+        model_options={"window": 20},
+        session_limit=SessionLimit(fraction=0.05, relaxed_fraction=0.08),
+    )
     scenario_axes = ("geopolitics",)
 
     currency_lenses: tuple[CurrencyLens, ...] = (

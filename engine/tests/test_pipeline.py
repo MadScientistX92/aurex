@@ -58,7 +58,7 @@ class TestOfflineRun:
     def test_runs_offline_and_produces_an_artifact(self, seeded_cache: CacheStore) -> None:
         artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
         assert artifact["mode"] == "offline"
-        assert artifact["schema_version"] == 2
+        assert artifact["schema_version"] == 3
 
     def test_emits_one_block_per_lens(self, seeded_cache: CacheStore) -> None:
         assert set(gold_block(seeded_cache)["lenses"]) == {"USD", "INR"}
@@ -151,6 +151,41 @@ class TestLensBlocks:
         assert "INR" not in lenses
 
 
+class TestMisconfigurationFailsLoudly:
+    def test_a_lens_wanting_fx_without_naming_a_series_is_refused(self) -> None:
+        """Silently skipping it would drop a currency view with no reason recorded."""
+        import dataclasses
+
+        from aurex.assets.lens import NativeLens
+        from aurex.pipeline import _apply_lenses
+
+        class Misconfigured:
+            id = "misconfigured"
+            price_series_id = "xauusd"
+            reference_rate_series = None
+            reference_rate_column = None
+            currency_lenses = (
+                dataclasses.replace(NativeLens(code="XXX", unit_label="unit"), requires_fx=True),
+            )
+
+        index = pd.bdate_range(START, periods=5, name="date")
+        series = {"xauusd": make_series("xauusd", start=str(START), periods=len(index))}
+        with pytest.raises(ValueError, match="requires_fx but no fx_series_id"):
+            _apply_lenses(Misconfigured(), series)  # type: ignore[arg-type]
+
+    def test_a_lens_with_no_overlapping_dates_reports_an_empty_block(
+        self, cache: CacheStore
+    ) -> None:
+        """Price and rate that never traded on the same day produce no prices at all."""
+        cache.write(make_series("xauusd", start="2026-06-01", periods=20, value=4_000.0))
+        cache.write(make_series("usdinr", start="2020-01-01", periods=20, value=96.5))
+
+        block = gold_block(cache)["lenses"]["INR"]
+        assert block["latest"] is None
+        assert block["local_premium"] is None
+        assert block["distribution"] is None
+
+
 class TestArtifactShape:
     def test_policy_breaks_are_emitted(self, seeded_cache: CacheStore) -> None:
         breaks = run(offline=True, start=START, end=END, cache=seeded_cache).artifact[
@@ -191,7 +226,7 @@ class TestArtifactWriting:
         artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
         path = write_artifact(artifact, tmp_path)
         assert path.name == "latest.json"
-        assert json.loads(path.read_text())["schema_version"] == 2
+        assert json.loads(path.read_text())["schema_version"] == 3
 
     def test_creates_the_directory(self, seeded_cache: CacheStore, tmp_path: Path) -> None:
         artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact

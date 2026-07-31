@@ -106,17 +106,25 @@ class TestSyntheticAssetRunsTheWholePipeline:
 class TestStaticLeakGuard:
     """No asset may be named outside ``assets/``."""
 
-    #: Modules that must stay asset-agnostic.
+    #: Packages that must stay asset-agnostic.
     GUARDED_DIRS = ("vol", "dist", "factors", "scenarios", "trade", "score")
+    #: Modules that compose assets with those packages. They necessarily know what a
+    #: lens and an asset *are*, and must still never know which one they are holding.
+    GUARDED_MODULES = ("forecast.py", "pipeline.py")
     #: Words that would betray a hardcoded asset. The oil vocabulary is listed while
     #: the guarded packages are still empty: a literal is far cheaper to keep out than
     #: to extract once ``vol/`` and ``factors/`` have been written around it.
     ASSET_LITERALS = ("gold", "xau", "ibja", "brent", "wti", "crude", "oil", "widget")
 
-    def _guarded_files(self) -> list[Path]:
+    def _package_files(self) -> list[Path]:
         files: list[Path] = []
         for name in self.GUARDED_DIRS:
             files.extend((ENGINE_ROOT / "aurex" / name).rglob("*.py"))
+        return files
+
+    def _guarded_files(self) -> list[Path]:
+        files = self._package_files()
+        files.extend(ENGINE_ROOT / "aurex" / name for name in self.GUARDED_MODULES)
         web = REPO_ROOT / "web"
         if web.exists():
             for suffix in ("*.ts", "*.tsx"):
@@ -124,10 +132,14 @@ class TestStaticLeakGuard:
         return files
 
     def test_the_guard_covers_every_downstream_package(self) -> None:
-        covered = {p.parent.name for p in self._guarded_files() if p.suffix == ".py"}
+        covered = {p.parent.name for p in self._package_files()}
         assert covered == set(self.GUARDED_DIRS), (
             f"guard missed: {set(self.GUARDED_DIRS) - covered}"
         )
+
+    def test_the_guard_covers_the_composition_modules(self) -> None:
+        for name in self.GUARDED_MODULES:
+            assert (ENGINE_ROOT / "aurex" / name).exists(), f"{name} is not where the guard looks"
 
     @pytest.mark.parametrize("literal", ASSET_LITERALS)
     def test_no_asset_literal_downstream(self, literal: str) -> None:
@@ -189,7 +201,6 @@ class TestProtocolConformance:
             requires_fx = False
             fx_series_id = None
             produces_local_premium = False
-            price_linkage = "mechanical"
 
             def apply(self, base_prices: pd.Series, ctx: LensContext) -> pd.DataFrame:
                 raise NotImplementedError
@@ -235,6 +246,7 @@ class TestCurrencyLensPolicy:
         admitting a policy-set retail price in any other currency. The test therefore
         builds an administered lens rather than an INR one.
         """
+
         administered: PriceLinkage = "administered"
 
         class PolicyPricedAsset:

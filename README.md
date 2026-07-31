@@ -6,10 +6,12 @@ Aurex does not tell you where the gold price is going. It produces a probability
 distribution, states what you have to beat to break even, and then scores its own
 distributions in public.
 
-> **Build status: steps 1 and 1.5 of 9 complete** — data layer, tax schedules,
-> import parity, currency lenses, and the asset abstraction. The volatility models,
-> distribution engine, scenario tree, dashboard, benchmark results and the oil module
-> are not built yet. Sections marked *(not built yet)* are commitments, not claims.
+> **Build status: steps 1, 1.5 and 2 of 9 complete** — data layer, tax schedules,
+> import parity, currency lenses, the asset abstraction, and the volatility and
+> distribution engine. The scoring layer, scenario tree, dashboard, benchmark results
+> and the oil module are not built yet. Sections marked *(not built yet)* are
+> commitments, not claims. **Nothing here has been shown to be calibrated**: the
+> engine now produces distributions, and step 3 is what will score them.
 
 ---
 
@@ -119,6 +121,12 @@ fails the build on an asset literal in a downstream package. The behavioural tes
 catches leaks that change something; the static one catches leaks that have not
 broken anything yet.
 
+The guard also covers `pipeline.py` and `forecast.py` — the two modules that compose
+assets with the model layer. They necessarily know what a lens *is*; they must never
+know which one they are holding. Extending the guard to them immediately found a
+stale asset name in a pipeline docstring, which is the argument for the guard in one
+sentence.
+
 The interface carries two decisions worth knowing about:
 
 **Friction takes a horizon.** Physical friction is paid at the door and is
@@ -133,6 +141,57 @@ shift of 100. The number more than halves on a constant that is arbitrary by
 construction. So every reported quantity is mapped back to price space first, and the
 transforms module deliberately exposes no volatility or quantile helper. A round-trip
 test cannot catch this — a badly-scaled transform round-trips perfectly.
+
+## Distributions, and why the paths are kept
+
+The engine fits a conditional variance model, resamples its standardised residuals in
+blocks, and walks them forward into price paths. Three choices are worth stating.
+
+**Terminal distributions are not enough.** Every path is retained rather than
+collapsed to its endpoint, because a position that can be closed out early — anything
+leveraged, stopped, or margined — never experiences the terminal distribution. Against
+a barrier it can reach, the chance of *touching* a level is materially higher than the
+chance of *ending* beyond it: on a 21-session horizon the engine currently measures a
+ratio of about 1.5. The artifact reports both numbers side by side at each horizon,
+never the terminal one alone.
+
+That ratio is below the factor of two a continuous-monitoring argument gives, and the
+reason is stated rather than tuned: paths are monitored at session close, so a barrier
+breached and recovered inside one session is not counted. The published touch
+probability is a floor.
+
+**The mean is zero unless someone insists.** A constant fitted on twenty years of
+returns is a drift, and a drift is a directional forecast wearing a mean's clothes —
+it would put the median terminal price above spot and every path statistic downstream
+would inherit it. The random walk is the null, so it is also the default.
+
+**One simulation, two views.** The underlying is simulated once and each lens is a
+multiplication applied to those same paths, so the dollar and rupee views cannot
+disagree about what the metal did. The rupee view adds an exchange rate with its own
+fitted variance, linked to the price by a **bivariate t-copula** — a Gaussian
+dependence has zero tail dependence by construction however high the correlation, and
+whether that describes a given pair is an estimated question. Where the fitted degrees
+of freedom run to their ceiling, the artifact says so instead of implying evidence of
+fat tails that the fit never found.
+
+| Model | Role |
+|---|---|
+| GJR-GARCH(1,1,1) | Asymmetric conditional variance, Student-t innovations. Each path carries its own variance trajectory |
+| HAR-RV | Cascade on realised variance measured from OHLC ranges. Needs a true high and low; a close-only series is refused rather than fed squared returns |
+| Rolling σ | The parameter-free baseline the others have to beat in step 6 |
+
+Fitting is break-aware: a policy step is a mechanical jump, so its date is excluded
+from the likelihood and enters the recursion as no shock at all. Those residuals are
+also dropped from the resampling pool, because a duty revision is not a shock the
+bootstrap should be allowed to redraw.
+
+Daily price limits are simulated where a venue has them: the session is truncated to
+the cap and the remainder carries into the next one, so a shock big enough to lock the
+market takes more than one session to arrive.
+
+Every ensemble records its seed, its model parameters and its block length. A
+distribution nobody can reproduce cannot be scored, and step 3 has to be able to
+regenerate exactly what was published.
 
 ### Structural breaks are recorded, not smoothed
 
@@ -180,13 +239,12 @@ supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
 
 | Step | Scope |
 |---|---|
-| 2 | GJR-GARCH / HAR-RV / rolling vol; filtered historical simulation; t-copula on price × FX |
 | 3 | Friction and P&L; PIT, CRPS, Kupiec, Christoffersen, Brier; walk-forward from 2015 |
-| 4 | Elastic-net factor attribution; market-sourced scenario priors |
-| 5 | Next.js dashboard, currency toggle, uncertainty decomposition |
+| 4 | Elastic-net factor attribution; market-sourced scenario priors; the crude → CPI → policy → rupee → gold transmission chain, estimated by local projections and published with its bands even where they straddle zero |
+| 5 | Next.js dashboard, currency toggle, uncertainty decomposition, user-set leverage with the liquidation probability recomputed live |
 | 6 | Benchmark shootout vs random walk, AutoARIMA, NHITS, Chronos — **including the rows where Aurex loses** |
 | 7 | Nightly automation and deploy |
-| 8 | Oil: Brent primary, shifted-log returns, roll friction, curve factors |
+| 8 | Oil as a traded instrument: exchange-listed rupee-quoted crude futures, shifted-log returns, roll friction at each expiry, futures friction including CTT |
 | 9 | Cross-asset scenario view — one geopolitical tree, two conditional distributions |
 
 ---
@@ -211,6 +269,17 @@ supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
   volatility estimators must use `xau_futures` and accept the basis.
 - **No calibration evidence exists yet.** Until step 3 lands there is no PIT
   histogram and no CRPS skill score, so nothing here has been shown to be calibrated.
+  The engine produces distributions; whether they are any good is unmeasured.
+- **Barrier probabilities are monitored at session close.** A level breached and
+  recovered inside one session is not counted, so every touch probability is a floor
+  rather than an estimate.
+- **Simulated policy is fixed policy.** Duty and GST enter a simulation at the rates
+  in force on the last observed day and stay there. A revision inside the horizon is
+  not modelled, because forecasting one would be a political prediction.
+- **The HAR cascade has no variance-of-variance.** Its forecast is iterated
+  deterministically, because a simulated path has no intraday high and low to measure
+  a range from, so every path in that ensemble shares one variance trajectory. Where
+  path dependence is the question, the recursive model is the one to use.
 - **The safe-haven channel is not yet estimated.** The factor set declares a
   geopolitical-risk regressor, but no source is wired to it, so it currently reports
   as unavailable. This matters more than it looks: without it, a scenario chain like
@@ -234,7 +303,7 @@ supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
 cd engine
 uv sync
 
-uv run pytest                                    # 227 tests, no network
+uv run pytest                                    # 370 tests, no network
 uv run aurex schedule                            # duty history with provenance
 uv run aurex duty 2026-07-29                     # rate in force, and its source
 uv run aurex pipeline                            # live run, writes public-data/latest.json

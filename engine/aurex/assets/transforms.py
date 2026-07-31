@@ -70,6 +70,24 @@ class ReturnTransform(Protocol):
         """
         ...
 
+    def advance(self, prices: np.ndarray, step_returns: np.ndarray) -> np.ndarray:
+        """One step, vectorised across an ensemble of prices.
+
+        :meth:`from_returns` walks a whole path at once, which is the wrong shape for
+        a simulator that must inspect each session before taking the next — a daily
+        price limit truncates the session it lands in and carries the remainder
+        forward, so the price has to exist between steps.
+        """
+        ...
+
+    def step_return(self, prices: np.ndarray, next_prices: np.ndarray) -> np.ndarray:
+        """Inverse of :meth:`advance`: the return that moves ``prices`` to ``next_prices``.
+
+        A truncated session needs to know how much of the move actually executed, in
+        return space, to work out what is left to carry.
+        """
+        ...
+
     def describe(self) -> dict[str, Any]:
         """Provenance for the artifact. The transform is never invisible."""
         ...
@@ -93,6 +111,18 @@ class LogReturn:
 
     def from_returns(self, anchor: float, returns: pd.Series | np.ndarray) -> np.ndarray:
         return float(anchor) * np.exp(np.cumsum(np.asarray(returns, dtype=float)))
+
+    def advance(self, prices: np.ndarray, step_returns: np.ndarray) -> np.ndarray:
+        moved: np.ndarray = np.asarray(prices, dtype=float) * np.exp(
+            np.asarray(step_returns, dtype=float)
+        )
+        return moved
+
+    def step_return(self, prices: np.ndarray, next_prices: np.ndarray) -> np.ndarray:
+        executed: np.ndarray = np.log(
+            np.asarray(next_prices, dtype=float) / np.asarray(prices, dtype=float)
+        )
+        return executed
 
     def describe(self) -> dict[str, Any]:
         return {"id": self.id, "formula": "log(P_t) - log(P_{t-1})"}
@@ -126,6 +156,14 @@ class ShiftedLogReturn:
         base = float(anchor) + self.shift
         return base * np.exp(np.cumsum(np.asarray(returns, dtype=float))) - self.shift
 
+    def advance(self, prices: np.ndarray, step_returns: np.ndarray) -> np.ndarray:
+        shifted = np.asarray(prices, dtype=float) + self.shift
+        return shifted * np.exp(np.asarray(step_returns, dtype=float)) - self.shift
+
+    def step_return(self, prices: np.ndarray, next_prices: np.ndarray) -> np.ndarray:
+        shifted = np.asarray(prices, dtype=float) + self.shift
+        return np.log((np.asarray(next_prices, dtype=float) + self.shift) / shifted)
+
     def describe(self) -> dict[str, Any]:
         return {
             "id": self.id,
@@ -154,6 +192,14 @@ class Difference:
 
     def from_returns(self, anchor: float, returns: pd.Series | np.ndarray) -> np.ndarray:
         return float(anchor) + np.cumsum(np.asarray(returns, dtype=float))
+
+    def advance(self, prices: np.ndarray, step_returns: np.ndarray) -> np.ndarray:
+        moved: np.ndarray = np.asarray(prices, dtype=float) + np.asarray(step_returns, dtype=float)
+        return moved
+
+    def step_return(self, prices: np.ndarray, next_prices: np.ndarray) -> np.ndarray:
+        moved: np.ndarray = np.asarray(next_prices, dtype=float) - np.asarray(prices, dtype=float)
+        return moved
 
     def describe(self) -> dict[str, Any]:
         return {"id": self.id, "formula": "P_t - P_{t-1}", "units": "price"}

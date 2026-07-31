@@ -186,6 +186,7 @@ dependencies = [
     { name = "pypdf" },
     { name = "pyyaml" },
     { name = "requests" },
+    { name = "scipy" },
     { name = "typer" },
     { name = "yfinance" },
 ]
@@ -221,6 +222,7 @@ requires-dist = [
     { name = "pypdf", specifier = ">=5.1" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.32" },
+    { name = "scipy", specifier = ">=1.14" },
     { name = "statsforecast", marker = "extra == 'bench'", specifier = ">=2.0" },
     { name = "torch", marker = "extra == 'bench'", specifier = ">=2.4" },
     { name = "typer", specifier = ">=0.15" },

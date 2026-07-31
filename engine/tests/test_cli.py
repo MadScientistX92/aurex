@@ -35,7 +35,7 @@ class TestPipelineCommand:
 
         assert result.exit_code == 0, result.output
         written = json.loads((target / "latest.json").read_text())
-        assert written["schema_version"] == 2
+        assert written["schema_version"] == 3
 
     def test_dry_run_output_contains_no_point_forecast_keys(self) -> None:
         """Structural guard: step 1 emits data and parity, never a predicted level."""

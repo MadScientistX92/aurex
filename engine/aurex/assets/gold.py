@@ -249,7 +249,7 @@ class Gold:
         return {sid: SourceChain(sid, loaders, store) for sid, loaders in spec.items()}
 
     def describe(self) -> dict[str, Any]:
-        return describe_asset(self) | {"ohlc_series_id": self.ohlc_series_id}
+        return describe_asset(self)
 
 
 GOLD = Gold()

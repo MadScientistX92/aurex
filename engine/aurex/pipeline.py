@@ -2,11 +2,13 @@
 
 Asset-driven: the pipeline resolves whatever the requested assets declare, applies
 each asset's lenses, and emits one block per asset per lens. It contains no
-asset-specific knowledge — adding oil means adding an asset module, not editing this
-file.
+asset-specific knowledge — adding an asset means adding an asset module, not editing
+this file.
 
-Current scope is data, lenses and residuals. There are no forecasts here yet, and
-when there are, there will still be no point estimates.
+Scope is data, lenses, residuals and — since step 2 — a simulated distribution per
+lens. There are still no point estimates: what the artifact carries is quantiles and
+barrier probabilities, and the composition that produces them lives in
+:mod:`aurex.forecast` so this module stays an orchestrator.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from aurex.data.cache import CacheStore
 from aurex.data.parity import local_premium_bps, passthrough_diagnostic
 from aurex.data.registry import chains_for
 from aurex.data.schedules import load_policy_breaks
+from aurex.forecast import AssetForecast, ForecastRequest, describe_forecast, forecast_asset
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +61,7 @@ class PipelineResult:
     artifact: dict[str, Any]
     series: dict[str, LoadedSeries]
     assets: dict[str, AssetResult]
+    forecasts: dict[str, AssetForecast] = field(default_factory=dict)
 
 
 def _price_column(frame: pd.DataFrame) -> pd.Series:
@@ -78,24 +82,70 @@ def run(
     end: date | None = None,
     cache: CacheStore | None = None,
     assets: Sequence[Asset] | None = None,
+    forecast: ForecastRequest | None = None,
 ) -> PipelineResult:
-    """Resolve data, apply lenses, and assemble the artifact."""
+    """Resolve data, apply lenses, simulate distributions, and assemble the artifact."""
     end = end or datetime.now(UTC).date()
     start = start or (end - timedelta(days=DEFAULT_LOOKBACK_DAYS))
     store = cache or CacheStore()
     active: Sequence[Asset] = assets if assets is not None else tuple(REGISTRY.values())
+    request = forecast or ForecastRequest()
 
     series, provenance, unavailable = _resolve(active, start, end, store, offline)
     results = {asset.id: _apply_lenses(asset, series) for asset in active}
+    breaks = tuple(pd.Timestamp(b.date) for b in load_policy_breaks())
+    forecasts = {
+        asset.id: _forecast(asset, results[asset.id], series, breaks, request)
+        for asset in active
+        if asset.id in results
+    }
 
     artifact = _build_artifact(
         active=active,
         results=results,
+        forecasts=forecasts,
+        request=request,
         provenance=provenance,
         unavailable=unavailable,
         offline=offline,
     )
-    return PipelineResult(artifact=artifact, series=series, assets=results)
+    return PipelineResult(artifact=artifact, series=series, assets=results, forecasts=forecasts)
+
+
+def _forecast(
+    asset: Asset,
+    result: AssetResult,
+    series: dict[str, LoadedSeries],
+    breaks: tuple[pd.Timestamp, ...],
+    request: ForecastRequest,
+) -> AssetForecast:
+    """Simulate the asset, or record why it could not be simulated."""
+    price = series.get(asset.price_series_id)
+    if price is None:
+        return AssetForecast(
+            asset_id=asset.id, lenses={}, unavailable_reason="the price series is unavailable"
+        )
+
+    ohlc = None
+    if asset.ohlc_series_id is not None:
+        loaded = series.get(asset.ohlc_series_id)
+        ohlc = None if loaded is None else loaded.frame
+
+    fx_series = {
+        lens.fx_series_id: _price_column(series[lens.fx_series_id].frame)
+        for lens in asset.currency_lenses
+        if lens.fx_series_id is not None and lens.fx_series_id in series
+    }
+
+    return forecast_asset(
+        asset,
+        base_prices=_price_column(price.frame),
+        lens_frames={code: lens.frame for code, lens in result.lenses.items()},
+        fx_series=fx_series,
+        ohlc=ohlc,
+        breaks=breaks,
+        request=request,
+    )
 
 
 def _resolve(
@@ -163,12 +213,19 @@ def _observed_reference(asset: Asset, series: dict[str, LoadedSeries]) -> pd.Ser
     return loaded.frame[asset.reference_rate_column]
 
 
-def _lens_block(asset: Asset, result: LensResult) -> dict[str, Any]:
+def _lens_block(
+    asset: Asset,
+    result: LensResult,
+    forecast: AssetForecast,
+    request: ForecastRequest,
+) -> dict[str, Any]:
     lens = next(x for x in asset.currency_lenses if x.code == result.code)
     block: dict[str, Any] = {"lens": lens.describe()}
 
     if result.frame.empty:
-        return block | {"latest": None, "local_premium": None}
+        return block | {"latest": None, "local_premium": None, "distribution": None}
+
+    block["distribution"] = describe_forecast(forecast, lens, request)
 
     row = result.frame.iloc[-1]
     block["latest"] = {
@@ -219,7 +276,7 @@ def _factor_availability(
 
     A factor that silently vanishes is worse than one that is absent, because the
     fitted loadings change without anything saying so. Optional factors are allowed
-    to drop out — oil's EIA inventories will, whenever no API key is present — but
+    to drop out — any driver behind an API key will, whenever no key is present — but
     never quietly.
     """
     out: list[dict[str, Any]] = []
@@ -243,6 +300,8 @@ def _build_artifact(
     *,
     active: Sequence[Asset],
     results: dict[str, AssetResult],
+    forecasts: dict[str, AssetForecast],
+    request: ForecastRequest,
     provenance: dict[str, Any],
     unavailable: dict[str, str],
     offline: bool,
@@ -261,7 +320,7 @@ def _build_artifact(
         asset.id: {
             "asset": asset.describe(),
             "lenses": {
-                code: _lens_block(asset, lens_result)
+                code: _lens_block(asset, lens_result, forecasts[asset.id], request)
                 for code, lens_result in results[asset.id].lenses.items()
             },
             "factors": _factor_availability(asset, provenance, unavailable),
@@ -271,7 +330,7 @@ def _build_artifact(
     }
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_at": datetime.now(UTC).isoformat(),
         "engine_version": __version__,
         "mode": "offline" if offline else "live",
