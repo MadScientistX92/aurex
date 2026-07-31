@@ -11,16 +11,25 @@ Two layers, because they catch different things:
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from datetime import date
 from pathlib import Path
+from typing import Any
 
+import pandas as pd
 import pytest
 
 from aurex.assets import GOLD, REGISTRY, get, lens_by_code
 from aurex.assets.base import Asset
 from aurex.assets.friction import FrictionProfile
-from aurex.assets.lens import CurrencyLens, NativeLens, TaxedImportLens
+from aurex.assets.lens import (
+    CurrencyLens,
+    LensContext,
+    NativeLens,
+    PriceLinkage,
+    TaxedImportLens,
+)
 from aurex.assets.synthetic import SYNTHETIC
 from aurex.assets.transforms import ReturnTransform
 from aurex.config import ENGINE_ROOT, REPO_ROOT
@@ -99,8 +108,10 @@ class TestStaticLeakGuard:
 
     #: Modules that must stay asset-agnostic.
     GUARDED_DIRS = ("vol", "dist", "factors", "scenarios", "trade", "score")
-    #: Words that would betray a hardcoded asset.
-    ASSET_LITERALS = ("gold", "xau", "ibja", "brent", "wti", "widget")
+    #: Words that would betray a hardcoded asset. The oil vocabulary is listed while
+    #: the guarded packages are still empty: a literal is far cheaper to keep out than
+    #: to extract once ``vol/`` and ``factors/`` have been written around it.
+    ASSET_LITERALS = ("gold", "xau", "ibja", "brent", "wti", "crude", "oil", "widget")
 
     def _guarded_files(self) -> list[Path]:
         files: list[Path] = []
@@ -160,6 +171,37 @@ class TestProtocolConformance:
 
         json.dumps(asset.describe())
 
+    @pytest.mark.parametrize("asset", [GOLD, SYNTHETIC], ids=lambda a: a.id)
+    def test_every_lens_answers_for_its_provenance(self, asset: Asset) -> None:
+        for lens in asset.currency_lenses:
+            assert isinstance(lens.provenance_for(date(2026, 7, 30)), dict)
+
+    def test_a_lens_that_misspells_provenance_for_is_not_a_lens(self) -> None:
+        """The reason provenance lives on the protocol rather than in a ``getattr``.
+
+        Under duck typing this class reports no citations for rates it applied, and
+        nothing fails. As a protocol member it is rejected at the boundary instead.
+        """
+
+        class MisspelledLens:
+            code = "XTS"
+            unit_label = "unit"
+            requires_fx = False
+            fx_series_id = None
+            produces_local_premium = False
+            price_linkage = "mechanical"
+
+            def apply(self, base_prices: pd.Series, ctx: LensContext) -> pd.DataFrame:
+                raise NotImplementedError
+
+            def provenence_for(self, day: date) -> dict[str, Any]:  # deliberate typo
+                return {"duty": {"source_url": "https://example.invalid"}}
+
+            def describe(self) -> dict[str, Any]:
+                return {}
+
+        assert not isinstance(MisspelledLens(), CurrencyLens)
+
     def test_registry_lookup(self) -> None:
         assert get("gold") is GOLD
         with pytest.raises(KeyError, match="unknown asset"):
@@ -181,24 +223,43 @@ class TestCurrencyLensPolicy:
         with pytest.raises(KeyError, match="no EUR lens"):
             lens_by_code(GOLD, "EUR")
 
-    def test_no_inr_lens_guard_works(self) -> None:
-        """§17.6: oil must never be converted to INR.
+    @pytest.mark.parametrize("asset", [GOLD, SYNTHETIC], ids=lambda a: a.id)
+    def test_every_lens_price_is_mechanically_linked(self, asset: Asset) -> None:
+        assert_price_linkage_is_mechanical(asset)
 
-        Indian retail fuel prices are administratively managed and heavily taxed, so
-        a rupee-converted crude price would imply a passthrough that does not exist.
-        Oil does not exist yet, so this proves the guard itself works — apply
-        :func:`assert_no_inr_lens` to the oil asset when it lands.
+    def test_the_linkage_guard_rejects_an_administered_price(self) -> None:
+        """§18 revises §17.6, which banned a currency where it meant to ban a linkage.
+
+        The superseded rule read "no INR lens for this asset" and would have rejected
+        an exchange-settled contract that converts by published formula, while still
+        admitting a policy-set retail price in any other currency. The test therefore
+        builds an administered lens rather than an INR one.
         """
-        assert_no_inr_lens(SYNTHETIC)
-        with pytest.raises(AssertionError, match="must not declare an INR lens"):
-            assert_no_inr_lens(GOLD)
+        administered: PriceLinkage = "administered"
+
+        class PolicyPricedAsset:
+            id = "administered_stand_in"
+            currency_lenses = (
+                dataclasses.replace(
+                    NativeLens(code="XTS", unit_label="unit"), price_linkage=administered
+                ),
+            )
+
+        with pytest.raises(AssertionError, match="administered"):
+            assert_price_linkage_is_mechanical(PolicyPricedAsset())  # type: ignore[arg-type]
 
 
-def assert_no_inr_lens(asset: Asset) -> None:
-    """Assert an asset declares no INR lens. See §17.6."""
-    codes = {lens.code for lens in asset.currency_lenses}
-    assert "INR" not in codes, (
-        f"{asset.id} must not declare an INR lens: Indian retail prices for this "
-        "asset are administratively managed, so conversion would imply a passthrough "
-        "that does not exist"
-    )
+def assert_price_linkage_is_mechanical(asset: Asset) -> None:
+    """Every lens must compute its price from the quote, never report a policy-set one.
+
+    §18: a lens is valid where the buyer's-currency price is a mechanical function of
+    the quote — FX, a unit conversion, a statutory rate, a published settlement
+    formula — and invalid where it is administered, because presenting it as a view
+    on the quote asserts a passthrough nobody has measured.
+    """
+    for lens in asset.currency_lenses:
+        assert lens.price_linkage == "mechanical", (
+            f"{asset.id}/{lens.code} declares an administered price: it is set by "
+            "policy rather than computed from the quote, so presenting it as a lens "
+            "would imply a passthrough that does not exist"
+        )

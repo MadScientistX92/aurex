@@ -29,10 +29,23 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 import numpy as np
 import pandas as pd
+
+#: How a lens-currency price relates to the asset's quoted price.
+#:
+#: ``mechanical``  — arithmetic on the quote: FX, a unit conversion, a published
+#: settlement formula, a statutory rate. The lens can compute it.
+#:
+#: ``administered`` — set by policy, and therefore not a function of the quote at
+#: all. §18's example is Indian retail fuel: excise and state VAT are adjusted
+#: discretionarily and have historically absorbed crude moves rather than passing
+#: them through, so a lens presenting it would imply a passthrough that does not
+#: exist. No lens may declare it — the value exists so the rule has something to
+#: refuse, rather than living only in a comment.
+PriceLinkage = Literal["mechanical", "administered"]
 
 #: Columns every lens produces, so downstream code never branches on lens identity.
 LENS_COLUMNS = (
@@ -86,13 +99,40 @@ class CurrencyLens(Protocol):
     def produces_local_premium(self) -> bool:
         """Whether an observed local reference rate exists to difference against.
 
-        False for USD gold — §15 notes the local-premium signal has no USD analogue.
+        False for a native lens — §15 notes the local-premium signal has no analogue
+        where there is no separate local market to observe.
+        """
+        ...
+
+    @property
+    def price_linkage(self) -> PriceLinkage:
+        """Whether this lens's price is computable from the quote, or set by policy.
+
+        §18 revises §17.6, which had banned one currency outright for one asset. The
+        currency was never the problem: an exchange-settled contract quoted in that
+        currency converts by a published formula and is a legitimate lens, while a
+        policy-set retail price in the same currency is not. What the guard has to
+        test is the linkage, not the currency code.
         """
         ...
 
     def apply(self, base_prices: pd.Series, ctx: LensContext) -> pd.DataFrame:
         """Return a frame with :data:`LENS_COLUMNS`."""
         ...
+
+    def provenance_for(self, day: date) -> dict[str, Any]:
+        """Citations for the rates this lens applied on ``day``; ``{}`` if it applies none.
+
+        A protocol member rather than something the caller duck-types for, because the
+        failure mode of the latter is silent: one misspelled method name and the
+        artifact reports no provenance for rates it did apply, which is precisely the
+        claim Aurex must never make by accident. Structural implementers must define
+        it — ``TestProtocolConformance`` checks every lens with ``isinstance``, and
+        mypy rejects the assignment — so the default below only serves explicit
+        subclasses.
+        """
+        del day
+        return {}
 
     def describe(self) -> dict[str, Any]: ...
 
@@ -116,6 +156,8 @@ class NativeLens:
     requires_fx: bool = False
     fx_series_id: str | None = None
     produces_local_premium: bool = False
+    #: Identity on the quote itself.
+    price_linkage: PriceLinkage = "mechanical"
 
     def apply(self, base_prices: pd.Series, ctx: LensContext) -> pd.DataFrame:
         del ctx
@@ -135,6 +177,11 @@ class NativeLens:
             }
         )
 
+    def provenance_for(self, day: date) -> dict[str, Any]:
+        """Empty: a native lens applies no duty and no consumption tax."""
+        del day
+        return {}
+
     def describe(self) -> dict[str, Any]:
         return {
             "code": self.code,
@@ -142,6 +189,7 @@ class NativeLens:
             "units_per_base": self.units_per_base,
             "requires_fx": self.requires_fx,
             "produces_local_premium": self.produces_local_premium,
+            "price_linkage": self.price_linkage,
         }
 
 
@@ -179,6 +227,8 @@ class TaxedImportLens:
     provenance_resolver: Callable[[date], dict[str, Any]] | None = None
     requires_fx: bool = True
     produces_local_premium: bool = True
+    #: FX times a unit conversion times statutory rates — every term is published.
+    price_linkage: PriceLinkage = "mechanical"
     notes: tuple[str, ...] = field(default_factory=tuple)
 
     def provenance_for(self, day: date) -> dict[str, Any]:
@@ -235,6 +285,7 @@ class TaxedImportLens:
             "requires_fx": self.requires_fx,
             "fx_series_id": self.fx_series_id,
             "produces_local_premium": self.produces_local_premium,
+            "price_linkage": self.price_linkage,
             "high_confidence_from": self.high_confidence_from.isoformat(),
             "notes": list(self.notes),
         }

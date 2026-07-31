@@ -112,6 +112,17 @@ class TestLensBlocks:
         assert latest["consumption_tax"] == 0.0
         assert latest["unit"] == "troy_ounce"
 
+    def test_every_lens_block_carries_a_provenance_key(self, seeded_cache: CacheStore) -> None:
+        """Empty for an untaxed lens, but never absent.
+
+        The key is emitted from a protocol method, so a lens cannot omit provenance
+        by failing to advertise it — an absent key and no applicable rates would
+        otherwise be indistinguishable downstream.
+        """
+        lenses = gold_block(seeded_cache)["lenses"]
+        assert all("rate_provenance" in block["latest"] for block in lenses.values())
+        assert lenses["USD"]["latest"]["rate_provenance"] == {}
+
     def test_usd_lens_reports_no_local_premium(self, seeded_cache: CacheStore) -> None:
         """§15: the local-premium signal has no USD analogue."""
         assert gold_block(seeded_cache)["lenses"]["USD"]["local_premium"] is None

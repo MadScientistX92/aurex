@@ -98,6 +98,14 @@ fitting a copula over exactly that dependence is the point of the distribution l
 INR distribution is usually wider; the interface must still be able to render the
 case where it is not.
 
+**A lens must be arithmetic, not policy.** A currency view is valid where the
+buyer's-currency price is a *mechanical* function of the quote — an exchange rate, a
+unit conversion, a statutory rate, a published settlement formula — and invalid where
+that price is administered. An exchange-settled contract quoted in rupees converts by
+formula and is a legitimate lens; a policy-set retail price is not, because
+presenting it as a view on the world price asserts a passthrough nobody has measured.
+Lenses declare which they are, so the rule is enforced rather than remembered.
+
 A note, not a calculation: US long-term gains on physical gold are taxed as a
 collectible at a higher maximum rate than equities. Aurex links the IRS guidance and
 computes nothing.
@@ -226,7 +234,7 @@ supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
 cd engine
 uv sync
 
-uv run pytest                                    # 221 tests, no network
+uv run pytest                                    # 227 tests, no network
 uv run aurex schedule                            # duty history with provenance
 uv run aurex duty 2026-07-29                     # rate in force, and its source
 uv run aurex pipeline                            # live run, writes public-data/latest.json

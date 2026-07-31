@@ -184,9 +184,9 @@ def _lens_block(asset: Asset, result: LensResult) -> dict[str, Any]:
         "currency": lens.code,
     }
 
-    provenance_for = getattr(lens, "provenance_for", None)
-    if provenance_for is not None:
-        block["latest"]["rate_provenance"] = provenance_for(result.frame.index[-1].date())
+    # Always present, empty for a lens that applies no rates: a missing key and an
+    # untaxed lens must not be the same thing on the wire.
+    block["latest"]["rate_provenance"] = lens.provenance_for(result.frame.index[-1].date())
 
     if not lens.produces_local_premium:
         block["local_premium"] = None
