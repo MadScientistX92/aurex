@@ -148,6 +148,23 @@ def _forecast(
     )
 
 
+def resolve_series(
+    assets: Sequence[Asset],
+    *,
+    start: date,
+    end: date,
+    cache: CacheStore | None = None,
+    offline: bool = False,
+) -> tuple[dict[str, LoadedSeries], dict[str, str]]:
+    """Just the data an asset needs, with the reasons for anything missing.
+
+    The backtester needs history without wanting a nightly artifact built around it,
+    and duplicating chain resolution would give the two paths different provenance.
+    """
+    series, _, unavailable = _resolve(assets, start, end, cache or CacheStore(), offline)
+    return series, unavailable
+
+
 def _resolve(
     assets: Iterable[Asset],
     start: date,
@@ -361,9 +378,28 @@ def _build_artifact(
 
 
 def write_artifact(artifact: dict[str, Any], directory: Path | None = None) -> Path:
-    """Write ``latest.json``. The dated forecast log arrives with step 3."""
+    """Write ``latest.json`` — the current state, overwritten every run."""
     target_dir = directory or PUBLIC_DATA_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
     path = target_dir / "latest.json"
+    path.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
+    return path
+
+
+def write_forecast_log(artifact: dict[str, Any], directory: Path | None = None) -> Path:
+    """Write the dated copy that will be scored once its horizon elapses.
+
+    ``latest.json`` is state and gets overwritten; this is the record. §0's second rule
+    — every probability gets scored — needs a forecast that still exists in the form it
+    was published in, and the only thing making that credible is that the file is
+    committed and the history cannot be quietly rewritten.
+
+    Re-running on the same day replaces that day's file, which is deliberate: a rerun
+    is a correction to an unelapsed forecast, and git carries both versions.
+    """
+    target_dir = (directory or PUBLIC_DATA_DIR) / "forecasts"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    stamp = str(artifact["generated_at"])[:10]
+    path = target_dir / f"{stamp}.json"
     path.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
     return path

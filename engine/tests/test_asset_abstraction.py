@@ -110,7 +110,7 @@ class TestStaticLeakGuard:
     GUARDED_DIRS = ("vol", "dist", "factors", "scenarios", "trade", "score")
     #: Modules that compose assets with those packages. They necessarily know what a
     #: lens and an asset *are*, and must still never know which one they are holding.
-    GUARDED_MODULES = ("forecast.py", "pipeline.py")
+    GUARDED_MODULES = ("forecast.py", "pipeline.py", "backtest.py")
     #: Words that would betray a hardcoded asset. The oil vocabulary is listed while
     #: the guarded packages are still empty: a literal is far cheaper to keep out than
     #: to extract once ``vol/`` and ``factors/`` have been written around it.

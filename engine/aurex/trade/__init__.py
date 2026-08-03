@@ -1,4 +1,4 @@
-"""Friction and P&L. Populated in step 3.
+"""Friction and P&L. Populated in step 3b.
 
 Consumes the friction profiles an asset declares — spread-and-tax shapes and
 carry/roll shapes alike — and produces the breakeven hurdle, P(profit), expected

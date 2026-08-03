@@ -9,7 +9,7 @@ import typer
 
 from aurex import __version__
 from aurex.data.schedules import duty_on, gst_on, load_duty_schedule
-from aurex.pipeline import run, write_artifact
+from aurex.pipeline import run, write_artifact, write_forecast_log
 
 app = typer.Typer(
     add_completion=False,
@@ -45,7 +45,9 @@ def pipeline(
         return
 
     path = write_artifact(result.artifact)
+    logged = write_forecast_log(result.artifact)
     typer.echo(f"wrote {path}")
+    typer.echo(f"logged {logged}")
 
 
 @app.command()
@@ -77,6 +79,95 @@ def schedule() -> None:
         typer.echo(
             f"{entry.effective_from}  {entry.total:>7.2%}  "
             f"[{entry.source_confidence:<9}]  {entry.source_url}"
+        )
+
+
+@app.command()
+def score(
+    asset_id: str = typer.Option("gold", "--asset", help="Which registered asset to grade."),
+    since: str = typer.Option("2015-01-01", "--from", help="First forecast date, YYYY-MM-DD."),
+    step: int = typer.Option(5, "--step", help="Sessions between forecasts."),
+    horizons: str = typer.Option("5,21,63", "--horizons", help="Comma-separated session counts."),
+    paths: int = typer.Option(4_000, "--paths", help="Simulated paths per forecast."),
+    model: str = typer.Option("", "--model", help="Override the asset's declared model."),
+    offline: bool = typer.Option(False, "--offline", help="Never touch the network."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print without writing."),
+) -> None:
+    """Walk the engine forward over history and grade what it would have said."""
+    import json as _json
+    from datetime import UTC, date, datetime, timedelta
+
+    import pandas as pd
+
+    from aurex.assets import get
+    from aurex.backtest import backtest_asset, describe_backtest
+    from aurex.config import PUBLIC_DATA_DIR
+    from aurex.data.schedules import load_policy_breaks
+    from aurex.pipeline import DEFAULT_LOOKBACK_DAYS, _price_column, resolve_series
+    from aurex.score import WalkForwardRequest
+
+    asset = get(asset_id)
+    start_date = date.fromisoformat(since)
+    end = datetime.now(UTC).date()
+
+    # History must begin well before the first forecast, or the earliest fits are
+    # short and the run silently grades a different model than the recent ones.
+    series, unavailable = resolve_series(
+        [asset],
+        start=min(start_date - timedelta(days=DEFAULT_LOOKBACK_DAYS // 2), start_date),
+        end=end,
+        offline=offline,
+    )
+    price = series.get(asset.price_series_id)
+    if price is None:
+        typer.echo(
+            f"cannot score {asset.id}: {asset.price_series_id} is unavailable "
+            f"({unavailable.get(asset.price_series_id, 'no reason recorded')})",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    ohlc = None
+    if asset.ohlc_series_id is not None and asset.ohlc_series_id in series:
+        ohlc = series[asset.ohlc_series_id].frame
+
+    request = WalkForwardRequest(
+        horizons=tuple(int(h) for h in horizons.split(",") if h.strip()),
+        step=step,
+        start=pd.Timestamp(start_date),
+    )
+    result = backtest_asset(
+        asset,
+        prices=_price_column(price.frame),
+        ohlc=ohlc,
+        breaks=tuple(pd.Timestamp(b.date) for b in load_policy_breaks()),
+        request=request,
+        model_id=model or None,
+        n_paths=paths,
+    )
+
+    block = describe_backtest(asset, result) | {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "engine_version": __version__,
+        "source": price.meta.to_dict(),
+    }
+
+    if dry_run:
+        typer.echo(_json.dumps(block, indent=2, sort_keys=True))
+        return
+
+    PUBLIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out = PUBLIC_DATA_DIR / f"calibration-{asset.id}.json"
+    out.write_text(_json.dumps(block, indent=2, sort_keys=True) + "\n")
+    typer.echo(f"wrote {out}")
+
+    for horizon in result.calibration().horizons:
+        uniformity = horizon.pit_uniformity
+        typer.echo(
+            f"  {horizon.horizon:>3} sessions: "
+            f"n={horizon.n:<5} independent={horizon.n_independent:<5} "
+            f"CRPS skill {horizon.skill:+.4f}  "
+            f"PIT KS p={'n/a' if uniformity is None else f'{uniformity.p_value:.4f}'}"
         )
 
 
