@@ -161,13 +161,26 @@ def score(
     out.write_text(_json.dumps(block, indent=2, sort_keys=True) + "\n")
     typer.echo(f"wrote {out}")
 
-    for horizon in result.calibration().horizons:
+    def _p(value: float | None) -> str:
+        return "n/a" if value is None else f"{value:.3f}"
+
+    calibration = result.calibration()
+    for horizon in calibration.horizons:
         uniformity = horizon.pit_uniformity
+        test = horizon.baseline_test
         typer.echo(
             f"  {horizon.horizon:>3} sessions: "
             f"n={horizon.n:<5} independent={horizon.n_independent:<5} "
             f"CRPS skill {horizon.skill:+.4f}  "
+            f"DM p={_p(test.overlapping.p_value)}/{_p(test.thinned.p_value)}  "
             f"PIT KS p={'n/a' if uniformity is None else f'{uniformity.p_value:.4f}'}"
+        )
+
+    decay = calibration.skill_decay
+    if decay is not None:
+        typer.echo(
+            f"  skill vs log-horizon: slope {decay.slope:+.5f} "
+            f"(bootstrap p={decay.p_value:.3f}, R²={decay.r_squared:.2f})"
         )
 
 

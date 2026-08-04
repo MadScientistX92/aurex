@@ -35,7 +35,13 @@ from aurex.assets.base import Asset
 from aurex.assets.lens import CurrencyLens
 from aurex.assets.transforms import LogReturn
 from aurex.dist.copula import DependenceMode, TCopula, fit_t_copula, joint_shocks
-from aurex.dist.fhs import SimulationSpec, bootstrap_shocks, simulate
+from aurex.dist.fhs import (
+    DEMEAN_BY_DEFAULT,
+    SimulationSpec,
+    bootstrap_shocks,
+    residual_pool,
+    simulate,
+)
 from aurex.dist.passage import first_passage
 from aurex.dist.paths import PathEnsemble
 from aurex.vol import model_for
@@ -61,6 +67,10 @@ class ForecastRequest:
     #: Adverse moves to report touch-versus-terminal against, as fractions.
     reference_moves: tuple[float, ...] = (0.05, 0.10, 0.20)
     dependence: DependenceMode = "t_copula"
+    #: Resample the residual pool with its mean removed. §0's position on drift, and
+    #: the default; see :mod:`aurex.dist.fhs`. Set false to simulate the drift the
+    #: sample actually carried, which is a declared choice and lands in the artifact.
+    demean_residuals: bool = DEMEAN_BY_DEFAULT
 
     def spec_for(self, horizon: int) -> SimulationSpec:
         return SimulationSpec(
@@ -70,6 +80,7 @@ class ForecastRequest:
             # Each horizon gets its own stream, so adding a horizon cannot change
             # the numbers published for the others.
             seed=self.seed + horizon,
+            demean_residuals=self.demean_residuals,
         )
 
     def describe(self) -> dict[str, Any]:
@@ -80,6 +91,7 @@ class ForecastRequest:
             "seed": self.seed,
             "reference_moves": list(self.reference_moves),
             "dependence": self.dependence,
+            "demean_residuals": self.demean_residuals,
         }
 
 
@@ -256,15 +268,29 @@ def _simulate_lens(
     # do. The native case falls out of the same expression with ``fx_rate == 1``.
     constant = float(latest["price"]) / (base_anchor * fx_rate)
 
+    # One pool per series, built once and reused across horizons: the drift policy is a
+    # property of the run, not of how far ahead it happens to be looking.
+    price_pool = residual_pool(price_fit.standardized_residuals, demean=request.demean_residuals)
+    fx_pool = (
+        None
+        if fx_fit is None
+        else residual_pool(fx_fit.standardized_residuals, demean=request.demean_residuals)
+    )
+
     ensembles: dict[int, PathEnsemble] = {}
     for horizon in request.horizons:
         spec = request.spec_for(horizon)
         rng = np.random.default_rng(spec.seed)
 
-        if lens.requires_fx and fx_fit is not None and fx_anchor is not None:
+        if (
+            lens.requires_fx
+            and fx_fit is not None
+            and fx_pool is not None
+            and fx_anchor is not None
+        ):
             price_shocks, fx_shocks = joint_shocks(
-                price_fit.standardized_residuals,
-                fx_fit.standardized_residuals,
+                price_pool,
+                fx_pool,
                 copula=copula,
                 mode=request.dependence,
                 n_paths=spec.n_paths,
@@ -279,6 +305,7 @@ def _simulate_lens(
                 spec=spec,
                 session_limit=asset.vol_defaults.session_limit,
                 shocks=price_shocks,
+                pool=price_pool,
             )
             rate = simulate(
                 fx_fit,
@@ -286,12 +313,13 @@ def _simulate_lens(
                 anchor=fx_anchor,
                 spec=spec,
                 shocks=fx_shocks,
+                pool=fx_pool,
             )
             ensembles[horizon] = base.rescaled(rate, factor=constant)
             continue
 
         shocks = bootstrap_shocks(
-            price_fit.standardized_residuals.to_numpy(),
+            price_pool,
             n_paths=spec.n_paths,
             horizon=spec.horizon_days,
             block_length=spec.block_length,
@@ -304,6 +332,7 @@ def _simulate_lens(
             spec=spec,
             session_limit=asset.vol_defaults.session_limit,
             shocks=shocks,
+            pool=price_pool,
         )
         ensembles[horizon] = base.scaled(constant)
 

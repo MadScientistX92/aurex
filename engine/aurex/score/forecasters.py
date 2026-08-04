@@ -17,6 +17,14 @@ average out. Twenty years of any appreciating series carries a large positive me
 a null that quietly inherited it would be a directional forecast — one that any model
 beats for the wrong reason in a flat sample, and that beats every model for a worse one
 in a rising sample.
+
+**And so is the model, now.** Both forecasters declare their drift through the same
+:class:`~aurex.dist.fhs.ResidualPool`, and both default to demeaned. That is not tidying:
+the model used to resample an undemeaned pool, which made it a drift-continuation
+forecast scored against a null that had been denied one, and the difference showed up as
+CRPS skill that belonged to neither. Two forecasters that differ in their drift policy
+are not comparable, so the policy is the same object on both sides and the comparison is
+back to conditional variance and nothing else.
 """
 
 from __future__ import annotations
@@ -28,7 +36,14 @@ import numpy as np
 import pandas as pd
 
 from aurex.assets.transforms import ReturnTransform
-from aurex.dist.fhs import SimulationSpec, bootstrap_shocks, paths_from_returns, simulate
+from aurex.dist.fhs import (
+    DEMEAN_BY_DEFAULT,
+    SimulationSpec,
+    bootstrap_shocks,
+    paths_from_returns,
+    residual_pool,
+    simulate,
+)
 from aurex.dist.paths import PathEnsemble
 from aurex.vol.base import VolatilityModel, require_observations
 from aurex.vol.limits import SessionLimit
@@ -71,10 +86,25 @@ class ModelForecaster:
     #: call. Range-based models need it and return-only models ignore it; supplying it
     #: here rather than recomputing per date keeps the OHLC estimator out of the loop.
     realised_variance: pd.Series | None = None
+    #: Resample the standardised residuals with their mean removed. Default, and the
+    #: same default the null carries, so the two are comparable by construction.
+    demean_residuals: bool = DEMEAN_BY_DEFAULT
 
     @property
     def label(self) -> str:
         return self.model.id
+
+    @property
+    def like_for_like_null(self) -> str:
+        """Which null this forecaster's drift policy makes the fair comparison.
+
+        A demeaned model belongs against the demeaned walk, which is §0's null and the
+        one every run is required to carry. A model resampling a pool that still holds
+        the sample's drift has to be read against the drift-matched walk instead, or the
+        skill score is measuring the drift. Derived rather than configured, so the two
+        cannot be set inconsistently.
+        """
+        return "random_walk" if self.demean_residuals else "random_walk_drift_matched"
 
     def forecast(
         self, history: pd.Series, *, horizons: tuple[int, ...], seed: int
@@ -83,6 +113,7 @@ class ModelForecaster:
         as_of = history.index[-1]
         realised = None if self.realised_variance is None else self.realised_variance.loc[:as_of]
         fit = self.model.fit(returns, realised_variance=realised, exclude=self.breaks)
+        pool = residual_pool(fit.standardized_residuals, demean=self.demean_residuals)
 
         anchor = float(history.iloc[-1])
         return {
@@ -95,8 +126,10 @@ class ModelForecaster:
                     n_paths=self.n_paths,
                     block_length=self.block_length,
                     seed=seed + horizon,
+                    demean_residuals=self.demean_residuals,
                 ),
                 session_limit=self.session_limit,
+                pool=pool,
             )
             for horizon in horizons
         }
@@ -109,6 +142,17 @@ class ModelForecaster:
             "n_paths": self.n_paths,
             "block_length": self.block_length,
             "breaks_excluded": len(self.breaks),
+            "residual_pool": {
+                "demeaned": self.demean_residuals,
+                "drift": (
+                    "none: the resampled pool is centred, so the simulated median sits "
+                    "at spot and the distribution makes no directional claim"
+                    if self.demean_residuals
+                    else "the sample's own, carried by the resampled residuals rather "
+                    "than fitted as a mean"
+                ),
+            },
+            "like_for_like_null": self.like_for_like_null,
         }
 
 
@@ -147,10 +191,14 @@ class RandomWalkForecaster:
     def forecast(
         self, history: pd.Series, *, horizons: tuple[int, ...], seed: int
     ) -> dict[int, PathEnsemble]:
-        returns = self.transform.to_returns(history).dropna().to_numpy(dtype=float)
+        returns = self.transform.to_returns(history).dropna()
         require_observations(int(returns.size), self.min_observations, self.label)
 
-        increments = returns - float(np.mean(returns)) if self.demean else returns
+        # The same pool type the model uses. The null's increments are raw returns
+        # rather than standardised residuals, but "does this pool carry a drift" is the
+        # same question, and asking it through one object is what keeps the two sides
+        # of the comparison honest.
+        pool = residual_pool(returns, demean=self.demean)
         anchor = float(history.iloc[-1])
 
         ensembles: dict[int, PathEnsemble] = {}
@@ -160,9 +208,10 @@ class RandomWalkForecaster:
                 n_paths=self.n_paths,
                 block_length=self.block_length,
                 seed=seed + horizon,
+                demean_residuals=self.demean,
             )
             drawn = bootstrap_shocks(
-                increments,
+                pool,
                 n_paths=spec.n_paths,
                 horizon=spec.horizon_days,
                 block_length=spec.block_length,
@@ -178,13 +227,9 @@ class RandomWalkForecaster:
                 | {
                     "simulation": spec.describe(),
                     "vol_model": {"model": self.label, "conditional_variance": False},
-                    "residual_sample_size": int(increments.size),
+                    "residual_sample_size": int(pool.residuals.size),
+                    "residual_pool": pool.describe(),
                     "transform": self.transform.describe(),
-                    "drift": (
-                        "removed from the resampled increments"
-                        if self.demean
-                        else "left in the resampled increments"
-                    ),
                 },
             )
         return ensembles

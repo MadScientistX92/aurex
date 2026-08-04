@@ -14,7 +14,16 @@ this is where that stops being a promise.
 **Overlap is recorded, not assumed away.** Forecasting every ``step`` sessions over a
 longer horizon produces records that share most of their path. Means and histograms are
 computed over all of them; every p-value is computed over the thinned, non-overlapping
-subsample, and both counts are reported. See :mod:`aurex.score.sampling`.
+subsample, and both counts are reported. See :mod:`aurex.score.sampling`. The one
+exception is the Diebold-Mariano test, which handles the dependence in its variance
+estimator instead of thinning it away, and is run on both series so the two can be
+compared — see :mod:`aurex.score.significance`.
+
+**No skill score leaves here without a test beside it.** A skill score is a difference
+of two sample means, and a difference of two sample means is not a result. Every null a
+run carries is reported as a :class:`SkillTest`, which cannot be constructed without the
+Diebold-Mariano statistic, its p-value and its observation count, so "the model wins by
+4.6%" and "the model is worth nothing" are held to the same standard of evidence.
 """
 
 from __future__ import annotations
@@ -48,6 +57,13 @@ from aurex.score.events import BinaryEvent, RealisedPath, TerminalAbove, default
 from aurex.score.forecasters import AsOfForecaster
 from aurex.score.reliability import DEFAULT_BINS, ReliabilityCurve, reliability_curve
 from aurex.score.sampling import Sampling
+from aurex.score.significance import (
+    DieboldMariano,
+    HorizonLosses,
+    SkillDecay,
+    diebold_mariano,
+    skill_decay,
+)
 from aurex.vol.base import InsufficientDataError
 
 #: Seed spacing. Each as-of date gets a thousand-wide band so a forecaster can add its
@@ -160,6 +176,58 @@ class LevelCoverage:
 
 
 @dataclass(frozen=True, slots=True)
+class SkillTest:
+    """A skill score against one null, with the test that says whether it means anything.
+
+    Both Diebold-Mariano runs are required fields rather than optional extras, so a
+    skill score cannot be constructed here without them: ``overlapping`` uses the HAC
+    variance on every record, ``thinned`` repeats it on the non-overlapping subsample.
+    They answer the same question with different tolerance for the sampling scheme, and
+    publishing both is what the existing p-value discipline asks for — the thinned run
+    is the one that assumes nothing about the dependence, and the overlapping run is the
+    one with the observations.
+    """
+
+    null: str
+    crps_model: float
+    crps_null: float
+    overlapping: DieboldMariano
+    thinned: DieboldMariano
+
+    @property
+    def skill(self) -> float:
+        return crps_skill(self.crps_model, self.crps_null)
+
+    @property
+    def significant(self) -> bool:
+        """Both runs reject at 5%, and agree on the sign. Anything less is not a result."""
+        first, second = self.overlapping, self.thinned
+        if first.p_value is None or second.p_value is None:
+            return False
+        return (
+            first.p_value < 0.05
+            and second.p_value < 0.05
+            and first.favours_model == second.favours_model
+        )
+
+    def describe(self) -> dict[str, Any]:
+        return {
+            "crps": round(self.crps_null, 4),
+            "skill_score": round(self.skill, 4),
+            "significance": {
+                "overlapping_windows_hac": self.overlapping.describe(),
+                "non_overlapping_subsample": self.thinned.describe(),
+                "distinguishable_from_zero": self.significant,
+                "reading": (
+                    "The skill score is a difference of two sample means and the test "
+                    "is what decides whether that difference is a finding. Both runs "
+                    "must reject and agree on the sign before this reads as one."
+                ),
+            },
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class HorizonCalibration:
     """Everything scored at one horizon."""
 
@@ -177,6 +245,9 @@ class HorizonCalibration:
     crps_model: float
     crps_baseline: float
     crps_alternatives: dict[str, float]
+    #: One per null, the required baseline first. Never empty: a run always carries §0's
+    #: null, so there is always at least one tested skill score here.
+    skill_tests: tuple[SkillTest, ...]
     coverage: tuple[LevelCoverage, ...]
     events: tuple[tuple[dict[str, Any], ReliabilityCurve], ...]
     #: What the model said "ends higher" was worth, against what happened. Kept beside
@@ -188,6 +259,11 @@ class HorizonCalibration:
     @property
     def skill(self) -> float:
         return crps_skill(self.crps_model, self.crps_baseline)
+
+    @property
+    def baseline_test(self) -> SkillTest:
+        """The test of §0's own null, which every run is required to carry."""
+        return self.skill_tests[0]
 
     def describe(self) -> dict[str, Any]:
         return {
@@ -227,19 +303,16 @@ class HorizonCalibration:
                 "model": round(self.crps_model, 4),
                 "random_walk": round(self.crps_baseline, 4),
                 "skill_score": round(self.skill, 4),
-                "alternative_nulls": {
-                    label: {
-                        "crps": round(value, 4),
-                        "skill_score": round(crps_skill(self.crps_model, value), 4),
-                    }
-                    for label, value in sorted(self.crps_alternatives.items())
-                },
+                "significance": self.baseline_test.describe()["significance"],
+                "alternative_nulls": {test.null: test.describe() for test in self.skill_tests[1:]},
                 "units": "price",
                 "estimator": "fair (ensemble-size bias removed)",
                 "reading": (
                     "Positive skill means the model beat a driftless random walk with "
                     "empirical increments. Zero means it tied. Negative means it lost, "
-                    "and a negative number here is published rather than withheld."
+                    "and a negative number here is published rather than withheld. The "
+                    "sign is only half of it: read the Diebold-Mariano p-value beside "
+                    "it before treating any of these as a finding."
                 ),
             },
             "coverage": [entry.describe() for entry in self.coverage],
@@ -258,6 +331,10 @@ class CalibrationReport:
     skipped: tuple[Skipped, ...]
     observations: int
     drift_displacement: DriftDisplacement | None
+    #: Whether skill falls with the horizon, which is what mean-reverting conditional
+    #: variance predicts. A cross-horizon question, so it lives here rather than on any
+    #: one horizon.
+    skill_decay: SkillDecay | None
 
     def describe(self) -> dict[str, Any]:
         return {
@@ -268,6 +345,7 @@ class CalibrationReport:
             "drift_displacement": (
                 None if self.drift_displacement is None else self.drift_displacement.describe()
             ),
+            "skill_decay": (None if self.skill_decay is None else self.skill_decay.describe()),
             "horizons": [entry.describe() for entry in self.horizons],
             "skipped": [
                 {
@@ -327,7 +405,41 @@ class WalkForwardResult:
                     for entry in horizons
                 )
             ),
+            skill_decay=self._skill_decay(),
         )
+
+    def _skill_decay(self) -> SkillDecay | None:
+        """Skill against §0's null, regressed on log horizon and block-bootstrapped.
+
+        The horizons are read at their *shared* as-of dates. A longer horizon runs off
+        the end of the sample sooner, so the raw record counts differ, and resampling
+        series of different lengths independently would break the very dependence the
+        bootstrap exists to preserve.
+        """
+        by_horizon = {
+            horizon: {record.as_of: record for record in self.for_horizon(horizon)}
+            for horizon in self.request.horizons
+        }
+        populated = {horizon: rows for horizon, rows in by_horizon.items() if rows}
+        if len(populated) < 3:
+            return None
+
+        shared = sorted(set.intersection(*(set(rows) for rows in populated.values())))
+        if not shared:
+            return None
+
+        points = tuple(
+            HorizonLosses(
+                horizon=horizon,
+                model=np.array([rows[date].crps for date in shared], dtype=float),
+                baseline=np.array([rows[date].crps_baseline for date in shared], dtype=float),
+            )
+            for horizon, rows in sorted(populated.items())
+        )
+        # Blocks as long as the widest overlap, so a resampled block carries the
+        # dependence between neighbouring records instead of shuffling it out.
+        block = max(self.request.sampling_for(horizon).stride for horizon in populated)
+        return skill_decay(points, block=block, seed=self.request.seed)
 
 
 def walk_forward(
@@ -505,6 +617,25 @@ def _calibrate(
             )
         )
 
+    model_losses = np.array([record.crps for record in records], dtype=float)
+    skill_tests = [
+        _skill_test(
+            "random_walk",
+            model_losses,
+            np.array([record.crps_baseline for record in records], dtype=float),
+            sampling=sampling,
+        )
+    ]
+    skill_tests.extend(
+        _skill_test(
+            label,
+            model_losses,
+            np.array([record.crps_alternatives[label] for record in records], dtype=float),
+            sampling=sampling,
+        )
+        for label in sorted(records[0].crps_alternatives)
+    )
+
     scored_events: list[tuple[dict[str, Any], ReliabilityCurve]] = []
     for event in events:
         probabilities = np.array([record.events[event.id][0] for record in records], dtype=float)
@@ -544,6 +675,23 @@ def _calibrate(
             label: float(np.mean([record.crps_alternatives[label] for record in records]))
             for label in records[0].crps_alternatives
         },
+        skill_tests=tuple(skill_tests),
         coverage=tuple(coverage),
         events=tuple(scored_events),
+    )
+
+
+def _skill_test(
+    label: str, model: np.ndarray, null: np.ndarray, *, sampling: Sampling
+) -> SkillTest:
+    """One null, tested twice: HAC on every record, then again on the thinned subsample."""
+    independent = sampling.independent()
+    return SkillTest(
+        null=label,
+        crps_model=float(np.mean(model)),
+        crps_null=float(np.mean(null)),
+        overlapping=diebold_mariano(model, null, sampling=sampling, null=label),
+        thinned=diebold_mariano(
+            sampling.thin(model), sampling.thin(null), sampling=independent, null=label
+        ),
     )

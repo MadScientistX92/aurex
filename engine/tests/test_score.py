@@ -31,6 +31,7 @@ from aurex.assets.transforms import LogReturn
 from aurex.backtest import backtest_asset, describe_backtest
 from aurex.score import (
     HorizonDisplacement,
+    HorizonLosses,
     ModelForecaster,
     RandomWalkForecaster,
     RealisedPath,
@@ -46,10 +47,12 @@ from aurex.score import (
     crps,
     crps_skill,
     default_events,
+    diebold_mariano,
     displacement,
     kupiec,
     pit_value,
     reliability_curve,
+    skill_decay,
     uniformity,
     walk_forward,
 )
@@ -565,19 +568,83 @@ class TestDriftDisplacement:
         assert displacement(self._points(0.04, (5, 21))) is None
 
 
-class TestTheModelIsNotDriftless:
-    """FHS resamples empirical residuals, whose mean is not zero in a sample that rose."""
+class TestBothSidesShareOneDriftPolicy:
+    """The §0 settlement: the model and its null are demeaned or neither is.
 
-    def test_a_rising_history_leaves_drift_in_the_residual_pool(self) -> None:
-        """The conditional mean is fitted at zero; the resampled pool carries the drift."""
-        prices = price_series(periods=1_200)
-        drift = np.exp(0.0008 * np.arange(len(prices)))
-        rising = pd.Series(prices.to_numpy() * drift, index=prices.index)
+    FHS resamples empirical residuals, and in a sample that rose those have a positive
+    mean — so the model used to carry a drift while the null had been stripped of one,
+    and the gap between them was scored as skill. The residuals still carry it; the
+    pool the simulation draws from does not.
+    """
 
-        fit = model_for("gjr_garch").fit(LogReturn().to_returns(rising))
+    def _rising(self, periods: int = 1_200, rate: float = 0.0008) -> pd.Series:
+        prices = price_series(periods=periods)
+        return pd.Series(
+            prices.to_numpy() * np.exp(rate * np.arange(len(prices))), index=prices.index
+        )
+
+    def test_a_rising_history_still_leaves_drift_in_the_fitted_residuals(self) -> None:
+        """The thing being corrected for is real, and it is not the fitted mean."""
+        fit = model_for("gjr_garch").fit(LogReturn().to_returns(self._rising()))
 
         assert fit.mu == 0.0
         assert float(fit.standardized_residuals.mean()) > 0.05
+
+    def test_the_model_no_longer_forecasts_that_drift_forward(self) -> None:
+        """The median simulated price sits at spot, which is what §0 asks a null-free
+        distribution to do. Before the pool was demeaned it sat measurably above."""
+        rising = self._rising()
+        demeaned = ModelForecaster(
+            model=model_for("gjr_garch"), transform=LogReturn(), n_paths=4_000
+        )
+        carrying = dataclasses.replace(demeaned, demean_residuals=False)
+        anchor = float(rising.iloc[-1])
+
+        centred = float(np.median(demeaned.forecast(rising, horizons=(63,), seed=4)[63].terminal()))
+        drifted = float(np.median(carrying.forecast(rising, horizons=(63,), seed=4)[63].terminal()))
+
+        assert centred == pytest.approx(anchor, rel=0.01)
+        assert drifted > anchor * 1.02
+
+    def test_the_drift_policy_picks_its_own_like_for_like_null(self) -> None:
+        """Derived from the flag, so the two cannot be configured to disagree."""
+        demeaned = ModelForecaster(model=model_for("gjr_garch"), transform=LogReturn())
+        carrying = dataclasses.replace(demeaned, demean_residuals=False)
+
+        assert demeaned.like_for_like_null == "random_walk"
+        assert carrying.like_for_like_null == "random_walk_drift_matched"
+        assert demeaned.describe()["residual_pool"]["demeaned"] is True
+
+    def test_the_backtest_gives_both_sides_the_same_policy(self) -> None:
+        prices = price_series(periods=400)
+        result = backtest_asset(
+            SYNTHETIC,
+            prices=prices,
+            request=WalkForwardRequest(horizons=(5,), step=5, min_observations=100),
+            n_paths=300,
+        )
+
+        assert result.subject["residual_pool"]["demeaned"] is True
+        assert result.subject["like_for_like_null"] == result.baseline["label"]
+        assert describe_backtest(SYNTHETIC, result)["like_for_like_null"]["null"] == "random_walk"
+
+    def test_a_drift_carrying_run_moves_its_own_like_for_like_null(self) -> None:
+        """The declared option stays available, and it takes its fair null with it."""
+        prices = price_series(periods=400)
+        result = backtest_asset(
+            SYNTHETIC,
+            prices=prices,
+            request=WalkForwardRequest(horizons=(5,), step=5, min_observations=100),
+            n_paths=300,
+            demean_residuals=False,
+        )
+        described = describe_backtest(SYNTHETIC, result)
+
+        assert result.subject["residual_pool"]["demeaned"] is False
+        assert described["like_for_like_null"]["null"] == "random_walk_drift_matched"
+        # The required null is still §0's, so turning the option on cannot remove the
+        # comparison the project committed to.
+        assert result.baseline["label"] == "random_walk"
 
     def test_the_two_nulls_differ_only_in_their_drift(self) -> None:
         prices = price_series(periods=800)
@@ -624,6 +691,263 @@ class TestTheModelIsNotDriftless:
         described = horizon.describe()["crps"]
         assert described["skill_score"] is not None
         assert "random_walk_drift_matched" in described["alternative_nulls"]
+
+
+class TestDieboldMariano:
+    """The test that decides whether a skill score is a finding or a rounding error."""
+
+    def _differential(self, *, mean: float, n: int, ma: int, seed: int) -> np.ndarray:
+        """A loss differential with the MA dependence overlapping windows produce."""
+        rng = np.random.default_rng(seed)
+        raw = rng.normal(0.0, 1.0, n + ma)
+        return np.convolve(raw, np.ones(ma + 1) / (ma + 1.0), mode="valid") + mean
+
+    def test_on_a_disjoint_series_it_is_exactly_the_paired_t_test(self) -> None:
+        """The HLN correction at an overlap of one *is* the ``t`` statistic, algebraically.
+
+        Not an approximation to check loosely: ``sqrt((n-1)/n)`` applied to a statistic
+        built on the ``1/n`` autocovariance divisor gives back ``dbar / (s / sqrt(n))``.
+        If this ever drifts, either the divisor or the correction has been changed and
+        every p-value in the calibration report moved with it.
+        """
+        differential = self._differential(mean=0.3, n=60, ma=0, seed=3)
+        result = diebold_mariano(
+            differential, np.zeros(differential.size), sampling=Sampling(5, 5), null="rw"
+        )
+        expected = stats.ttest_1samp(differential, 0.0)
+
+        assert result.hac_lag == 0
+        assert result.statistic == pytest.approx(float(expected.statistic))
+        assert result.p_value == pytest.approx(float(expected.pvalue))
+
+    def test_the_truncation_lag_is_the_overlap_in_records_not_the_horizon(self) -> None:
+        """``h - 1`` is the textbook rule for forecasts made every session, and it is
+        recovered at ``step = 1``. Sampled weekly, a 63-session window overlaps the
+        previous twelve records, not the previous sixty-two."""
+        differential = self._differential(mean=0.0, n=200, ma=12, seed=5)
+        null = np.zeros(differential.size)
+
+        weekly = diebold_mariano(differential, null, sampling=Sampling(63, 5), null="rw")
+        daily = diebold_mariano(differential, null, sampling=Sampling(63, 1), null="rw")
+
+        assert weekly.hac_lag == 12
+        assert daily.hac_lag == 62
+
+    def test_ignoring_the_overlap_manufactures_significance(self) -> None:
+        """The whole reason the lag is derived from the sampling rather than defaulted."""
+        differential = self._differential(mean=0.06, n=600, ma=12, seed=7)
+        null = np.zeros(differential.size)
+
+        honest = diebold_mariano(differential, null, sampling=Sampling(63, 5), null="rw")
+        pretending = diebold_mariano(differential, null, sampling=Sampling(5, 5), null="rw")
+
+        assert abs(pretending.statistic) > 2.5 * abs(honest.statistic)
+        assert pretending.p_value < honest.p_value
+
+    def test_a_model_that_really_is_better_is_detected(self) -> None:
+        """Power, so the test is not just a machine for failing to reject."""
+        rng = np.random.default_rng(11)
+        baseline = rng.gamma(shape=4.0, scale=1.0, size=400)
+        model = baseline * 0.85
+
+        result = diebold_mariano(model, baseline, sampling=Sampling(5, 5), null="rw")
+
+        assert result.favours_model
+        assert result.p_value is not None and result.p_value < 0.001
+
+    def test_the_sign_convention_is_the_differentials_not_the_skill_scores(self) -> None:
+        """``d = model - null``, so the model winning shows up as a negative statistic."""
+        rng = np.random.default_rng(13)
+        baseline = rng.gamma(shape=4.0, scale=1.0, size=200)
+
+        better = diebold_mariano(baseline * 0.9, baseline, sampling=Sampling(5, 5), null="rw")
+        worse = diebold_mariano(baseline * 1.1, baseline, sampling=Sampling(5, 5), null="rw")
+
+        assert better.statistic is not None and better.statistic < 0.0
+        assert worse.statistic is not None and worse.statistic > 0.0
+        assert better.favours_model and not worse.favours_model
+
+    def test_the_small_sample_correction_always_shrinks_the_statistic(self) -> None:
+        """HLN scales by something below one, so it can only ever make rejection harder."""
+        differential = self._differential(mean=0.2, n=50, ma=12, seed=17)
+        null = np.zeros(differential.size)
+        result = diebold_mariano(differential, null, sampling=Sampling(63, 5), null="rw")
+
+        centred = differential - differential.mean()
+        variance = float(np.dot(centred, centred) / centred.size)
+        for lag in range(1, result.hac_lag + 1):
+            weight = 1.0 - lag / (result.hac_lag + 1.0)
+            variance += 2.0 * weight * float(np.dot(centred[lag:], centred[:-lag]) / centred.size)
+        uncorrected = differential.mean() / math.sqrt(variance / differential.size)
+
+        assert result.statistic is not None
+        assert abs(result.statistic) < abs(uncorrected)
+
+    def test_two_identical_forecasters_leave_nothing_to_test(self) -> None:
+        losses = np.array([1.0, 2.0, 3.0, 4.0])
+        result = diebold_mariano(losses, losses, sampling=Sampling(5, 5), null="rw")
+
+        assert result.statistic is None and result.p_value is None
+        assert result.undefined_reason is not None
+        assert "identically" in result.undefined_reason
+
+    def test_a_sample_shorter_than_its_own_overlap_is_refused(self) -> None:
+        """Rather than reporting a statistic from autocovariances it cannot estimate."""
+        result = diebold_mariano(np.arange(3.0), np.zeros(3), sampling=Sampling(63, 5), null="rw")
+
+        assert result.statistic is None
+        assert result.undefined_reason is not None
+        assert result.n == 3
+
+    def test_misaligned_series_are_refused(self) -> None:
+        with pytest.raises(ValueError, match="align"):
+            diebold_mariano(np.zeros(5), np.zeros(4), sampling=Sampling(5, 5), null="rw")
+
+    def test_the_described_block_names_both_corrections(self) -> None:
+        result = diebold_mariano(
+            np.arange(40.0), np.zeros(40), sampling=Sampling(21, 5), null="random_walk"
+        )
+        described = result.describe()
+
+        assert described["variance_estimator"] == "newey_west_bartlett"
+        assert described["small_sample_correction"] == "harvey_leybourne_newbold"
+        assert described["null_compared"] == "random_walk"
+        assert described["reference_distribution"] == "t(39)"
+        json.dumps(described)
+
+
+class TestSkillDecay:
+    """Skill should fall with the horizon, because conditional variance mean-reverts."""
+
+    def _losses(self, skills: dict[int, float], *, n: int, seed: int) -> tuple[HorizonLosses, ...]:
+        """Aligned per-date losses engineered to produce the given skill at each horizon."""
+        rng = np.random.default_rng(seed)
+        return tuple(
+            HorizonLosses(
+                horizon=horizon,
+                model=(base := rng.gamma(shape=6.0, scale=1.0, size=n)) * (1.0 - skill),
+                baseline=base,
+            )
+            for horizon, skill in sorted(skills.items())
+        )
+
+    def test_it_finds_a_decay_it_was_given(self) -> None:
+        points = self._losses({5: 0.05, 10: 0.03, 21: 0.015, 42: 0.005, 63: 0.0}, n=300, seed=2)
+        fitted = skill_decay(points, block=13, seed=4, draws=800)
+
+        assert fitted is not None
+        assert fitted.decays
+        assert fitted.p_value < 0.05
+        assert fitted.interval[1] < 0.0
+
+    def test_flat_skill_across_horizons_is_not_a_trend(self) -> None:
+        points = self._losses({5: 0.02, 10: 0.02, 21: 0.02, 42: 0.02, 63: 0.02}, n=300, seed=6)
+        fitted = skill_decay(points, block=13, seed=4, draws=800)
+
+        assert fitted is not None
+        assert fitted.p_value > 0.05
+        assert fitted.interval[0] < 0.0 < fitted.interval[1]
+
+    def test_a_bootstrap_never_reports_a_p_value_below_its_own_resolution(self) -> None:
+        """800 draws cannot resolve 1-in-10,000, and printing 0.0 would claim it could."""
+        points = self._losses({5: 0.30, 10: 0.20, 21: 0.10, 42: 0.02, 63: -0.05}, n=300, seed=8)
+        fitted = skill_decay(points, block=13, seed=4, draws=800)
+
+        assert fitted is not None
+        assert fitted.p_value >= 1.0 / fitted.draws
+
+    def test_two_horizons_are_a_line_rather_than_a_shape(self) -> None:
+        assert skill_decay(self._losses({5: 0.05, 63: 0.0}, n=100, seed=9), block=5, seed=1) is None
+
+    def test_horizons_read_at_different_dates_cannot_be_resampled_together(self) -> None:
+        rng = np.random.default_rng(10)
+        points = (
+            HorizonLosses(horizon=5, model=rng.random(50), baseline=rng.random(50) + 1.0),
+            HorizonLosses(horizon=21, model=rng.random(50), baseline=rng.random(50) + 1.0),
+            HorizonLosses(horizon=63, model=rng.random(40), baseline=rng.random(40) + 1.0),
+        )
+        with pytest.raises(ValueError, match="same as-of dates"):
+            skill_decay(points, block=13, seed=1, draws=100)
+
+    def test_a_horizon_with_mismatched_series_is_refused_at_construction(self) -> None:
+        with pytest.raises(ValueError, match="align"):
+            HorizonLosses(horizon=5, model=np.zeros(10), baseline=np.zeros(9))
+
+
+class TestEverySkillScoreCarriesItsTest:
+    """§0 asks for a comparison against the null; a comparison without a test is not one."""
+
+    def _report(self) -> object:
+        prices = price_series(periods=1_600, **CLUSTERED)
+        matched = RandomWalkForecaster(
+            transform=LogReturn(), n_paths=1_200, min_observations=100, demean=False
+        )
+        result = walk_forward(
+            prices,
+            subject=ModelForecaster(
+                model=model_for("gjr_garch"), transform=LogReturn(), n_paths=1_200
+            ),
+            baseline=RandomWalkForecaster(transform=LogReturn(), n_paths=1_200),
+            request=WalkForwardRequest(horizons=(5, 21, 63), step=5, min_observations=750),
+            extra_baselines=(matched,),
+        )
+        return result.calibration()
+
+    def test_one_test_per_null_with_the_required_one_first(self) -> None:
+        report = self._report()
+
+        for horizon in report.horizons:  # type: ignore[attr-defined]
+            assert len(horizon.skill_tests) == 2
+            assert horizon.baseline_test.null == "random_walk"
+            assert horizon.skill_tests[1].null == "random_walk_drift_matched"
+
+    def test_the_test_is_run_twice_and_the_counts_differ_where_windows_overlap(self) -> None:
+        report = self._report()
+        weekly, _, quarterly = report.horizons  # type: ignore[attr-defined]
+
+        assert weekly.baseline_test.overlapping.n == weekly.baseline_test.thinned.n
+        assert quarterly.baseline_test.thinned.n < quarterly.baseline_test.overlapping.n
+        assert quarterly.baseline_test.thinned.n == quarterly.n_independent
+
+    def test_the_skill_score_and_its_test_agree_on_who_won(self) -> None:
+        """Opposite sign conventions, so this catches a differential built backwards."""
+        report = self._report()
+
+        for horizon in report.horizons:  # type: ignore[attr-defined]
+            for test in horizon.skill_tests:
+                if test.skill != 0.0:
+                    assert (test.skill > 0.0) == test.overlapping.favours_model
+
+    def test_a_result_needs_both_runs_to_reject_and_to_agree(self) -> None:
+        report = self._report()
+        horizon = report.horizons[0]  # type: ignore[attr-defined]
+        test = horizon.baseline_test
+
+        assert test.significant == (
+            test.overlapping.p_value is not None
+            and test.thinned.p_value is not None
+            and test.overlapping.p_value < 0.05
+            and test.thinned.p_value < 0.05
+            and test.overlapping.favours_model == test.thinned.favours_model
+        )
+
+    def test_the_shape_is_tested_across_horizons(self) -> None:
+        report = self._report()
+
+        assert report.skill_decay is not None  # type: ignore[attr-defined]
+        assert report.skill_decay.n_dates > 0  # type: ignore[attr-defined]
+        assert len(report.skill_decay.points) == 3  # type: ignore[attr-defined]
+
+    def test_the_tests_reach_the_artifact(self) -> None:
+        described = self._report().describe()  # type: ignore[attr-defined]
+        crps_block = described["horizons"][0]["crps"]
+
+        assert crps_block["significance"]["overlapping_windows_hac"]["p_value"] is not None
+        assert crps_block["significance"]["non_overlapping_subsample"]["p_value"] is not None
+        alternative = crps_block["alternative_nulls"]["random_walk_drift_matched"]
+        assert alternative["significance"]["overlapping_windows_hac"]["test"] == "diebold_mariano"
+        assert described["skill_decay"]["p_value"] is not None
+        json.dumps(described)
 
 
 class TestWalkForward:

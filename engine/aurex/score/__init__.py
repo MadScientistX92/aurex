@@ -21,7 +21,14 @@ by something that fails rather than by something that is remembered:
   the random walk's CRPS for the same date beside it.
 * **Overlapping windows are not independent observations.** Every p-value goes through
   :func:`~aurex.score.sampling.require_independent`, which raises on a series that
-  overlaps rather than quietly reporting a number that assumes it does not.
+  overlaps rather than quietly reporting a number that assumes it does not. The
+  Diebold-Mariano test in :mod:`aurex.score.significance` is the single exception, and
+  it earns it by modelling the dependence rather than ignoring it: it takes the same
+  declaration and turns it into a HAC truncation lag.
+* **A skill score without a test is not a result.** Every null is reported as a
+  :class:`~aurex.score.walkforward.SkillTest`, whose Diebold-Mariano statistic, p-value
+  and observation count are required fields. This binds in both directions — a win and
+  a shrug are claims about the same population and neither publishes without evidence.
 
 A realised touch is evaluated at session close, matching the forecast's own monitoring
 convention; :class:`~aurex.score.events.RealisedPath` carries closes and nothing else,
@@ -59,11 +66,19 @@ from aurex.score.events import (
 from aurex.score.forecasters import AsOfForecaster, ModelForecaster, RandomWalkForecaster
 from aurex.score.reliability import ReliabilityBin, ReliabilityCurve, brier_score, reliability_curve
 from aurex.score.sampling import OverlappingWindowsError, Sampling, require_independent
+from aurex.score.significance import (
+    DieboldMariano,
+    HorizonLosses,
+    SkillDecay,
+    diebold_mariano,
+    skill_decay,
+)
 from aurex.score.walkforward import (
     CalibrationReport,
     HorizonCalibration,
     LevelCoverage,
     ScoreRecord,
+    SkillTest,
     Skipped,
     WalkForwardRequest,
     WalkForwardResult,
@@ -74,10 +89,12 @@ __all__ = [
     "AsOfForecaster",
     "BinaryEvent",
     "CalibrationReport",
+    "DieboldMariano",
     "DriftDisplacement",
     "GoodnessOfFit",
     "HorizonCalibration",
     "HorizonDisplacement",
+    "HorizonLosses",
     "LevelCoverage",
     "ModelForecaster",
     "Monitoring",
@@ -88,6 +105,8 @@ __all__ = [
     "ReliabilityCurve",
     "Sampling",
     "ScoreRecord",
+    "SkillDecay",
+    "SkillTest",
     "Skipped",
     "TerminalAbove",
     "TestResult",
@@ -103,12 +122,14 @@ __all__ = [
     "crps",
     "crps_skill",
     "default_events",
+    "diebold_mariano",
     "displacement",
     "kupiec",
     "pit_histogram",
     "pit_value",
     "reliability_curve",
     "require_independent",
+    "skill_decay",
     "uniformity",
     "walk_forward",
 ]

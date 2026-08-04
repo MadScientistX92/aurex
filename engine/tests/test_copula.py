@@ -13,7 +13,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from aurex.dist import TCopula, fit_t_copula, joint_shocks, pseudo_observations
+from aurex.dist import (
+    ResidualPool,
+    TCopula,
+    fit_t_copula,
+    joint_shocks,
+    pseudo_observations,
+    residual_pool,
+)
 
 INDEX = pd.bdate_range("2018-01-01", periods=2_000, name="date")
 
@@ -130,13 +137,19 @@ class TestJointShocks:
     def _residuals(self) -> tuple[pd.Series, pd.Series]:
         return t_pair(correlation=0.6, df=4.0, seed=6)
 
+    def _pools(self) -> tuple[ResidualPool, ResidualPool]:
+        """Undemeaned, so the drawn values stay identical to the sample's own."""
+        first, second = self._residuals()
+        return residual_pool(first, demean=False), residual_pool(second, demean=False)
+
     def test_copula_mode_keeps_each_margin_empirical(self) -> None:
         """The copula supplies dependence; it must not reshape a marginal tail."""
         first, second = self._residuals()
         copula = fit_t_copula(first, second)
+        left_pool, right_pool = self._pools()
         drawn_first, _ = joint_shocks(
-            first,
-            second,
+            left_pool,
+            right_pool,
             copula=copula,
             mode="t_copula",
             n_paths=2_000,
@@ -149,9 +162,10 @@ class TestJointShocks:
     def test_copula_mode_reproduces_the_dependence(self) -> None:
         first, second = self._residuals()
         copula = fit_t_copula(first, second)
+        left_pool, right_pool = self._pools()
         left, right = joint_shocks(
-            first,
-            second,
+            left_pool,
+            right_pool,
             copula=copula,
             mode="t_copula",
             n_paths=4_000,
@@ -164,9 +178,10 @@ class TestJointShocks:
 
     def test_synchronised_mode_preserves_the_sample_dependence(self) -> None:
         first, second = self._residuals()
+        left_pool, right_pool = self._pools()
         left, right = joint_shocks(
-            first,
-            second,
+            left_pool,
+            right_pool,
             copula=None,
             mode="synchronised",
             n_paths=4_000,
@@ -182,8 +197,8 @@ class TestJointShocks:
         first = pd.Series(np.arange(100.0), index=pd.bdate_range("2020-01-01", periods=100))
         second = first * -1.0
         left, right = joint_shocks(
-            first,
-            second,
+            residual_pool(first, demean=False),
+            residual_pool(second, demean=False),
             copula=None,
             mode="synchronised",
             n_paths=50,
@@ -194,11 +209,11 @@ class TestJointShocks:
         np.testing.assert_allclose(left, -right)
 
     def test_copula_mode_without_a_copula_is_refused(self) -> None:
-        first, second = self._residuals()
+        left_pool, right_pool = self._pools()
         with pytest.raises(ValueError, match="needs a fitted copula"):
             joint_shocks(
-                first,
-                second,
+                left_pool,
+                right_pool,
                 copula=None,
                 mode="t_copula",
                 n_paths=10,
@@ -212,14 +227,29 @@ class TestJointShocks:
         second = pd.Series([1.0, 2.0], index=pd.bdate_range("2021-01-01", periods=2))
         with pytest.raises(ValueError, match="do not overlap"):
             joint_shocks(
-                first,
-                second,
+                residual_pool(first, demean=False),
+                residual_pool(second, demean=False),
                 copula=None,
                 mode="synchronised",
                 n_paths=5,
                 horizon=2,
                 block_length=2,
                 rng=np.random.default_rng(12),
+            )
+
+    def test_two_legs_with_different_drift_policies_are_refused(self) -> None:
+        """A driftless metal composed with a drifting rate is a currency call in disguise."""
+        first, second = self._residuals()
+        with pytest.raises(ValueError, match="same drift policy"):
+            joint_shocks(
+                residual_pool(first, demean=True),
+                residual_pool(second, demean=False),
+                copula=None,
+                mode="synchronised",
+                n_paths=5,
+                horizon=2,
+                block_length=2,
+                rng=np.random.default_rng(13),
             )
 
 

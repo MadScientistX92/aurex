@@ -6,10 +6,19 @@ must not know what it is scoring, and an asset must not know how it will be grad
 This is the only file that holds both.
 
 **The null is built from the same parts as the model.** Both forecasters get the
-asset's own return transform and its venue's session limit, so the random walk is not
-a straw man assembled from different plumbing: it differs from the model in exactly one
-respect, which is that it has no conditional variance. That is the comparison §0 asks
-for.
+asset's own return transform, its venue's session limit and the *same drift policy*, so
+the random walk is not a straw man assembled from different plumbing: it differs from
+the model in exactly one respect, which is that it has no conditional variance. That is
+the comparison §0 asks for.
+
+That last part was not true until it was fixed, and the failure is worth recording
+because it is easy to reproduce. The model resampled an undemeaned residual pool while
+the null had its mean removed by construction, so the model was scored carrying a drift
+its null was denied — worth up to +4.6% of CRPS skill at a quarter on the first asset
+measured, all of it eleven years of appreciation rather than anything the volatility
+layer did. The drift policy is now one flag that both sides read, and it also picks
+which null is the like-for-like one rather than leaving the caller to remember. A
+comparison whose fairness depends on someone remembering is not one.
 
 **A backtest scores the asset's own quote, not a lens.** The distributions this grades
 are the ones the engine publishes for the native view. A currency lens composes the
@@ -27,6 +36,7 @@ from typing import Any
 import pandas as pd
 
 from aurex.assets.base import Asset
+from aurex.dist.fhs import DEMEAN_BY_DEFAULT
 from aurex.score.forecasters import ModelForecaster, RandomWalkForecaster
 from aurex.score.walkforward import (
     DEFAULT_MIN_OBSERVATIONS,
@@ -54,8 +64,16 @@ def backtest_asset(
     model_id: str | None = None,
     n_paths: int = DEFAULT_BACKTEST_PATHS,
     block_length: int = 10,
+    demean_residuals: bool = DEMEAN_BY_DEFAULT,
 ) -> WalkForwardResult:
-    """Walk the asset's declared model forward against the random walk."""
+    """Walk the asset's declared model forward against the random walk.
+
+    ``demean_residuals`` sets the drift policy for *both* sides. Turning it off scores
+    a drift-continuation model, which is a legitimate thing to measure and is not the
+    default; the required baseline stays §0's driftless walk either way, and the
+    drift-matched walk rides along as the second null so both readings are always in
+    the artifact.
+    """
     defaults = asset.vol_defaults
     ask = request or WalkForwardRequest(
         # The harness must not start before the model can be fitted at all, or every
@@ -81,6 +99,7 @@ def backtest_asset(
         n_paths=n_paths,
         breaks=breaks if defaults.break_aware else (),
         realised_variance=realised,
+        demean_residuals=demean_residuals,
     )
     baseline = RandomWalkForecaster(
         transform=asset.return_transform,
@@ -88,11 +107,11 @@ def backtest_asset(
         n_paths=n_paths,
         min_observations=defaults.min_observations,
     )
-    # The second null carries the sample's own drift. Filtered historical simulation
-    # resamples empirical standardised residuals, whose mean is not zero in a sample
-    # that trended, so the model is not driftless either — and scoring it only against
-    # a demeaned null would credit that drift to its volatility work. The difference
-    # between the two skill scores is how much of the win was drift.
+    # The second null carries the sample's own drift, and it stays even now that the
+    # model is demeaned by default — it is what makes the drift visible. With a
+    # driftless model it is a *hindsight* benchmark: a walk handed the sample mean it
+    # could not have known, which is why losing to it is not a finding about the model
+    # and beating it is a strong one.
     drift_matched = dataclasses.replace(baseline, demean=False)
 
     return walk_forward(
@@ -106,6 +125,10 @@ def backtest_asset(
 
 def describe_backtest(asset: Asset, result: WalkForwardResult) -> dict[str, Any]:
     """Artifact block: which asset was scored, and how it did."""
+    # Indexed rather than fetched with a default: a subject that stopped declaring its
+    # drift policy must break the artifact loudly, because the alternative is a report
+    # that names the wrong null as the fair one and reads perfectly well doing it.
+    like_for_like = result.subject["like_for_like_null"]
     return {
         "asset": {
             "id": asset.id,
@@ -115,6 +138,15 @@ def describe_backtest(asset: Asset, result: WalkForwardResult) -> dict[str, Any]
             "price_series_id": asset.price_series_id,
         },
         "calibration": result.calibration().describe(),
+        "like_for_like_null": {
+            "null": like_for_like,
+            "why": (
+                "The subject and this null share a drift policy, so the difference "
+                "between their scores is conditional variance and nothing else. The "
+                "other null differs in drift as well, and its skill score should be "
+                "read as the size of that difference rather than as a verdict."
+            ),
+        },
         "scope": (
             "The asset's own quote. A currency lens composes these paths with an "
             "exchange rate through a copula and is not scored here."
