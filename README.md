@@ -306,6 +306,22 @@ The two symptoms are the same displacement read from different reference points.
 
 **None of this is an argument for fitting a drift.** A fitted mean over a rising sample is a directional forecast wearing a mean's clothes. The displacement is measured and published; it is not tuned away.
 
+### Pre-registered: what the hurdle event is expected to do *(step 3b, not built yet)*
+
+Step 3b adds one event to the machinery above — did the realised move clear the round-trip breakeven a route and jurisdiction define. This section is written **before** that event exists, because its failure mode is predictable and a limitation discovered after the fact reads like an excuse.
+
+**The arithmetic.** At Indian retail parameters the hurdle is around +9.4%. A one-standard-deviation move at ten sessions is roughly ±4.4%, so the hurdle is about 2.1 sigma in one specific direction. That puts the base rate somewhere near 2–3%, and over roughly 580 walk-forward windows that is on the order of **15 positive events**.
+
+**What that means for the score.** Fifteen positives cannot support a ten-bin reliability diagram. The Brier score will be dominated by its uncertainty term — a base rate of 0.025 has an uncertainty of 0.024, and any forecaster that says "probably not" every time will score close to that. Resolution will be unmeasurable at short horizons, and a reliability curve drawn on those counts would be a picture of sampling noise with an axis on it.
+
+**So the following are fixed now, not chosen after seeing the numbers:**
+
+- Every hurdle Brier score is reported with its **base rate and its positive-event count** beside it. A Brier score of 0.02 that looks excellent next to direction's 0.25 is measuring a rare event, not a better forecast, and the count is what makes that visible.
+- The reliability curve is **withheld** where the positive count cannot support one. The threshold is **10 positive events**, chosen to match the `MIN_EXPECTED_BREACHES` rule of thumb the coverage tests already use rather than tuned to what this event happens to produce. Below it the score, base rate and count are still published; the diagram is not, and the artifact says why.
+- Resolution and reliability terms are still computed and published where the curve is withheld, because they are functions of the score rather than of the diagram — but a withheld curve is the signal that neither should be read as a measurement.
+
+**The comparison is the point, and it is also pre-registered.** Different jurisdictions face different hurdles on the same metal and the same distribution. If a low-friction route clears its hurdle often enough to score and a high-friction one does not, that difference is not an inconvenience in the reporting — it *is* the finding, and it is the project's thesis stated in event counts rather than in prose. The expectation stated in advance: the hurdle rises with friction, the base rate falls with it, and at the top of the friction range the event becomes unmeasurable on eleven years of data. If that is what happens, the honest output is a table of base rates and counts with most of the reliability column empty, and that table is the result rather than a failure to produce one.
+
 ### Two conventions fixed in advance, because both would otherwise look like results
 
 **A realised touch is measured at session close**, the same convention the forecast uses. Scoring simulated closes against intraday extremes would charge the model for a floor it already declares. The enforcement is structural: the object carrying a realised outcome holds closes and nothing else, so there is no high or low available to score against.
