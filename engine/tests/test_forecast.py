@@ -190,7 +190,7 @@ class TestTheTwoViewsShareOneSimulation:
 
 class TestReproducibility:
     def test_two_runs_agree_on_every_number(self, long_cache: CacheStore) -> None:
-        """A distribution nobody can reproduce cannot be scored in step 3."""
+        """A distribution nobody can reproduce cannot be scored in step 3a."""
         first = lenses(long_cache)["INR"]["distribution"]["horizons"]
         second = lenses(long_cache)["INR"]["distribution"]["horizons"]
         assert first == second

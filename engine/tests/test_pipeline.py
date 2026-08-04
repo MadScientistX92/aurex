@@ -13,7 +13,7 @@ import pytest
 from aurex.assets import GOLD
 from aurex.data.base import LoadedSeries, SeriesMeta
 from aurex.data.cache import CacheStore
-from aurex.pipeline import _price_column, run, write_artifact
+from aurex.pipeline import _price_column, run, write_artifact, write_forecast_log
 from tests.conftest import make_series
 
 START, END = date(2026, 6, 1), date(2026, 7, 30)
@@ -231,6 +231,47 @@ class TestArtifactWriting:
     def test_creates_the_directory(self, seeded_cache: CacheStore, tmp_path: Path) -> None:
         artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
         assert write_artifact(artifact, tmp_path / "nested" / "dir").exists()
+
+
+class TestForecastLog:
+    """§0's second rule needs a forecast that still exists in the form it was published."""
+
+    def test_the_log_is_dated_and_separate_from_latest(
+        self, seeded_cache: CacheStore, tmp_path: Path
+    ) -> None:
+        artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
+        path = write_forecast_log(artifact, tmp_path)
+
+        assert path.parent.name == "forecasts"
+        assert path.name == f"{artifact['generated_at'][:10]}.json"
+        assert path != write_artifact(artifact, tmp_path)
+
+    def test_the_logged_copy_is_the_published_artifact_verbatim(
+        self, seeded_cache: CacheStore, tmp_path: Path
+    ) -> None:
+        """A log that summarises rather than copies cannot be scored against later.
+
+        The seed, the fitted parameters and the block length all live in the
+        distribution block; a log that dropped any of them would leave a forecast
+        nobody can regenerate, which §2 says is the same as no forecast at all. The
+        fixture window is too short to fit a model, so what this pins is the copy
+        being whole — including the recorded reason when there is no distribution.
+        """
+        artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
+        logged = json.loads(write_forecast_log(artifact, tmp_path).read_text())
+
+        assert logged == json.loads(json.dumps(artifact))
+        assert "distribution" in logged["assets"][GOLD.id]["lenses"]["USD"]
+
+    def test_rerunning_the_same_day_replaces_that_day(
+        self, seeded_cache: CacheStore, tmp_path: Path
+    ) -> None:
+        artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
+        first = write_forecast_log(artifact, tmp_path)
+        second = write_forecast_log(artifact, tmp_path)
+
+        assert first == second
+        assert len(list((tmp_path / "forecasts").glob("*.json"))) == 1
 
 
 class TestPriceColumn:

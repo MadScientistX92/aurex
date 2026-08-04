@@ -8,6 +8,8 @@ random shocks would only prove the cap holds, not that the remainder went anywhe
 
 from __future__ import annotations
 
+import dataclasses
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -15,10 +17,12 @@ import pytest
 from aurex.assets.transforms import Difference, LogReturn, ShiftedLogReturn
 from aurex.dist import (
     PathEnsemble,
+    ResidualPool,
     SimulationSpec,
     block_indices,
     bootstrap_shocks,
     paths_from_returns,
+    residual_pool,
     simulate,
 )
 from aurex.vol import RollingStd, SessionLimit
@@ -61,9 +65,10 @@ class TestBlockBootstrap:
         assert set(np.unique(picks)) == set(range(20))
 
     def test_resampling_preserves_the_empirical_distribution(self) -> None:
-        residuals = np.random.default_rng(3).standard_t(5, size=2_000)
+        residuals = pd.Series(np.random.default_rng(3).standard_t(5, size=2_000))
+        pool = residual_pool(residuals, demean=False)
         drawn = bootstrap_shocks(
-            residuals,
+            pool,
             n_paths=5_000,
             horizon=10,
             block_length=5,
@@ -76,6 +81,87 @@ class TestBlockBootstrap:
     def test_a_degenerate_sample_is_refused(self) -> None:
         with pytest.raises(ValueError, match="at least 2 residuals"):
             block_indices(1, n_paths=2, horizon=2, block_length=1, rng=np.random.default_rng(0))
+
+
+class TestTheResidualPoolDeclaresItsDrift:
+    """§0's position on drift, enforced by a type rather than by a keyword argument."""
+
+    def _residuals(self, mean: float) -> pd.Series:
+        return pd.Series(np.random.default_rng(21).standard_t(6, size=1_000) + mean)
+
+    def test_the_default_removes_the_mean(self) -> None:
+        pool = residual_pool(self._residuals(0.05))
+
+        assert pool.demeaned
+        assert float(pool.residuals.mean()) == pytest.approx(0.0, abs=1e-12)
+        assert pool.removed_mean == pytest.approx(0.05, abs=0.05)
+
+    def test_the_drift_carrying_pool_is_available_and_says_so(self) -> None:
+        pool = residual_pool(self._residuals(0.05), demean=False)
+
+        assert not pool.demeaned
+        assert pool.removed_mean == 0.0
+        assert float(pool.residuals.mean()) > 0.01
+        assert "left in" in pool.describe()["drift"]
+
+    def test_a_bare_array_is_refused_at_the_boundary(self) -> None:
+        """The whole point: an array of residuals carries no drift policy with it."""
+        with pytest.raises(TypeError, match="needs a ResidualPool"):
+            bootstrap_shocks(
+                np.zeros(100),  # type: ignore[arg-type]
+                n_paths=10,
+                horizon=5,
+                block_length=2,
+                rng=np.random.default_rng(0),
+            )
+
+    def test_an_excluded_break_does_not_drag_the_mean_toward_zero(self) -> None:
+        """Breaks enter the residual series as NaN, and a NaN is absent, not a zero."""
+        values = self._residuals(0.05)
+        with_break = values.copy()
+        with_break.iloc[:200] = np.nan
+
+        pool = residual_pool(with_break)
+        assert pool.removed_mean == pytest.approx(float(values.iloc[200:].mean()))
+        assert int(pool.residuals.size) == 800
+
+    def test_a_pool_with_nothing_finite_in_it_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="at least one finite"):
+            residual_pool(pd.Series([np.nan, np.nan]))
+
+    def test_demeaning_moves_the_median_to_spot(self, fitted) -> None:  # type: ignore[no-untyped-def]
+        """The behavioural consequence, on a fit whose residual pool carries a drift."""
+        spec = SimulationSpec(horizon_days=63, n_paths=8_000, seed=3)
+        drifting = ResidualPool(
+            residuals=fitted.standardized_residuals + 0.05,
+            demeaned=False,
+            removed_mean=0.0,
+        )
+
+        centred = simulate(fitted, transform=LogReturn(), anchor=ANCHOR, spec=spec)
+        drifted = simulate(
+            fitted,
+            transform=LogReturn(),
+            anchor=ANCHOR,
+            spec=dataclasses.replace(spec, demean_residuals=False),
+            shocks=bootstrap_shocks(
+                drifting,
+                n_paths=spec.n_paths,
+                horizon=spec.horizon_days,
+                block_length=spec.block_length,
+                rng=np.random.default_rng(spec.seed),
+            ),
+            pool=drifting,
+        )
+
+        # 0.05 of a standard deviation per session, compounded over a quarter, is a
+        # median displaced by roughly 0.05 * sigma * horizon in log space. Small per
+        # session and unmissable by the horizon, which is the whole shape of the problem.
+        expected = float(np.exp(0.05 * fitted.next_sigma * spec.horizon_days))
+
+        assert float(np.median(centred.terminal())) == pytest.approx(ANCHOR, rel=0.02)
+        assert float(np.median(drifted.terminal())) == pytest.approx(ANCHOR * expected, rel=0.02)
+        assert float(np.median(drifted.terminal())) > float(np.median(centred.terminal()))
 
 
 class TestSimulation:
@@ -139,7 +225,45 @@ class TestSimulation:
                 anchor=ANCHOR,
                 spec=spec,
                 shocks=np.zeros((10, 4)),
+                pool=residual_pool(fitted.standardized_residuals),
             )
+
+    def test_shocks_drawn_elsewhere_must_bring_their_pool(self, fitted) -> None:  # type: ignore[no-untyped-def]
+        """Otherwise the ensemble publishes a drift policy nothing verified."""
+        with pytest.raises(ValueError, match="must arrive with the ResidualPool"):
+            simulate(
+                fitted,
+                transform=LogReturn(),
+                anchor=ANCHOR,
+                spec=SimulationSpec(horizon_days=5, n_paths=10, seed=1),
+                shocks=np.zeros((10, 5)),
+            )
+
+    def test_a_pool_that_contradicts_the_spec_is_refused(self, fitted) -> None:  # type: ignore[no-untyped-def]
+        """The spec is what reaches the artifact, so it has to be what actually happened."""
+        spec = SimulationSpec(horizon_days=5, n_paths=10, seed=1, demean_residuals=True)
+        pool = residual_pool(fitted.standardized_residuals, demean=False)
+
+        with pytest.raises(ValueError, match="would misreport the drift"):
+            simulate(
+                fitted,
+                transform=LogReturn(),
+                anchor=ANCHOR,
+                spec=spec,
+                shocks=np.zeros((10, 5)),
+                pool=pool,
+            )
+
+    def test_the_ensemble_publishes_its_drift_policy(self, fitted) -> None:  # type: ignore[no-untyped-def]
+        ensemble = simulate(
+            fitted,
+            transform=LogReturn(),
+            anchor=ANCHOR,
+            spec=SimulationSpec(horizon_days=5, n_paths=50, seed=7),
+        )
+
+        assert ensemble.diagnostics["simulation"]["demean_residuals"] is True
+        assert ensemble.diagnostics["residual_pool"]["demeaned"] is True
 
     @pytest.mark.parametrize("field", ["horizon_days", "n_paths", "block_length"])
     def test_a_meaningless_spec_is_refused(self, field: str) -> None:

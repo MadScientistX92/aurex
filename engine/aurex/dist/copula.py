@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 from scipy import optimize, stats
 
-from aurex.dist.fhs import block_indices
+from aurex.dist.fhs import ResidualPool, block_indices
 
 #: How the two series' shocks are linked. See the module docstring.
 DependenceMode = Literal["t_copula", "synchronised"]
@@ -184,8 +184,8 @@ def _copula_log_likelihood(u: np.ndarray, rho: float, df: float) -> float:
 
 
 def joint_shocks(
-    first_residuals: pd.Series,
-    second_residuals: pd.Series,
+    first: ResidualPool,
+    second: ResidualPool,
     *,
     copula: TCopula | None,
     mode: DependenceMode,
@@ -202,10 +202,21 @@ def joint_shocks(
     residual quantiles, which buys extrapolatable tail dependence at the cost of the
     block structure — the variance recursion still carries clustering, but a run of
     jointly bad days is no longer drawn as a run.
+
+    Both pools must agree on their drift policy. A rupee price composed from a driftless
+    metal and a drifting exchange rate is a directional forecast about the currency
+    wearing a joint simulation's clothes, and the mismatch is easier to create than to
+    notice — the two series are fitted in different places.
     """
+    if first.demeaned != second.demeaned:
+        raise ValueError(
+            f"both legs of a joint simulation need the same drift policy, got "
+            f"demeaned={first.demeaned} and demeaned={second.demeaned}"
+        )
+
     if mode == "synchronised":
         aligned = pd.concat(
-            {"a": first_residuals, "b": second_residuals}, axis=1, join="inner"
+            {"a": first.residuals, "b": second.residuals}, axis=1, join="inner"
         ).dropna()
         if aligned.empty:
             raise ValueError("the two residual series do not overlap")
@@ -223,8 +234,8 @@ def joint_shocks(
 
     uniforms = copula.sample(n_paths * horizon, rng).reshape(n_paths, horizon, 2)
     return (
-        _empirical_quantile(first_residuals.to_numpy(dtype=float), uniforms[:, :, 0]),
-        _empirical_quantile(second_residuals.to_numpy(dtype=float), uniforms[:, :, 1]),
+        _empirical_quantile(first.values, uniforms[:, :, 0]),
+        _empirical_quantile(second.values, uniforms[:, :, 1]),
     )
 
 

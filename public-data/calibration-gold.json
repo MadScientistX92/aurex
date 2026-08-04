@@ -1,0 +1,3631 @@
+{
+  "asset": {
+    "base_unit": "troy_ounce",
+    "id": "gold",
+    "label": "Gold",
+    "price_series_id": "xauusd",
+    "quote_currency": "USD"
+  },
+  "calibration": {
+    "baseline": {
+      "block_length": 1,
+      "label": "random_walk",
+      "model": {
+        "drift": "zero by construction, not by sample average",
+        "id": "random_walk",
+        "increments": "iid draws from the demeaned empirical return distribution"
+      },
+      "n_paths": 4000,
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    "conventions": {
+      "independence": "Every p-value is computed on the non-overlapping subsample. Means and histograms use every forecast.",
+      "lookahead": "none: each fit sees prices up to and including its as-of date",
+      "monitoring": "session_close",
+      "window": "expanding"
+    },
+    "drift_displacement": {
+      "implied_standardised_drift_per_session": 0.04115,
+      "intercept_note": "The intercept is pinned at 0.5 rather than fitted: a sample with no displacement must give a mean PIT of one half at every horizon, so a free intercept would absorb the effect under test.",
+      "model": "mean_pit = 0.5 + slope * sqrt(horizon)",
+      "points": [
+        {
+          "horizon_sessions": 5,
+          "mean_pit": 0.52094,
+          "observations": 580
+        },
+        {
+          "horizon_sessions": 10,
+          "mean_pit": 0.53339,
+          "observations": 579
+        },
+        {
+          "horizon_sessions": 21,
+          "mean_pit": 0.54806,
+          "observations": 577
+        },
+        {
+          "horizon_sessions": 42,
+          "mean_pit": 0.57505,
+          "observations": 572
+        },
+        {
+          "horizon_sessions": 63,
+          "mean_pit": 0.59796,
+          "observations": 568
+        }
+      ],
+      "r_squared": 0.995,
+      "reading": "A high r-squared means the location error scales as the square root of the horizon, which is what a constant per-session drift against a fixed forecast centre looks like. It is a diagnosis, not a correction: fitting a mean to remove it would be a directional forecast.",
+      "slope": 0.011607
+    },
+    "horizons": [
+      {
+        "coverage": [
+          {
+            "breaches": 19,
+            "christoffersen_independence": {
+              "breach_rate_after_breach": 0.05263,
+              "breach_rate_after_calm": 0.03214,
+              "independent_observations": 580,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.64864,
+              "power_note": null,
+              "statistic": 0.20762,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 542,
+                "n01": 18,
+                "n10": 18,
+                "n11": 1
+              },
+              "undefined_reason": null
+            },
+            "conditional_coverage": {
+              "boundary_note": null,
+              "components": {
+                "independence": 0.20762318858268713,
+                "kupiec": 4.111839795733971
+              },
+              "independent_observations": 580,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.11536,
+              "power_note": null,
+              "statistic": 4.31946,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": null
+            },
+            "kupiec": {
+              "boundary_note": null,
+              "breaches": 19,
+              "chi2_p_value": 0.04258,
+              "exact_binomial_p_value": 0.05641,
+              "exact_lower_tail": 0.02947,
+              "expected_breaches": 29.0,
+              "expected_rate": 0.05,
+              "independent_observations": 580,
+              "method": "likelihood_ratio_chi2",
+              "observed_rate": 0.03276,
+              "p_value": 0.04258,
+              "power_note": null,
+              "statistic": 4.11184,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.05
+          },
+          {
+            "breaches": 4,
+            "christoffersen_independence": {
+              "breach_rate_after_breach": 0.0,
+              "breach_rate_after_calm": 0.00696,
+              "independent_observations": 580,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.8135,
+              "power_note": "580 independent observations at a 1% quantile expect 5.8 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 0.05565,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 571,
+                "n01": 4,
+                "n10": 4,
+                "n11": 0
+              },
+              "undefined_reason": null
+            },
+            "conditional_coverage": {
+              "boundary_note": null,
+              "components": {
+                "independence": 0.05565262278615535,
+                "kupiec": 0.6331282948247932
+              },
+              "independent_observations": 580,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.70865,
+              "power_note": "580 independent observations at a 1% quantile expect 5.8 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 0.68878,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": null
+            },
+            "kupiec": {
+              "boundary_note": null,
+              "breaches": 4,
+              "chi2_p_value": 0.42621,
+              "exact_binomial_p_value": 0.67287,
+              "exact_lower_tail": 0.31143,
+              "expected_breaches": 5.8,
+              "expected_rate": 0.01,
+              "independent_observations": 580,
+              "method": "likelihood_ratio_chi2",
+              "observed_rate": 0.0069,
+              "p_value": 0.42621,
+              "power_note": "580 independent observations at a 1% quantile expect 5.8 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 0.63313,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.01
+          }
+        ],
+        "crps": {
+          "alternative_nulls": {
+            "random_walk_drift_matched": {
+              "crps": 24.8495,
+              "significance": {
+                "distinguishable_from_zero": false,
+                "non_overlapping_subsample": {
+                  "hac_truncation_lag": 0,
+                  "mean_loss_differential": -0.032885,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 580,
+                  "overlapping_records": 1,
+                  "p_value": 0.881,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(579)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": -0.1498,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "overlapping_windows_hac": {
+                  "hac_truncation_lag": 0,
+                  "mean_loss_differential": -0.032885,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 580,
+                  "overlapping_records": 1,
+                  "p_value": 0.881,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(579)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": -0.1498,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+              },
+              "skill_score": 0.0013
+            }
+          },
+          "estimator": "fair (ensemble-size bias removed)",
+          "model": 24.8166,
+          "random_walk": 24.9677,
+          "reading": "Positive skill means the model beat a driftless random walk with empirical increments. Zero means it tied. Negative means it lost, and a negative number here is published rather than withheld. The sign is only half of it: read the Diebold-Mariano p-value beside it before treating any of these as a finding.",
+          "significance": {
+            "distinguishable_from_zero": false,
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.151083,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.4186,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.8094,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.151083,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.4186,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.8094,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+          },
+          "skill_score": 0.0061,
+          "units": "price"
+        },
+        "direction": {
+          "forecast_mean": 0.50944,
+          "gap": 0.02332,
+          "note": "Measured against spot rather than against the forecast centre, so this gap reads the whole sample drift where the PIT mean reads only what the forecast centre failed to carry.",
+          "observed_rate": 0.53276
+        },
+        "events": [
+          {
+            "base_rate": 0.5328,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 77,
+                "forecast_mean": 0.4966,
+                "lower": 0.4,
+                "observed_rate": 0.4416,
+                "upper": 0.5
+              },
+              {
+                "count": 503,
+                "forecast_mean": 0.5114,
+                "lower": 0.5,
+                "observed_rate": 0.5467,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.24916,
+            "decomposition": {
+              "binning_error": -2.2e-05,
+              "implied_brier": 0.24914,
+              "reliability": 0.00148,
+              "resolution": 0.00127,
+              "uncertainty": 0.24893
+            },
+            "definition": "terminal price above anchor x 1",
+            "id": "direction_up",
+            "monitoring": "terminal",
+            "observations": 580,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.019,
+            "bins": [
+              {
+                "count": 558,
+                "forecast_mean": 0.0207,
+                "lower": 0.0,
+                "observed_rate": 0.0143,
+                "upper": 0.1
+              },
+              {
+                "count": 20,
+                "forecast_mean": 0.1404,
+                "lower": 0.1,
+                "observed_rate": 0.15,
+                "upper": 0.2
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.2306,
+                "lower": 0.2,
+                "observed_rate": 0.0,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.01829,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -7.6e-05,
+              "implied_brier": 0.01822,
+              "reliability": 0.00023,
+              "resolution": 0.00061,
+              "uncertainty": 0.01861
+            },
+            "definition": "any session closing at or below anchor x 0.95",
+            "id": "touch_below_5pct",
+            "monitoring": "session_close",
+            "observations": 580,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.019,
+            "bins": [
+              {
+                "count": 551,
+                "forecast_mean": 0.0163,
+                "lower": 0.0,
+                "observed_rate": 0.0163,
+                "upper": 0.1
+              },
+              {
+                "count": 25,
+                "forecast_mean": 0.14,
+                "lower": 0.1,
+                "observed_rate": 0.08,
+                "upper": 0.2
+              },
+              {
+                "count": 4,
+                "forecast_mean": 0.2272,
+                "lower": 0.2,
+                "observed_rate": 0.0,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.01903,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -8.3e-05,
+              "implied_brier": 0.01895,
+              "reliability": 0.00051,
+              "resolution": 0.00017,
+              "uncertainty": 0.01861
+            },
+            "definition": "any session closing at or above anchor x 1.05",
+            "id": "touch_above_5pct",
+            "monitoring": "session_close",
+            "observations": 580,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0017,
+            "bins": [
+              {
+                "count": 580,
+                "forecast_mean": 0.0026,
+                "lower": 0.0,
+                "observed_rate": 0.0017,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.00169,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 3.3e-05,
+              "implied_brier": 0.00172,
+              "reliability": 0.0,
+              "resolution": 0.0,
+              "uncertainty": 0.00172
+            },
+            "definition": "any session closing at or below anchor x 0.9",
+            "id": "touch_below_10pct",
+            "monitoring": "session_close",
+            "observations": 580,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0,
+            "bins": [
+              {
+                "count": 580,
+                "forecast_mean": 0.0015,
+                "lower": 0.0,
+                "observed_rate": 0.0,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 3e-05,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -3.2e-05,
+              "implied_brier": 0.0,
+              "reliability": 0.0,
+              "resolution": 0.0,
+              "uncertainty": 0.0
+            },
+            "definition": "any session closing at or above anchor x 1.1",
+            "id": "touch_above_10pct",
+            "monitoring": "session_close",
+            "observations": 580,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          }
+        ],
+        "first_as_of": "2015-01-02",
+        "horizon_sessions": 5,
+        "independent_observations": 580,
+        "last_as_of": "2026-07-21",
+        "observations": 580,
+        "pit": {
+          "bins": [
+            41,
+            63,
+            45,
+            67,
+            63,
+            63,
+            62,
+            44,
+            54,
+            78
+          ],
+          "goodness_of_fit": {
+            "bins": [
+              41,
+              63,
+              45,
+              67,
+              63,
+              63,
+              62,
+              44,
+              54,
+              78
+            ],
+            "degrees_of_freedom": 9,
+            "expected_per_bin": 58.0,
+            "independent_observations": 580,
+            "p_value": 0.01093,
+            "reading": "Complements KS rather than replacing it: chi-square sees mass piled in one bin, which barely moves a cumulative statistic.",
+            "statistic": 21.41379,
+            "test": "pearson_chi_square_vs_uniform",
+            "validity_note": null
+          },
+          "mean": 0.52094,
+          "note": "Histogram over every forecast; both tests over the non-overlapping subsample only. KS and chi-square are reported together because they fail on different shapes.",
+          "uniformity": {
+            "independent_observations": 580,
+            "p_value": 0.14497,
+            "reading": "A small p-value says the predicted distributions are the wrong shape. It does not say in which direction; read the histogram for that.",
+            "statistic": 0.04727,
+            "test": "kolmogorov_smirnov_vs_uniform"
+          },
+          "uniformity_unavailable": null
+        },
+        "sampling": {
+          "horizon_sessions": 5,
+          "independent_stride": 1,
+          "overlapping": false,
+          "step_sessions": 5
+        }
+      },
+      {
+        "coverage": [
+          {
+            "breaches": 9,
+            "christoffersen_independence": {
+              "breach_rate_after_breach": 0.0,
+              "breach_rate_after_calm": 0.03214,
+              "independent_observations": 290,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.44683,
+              "power_note": null,
+              "statistic": 0.57867,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 271,
+                "n01": 9,
+                "n10": 9,
+                "n11": 0
+              },
+              "undefined_reason": null
+            },
+            "conditional_coverage": {
+              "boundary_note": null,
+              "components": {
+                "independence": 0.5786710962241273,
+                "kupiec": 2.5244435986909224
+              },
+              "independent_observations": 290,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.21192,
+              "power_note": null,
+              "statistic": 3.10311,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": null
+            },
+            "kupiec": {
+              "boundary_note": null,
+              "breaches": 9,
+              "chi2_p_value": 0.11209,
+              "exact_binomial_p_value": 0.17551,
+              "exact_lower_tail": 0.0823,
+              "expected_breaches": 14.5,
+              "expected_rate": 0.05,
+              "independent_observations": 290,
+              "method": "likelihood_ratio_chi2",
+              "observed_rate": 0.03103,
+              "p_value": 0.11209,
+              "power_note": null,
+              "statistic": 2.52444,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.05
+          },
+          {
+            "breaches": 1,
+            "christoffersen_independence": {
+              "breach_rate_after_breach": 0.0,
+              "breach_rate_after_calm": 0.00347,
+              "independent_observations": 290,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.93359,
+              "power_note": "290 independent observations at a 1% quantile expect 2.9 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 0.00694,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 287,
+                "n01": 1,
+                "n10": 1,
+                "n11": 0
+              },
+              "undefined_reason": null
+            },
+            "conditional_coverage": {
+              "boundary_note": null,
+              "components": {
+                "independence": 0.006944458398631781,
+                "kupiec": 1.6831248955843723
+              },
+              "independent_observations": 290,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.42954,
+              "power_note": "290 independent observations at a 1% quantile expect 2.9 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 1.69007,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": null
+            },
+            "kupiec": {
+              "boundary_note": null,
+              "breaches": 1,
+              "chi2_p_value": 0.19451,
+              "exact_binomial_p_value": 0.38039,
+              "exact_lower_tail": 0.21307,
+              "expected_breaches": 2.9,
+              "expected_rate": 0.01,
+              "independent_observations": 290,
+              "method": "likelihood_ratio_chi2",
+              "observed_rate": 0.00345,
+              "p_value": 0.19451,
+              "power_note": "290 independent observations at a 1% quantile expect 2.9 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 1.68312,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.01
+          }
+        ],
+        "crps": {
+          "alternative_nulls": {
+            "random_walk_drift_matched": {
+              "crps": 35.2288,
+              "significance": {
+                "distinguishable_from_zero": false,
+                "non_overlapping_subsample": {
+                  "hac_truncation_lag": 0,
+                  "mean_loss_differential": 0.493855,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 290,
+                  "overlapping_records": 1,
+                  "p_value": 0.2743,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(289)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 1.0953,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "overlapping_windows_hac": {
+                  "hac_truncation_lag": 1,
+                  "mean_loss_differential": 0.346815,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 579,
+                  "overlapping_records": 2,
+                  "p_value": 0.3802,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(578)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 0.8783,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+              },
+              "skill_score": -0.0098
+            }
+          },
+          "estimator": "fair (ensemble-size bias removed)",
+          "model": 35.5756,
+          "random_walk": 35.4209,
+          "reading": "Positive skill means the model beat a driftless random walk with empirical increments. Zero means it tied. Negative means it lost, and a negative number here is published rather than withheld. The sign is only half of it: read the Diebold-Mariano p-value beside it before treating any of these as a finding.",
+          "significance": {
+            "distinguishable_from_zero": false,
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.272653,
+              "null_compared": "random_walk",
+              "observations": 290,
+              "overlapping_records": 1,
+              "p_value": 0.4092,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(289)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.8266,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 1,
+              "mean_loss_differential": 0.15472,
+              "null_compared": "random_walk",
+              "observations": 579,
+              "overlapping_records": 2,
+              "p_value": 0.5952,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(578)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.5316,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+          },
+          "skill_score": -0.0044,
+          "units": "price"
+        },
+        "direction": {
+          "forecast_mean": 0.51204,
+          "gap": 0.03373,
+          "note": "Measured against spot rather than against the forecast centre, so this gap reads the whole sample drift where the PIT mean reads only what the forecast centre failed to carry.",
+          "observed_rate": 0.54577
+        },
+        "events": [
+          {
+            "base_rate": 0.5458,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 44,
+                "forecast_mean": 0.4955,
+                "lower": 0.4,
+                "observed_rate": 0.6136,
+                "upper": 0.5
+              },
+              {
+                "count": 535,
+                "forecast_mean": 0.5134,
+                "lower": 0.5,
+                "observed_rate": 0.5402,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.24982,
+            "decomposition": {
+              "binning_error": -0.000572,
+              "implied_brier": 0.24925,
+              "reliability": 0.00172,
+              "resolution": 0.00038,
+              "uncertainty": 0.24791
+            },
+            "definition": "terminal price above anchor x 1",
+            "id": "direction_up",
+            "monitoring": "terminal",
+            "observations": 579,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0553,
+            "bins": [
+              {
+                "count": 478,
+                "forecast_mean": 0.0516,
+                "lower": 0.0,
+                "observed_rate": 0.0377,
+                "upper": 0.1
+              },
+              {
+                "count": 69,
+                "forecast_mean": 0.1382,
+                "lower": 0.1,
+                "observed_rate": 0.1014,
+                "upper": 0.2
+              },
+              {
+                "count": 25,
+                "forecast_mean": 0.2477,
+                "lower": 0.2,
+                "observed_rate": 0.24,
+                "upper": 0.3
+              },
+              {
+                "count": 7,
+                "forecast_mean": 0.3385,
+                "lower": 0.3,
+                "observed_rate": 0.1429,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.05137,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -0.000448,
+              "implied_brier": 0.05092,
+              "reliability": 0.00079,
+              "resolution": 0.00208,
+              "uncertainty": 0.05221
+            },
+            "definition": "any session closing at or below anchor x 0.95",
+            "id": "touch_below_5pct",
+            "monitoring": "session_close",
+            "observations": 579,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0915,
+            "bins": [
+              {
+                "count": 460,
+                "forecast_mean": 0.0504,
+                "lower": 0.0,
+                "observed_rate": 0.0891,
+                "upper": 0.1
+              },
+              {
+                "count": 80,
+                "forecast_mean": 0.1368,
+                "lower": 0.1,
+                "observed_rate": 0.1,
+                "upper": 0.2
+              },
+              {
+                "count": 27,
+                "forecast_mean": 0.2435,
+                "lower": 0.2,
+                "observed_rate": 0.0741,
+                "upper": 0.3
+              },
+              {
+                "count": 11,
+                "forecast_mean": 0.3358,
+                "lower": 0.3,
+                "observed_rate": 0.1818,
+                "upper": 0.4
+              },
+              {
+                "count": 1,
+                "forecast_mean": 0.4228,
+                "lower": 0.4,
+                "observed_rate": 0.0,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.0859,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.000539,
+              "implied_brier": 0.08644,
+              "reliability": 0.00348,
+              "resolution": 0.0002,
+              "uncertainty": 0.08316
+            },
+            "definition": "any session closing at or above anchor x 1.05",
+            "id": "touch_above_5pct",
+            "monitoring": "session_close",
+            "observations": 579,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0052,
+            "bins": [
+              {
+                "count": 577,
+                "forecast_mean": 0.0089,
+                "lower": 0.0,
+                "observed_rate": 0.0052,
+                "upper": 0.1
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.1215,
+                "lower": 0.1,
+                "observed_rate": 0.0,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.00503,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.00019,
+              "implied_brier": 0.00522,
+              "reliability": 6e-05,
+              "resolution": 0.0,
+              "uncertainty": 0.00515
+            },
+            "definition": "any session closing at or below anchor x 0.9",
+            "id": "touch_below_10pct",
+            "monitoring": "session_close",
+            "observations": 579,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0086,
+            "bins": [
+              {
+                "count": 572,
+                "forecast_mean": 0.0071,
+                "lower": 0.0,
+                "observed_rate": 0.0087,
+                "upper": 0.1
+              },
+              {
+                "count": 7,
+                "forecast_mean": 0.1251,
+                "lower": 0.1,
+                "observed_rate": 0.0,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.00884,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -8.5e-05,
+              "implied_brier": 0.00875,
+              "reliability": 0.00019,
+              "resolution": 0.0,
+              "uncertainty": 0.00856
+            },
+            "definition": "any session closing at or above anchor x 1.1",
+            "id": "touch_above_10pct",
+            "monitoring": "session_close",
+            "observations": 579,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          }
+        ],
+        "first_as_of": "2015-01-02",
+        "horizon_sessions": 10,
+        "independent_observations": 290,
+        "last_as_of": "2026-07-14",
+        "observations": 579,
+        "pit": {
+          "bins": [
+            42,
+            55,
+            50,
+            64,
+            58,
+            55,
+            53,
+            72,
+            60,
+            70
+          ],
+          "goodness_of_fit": {
+            "bins": [
+              24,
+              24,
+              27,
+              36,
+              26,
+              22,
+              24,
+              40,
+              33,
+              34
+            ],
+            "degrees_of_freedom": 9,
+            "expected_per_bin": 29.0,
+            "independent_observations": 290,
+            "p_value": 0.21331,
+            "reading": "Complements KS rather than replacing it: chi-square sees mass piled in one bin, which barely moves a cumulative statistic.",
+            "statistic": 12.0,
+            "test": "pearson_chi_square_vs_uniform",
+            "validity_note": null
+          },
+          "mean": 0.53339,
+          "note": "Histogram over every forecast; both tests over the non-overlapping subsample only. KS and chi-square are reported together because they fail on different shapes.",
+          "uniformity": {
+            "independent_observations": 290,
+            "p_value": 0.06933,
+            "reading": "A small p-value says the predicted distributions are the wrong shape. It does not say in which direction; read the histogram for that.",
+            "statistic": 0.07554,
+            "test": "kolmogorov_smirnov_vs_uniform"
+          },
+          "uniformity_unavailable": null
+        },
+        "sampling": {
+          "horizon_sessions": 10,
+          "independent_stride": 2,
+          "overlapping": true,
+          "step_sessions": 5
+        }
+      },
+      {
+        "coverage": [
+          {
+            "breaches": 2,
+            "christoffersen_independence": {
+              "breach_rate_after_breach": 0.0,
+              "breach_rate_after_calm": 0.0177,
+              "independent_observations": 116,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.79018,
+              "power_note": "116 independent observations at a 5% quantile expect 5.8 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 0.0708,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 111,
+                "n01": 2,
+                "n10": 2,
+                "n11": 0
+              },
+              "undefined_reason": null
+            },
+            "conditional_coverage": {
+              "boundary_note": null,
+              "components": {
+                "independence": 0.07080015690775454,
+                "kupiec": 3.4707108340856365
+              },
+              "independent_observations": 116,
+              "method": "likelihood_ratio_chi2",
+              "p_value": 0.1702,
+              "power_note": "116 independent observations at a 5% quantile expect 5.8 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 3.54151,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": null
+            },
+            "kupiec": {
+              "boundary_note": null,
+              "breaches": 2,
+              "chi2_p_value": 0.06246,
+              "exact_binomial_p_value": 0.13244,
+              "exact_lower_tail": 0.06666,
+              "expected_breaches": 5.8,
+              "expected_rate": 0.05,
+              "independent_observations": 116,
+              "method": "likelihood_ratio_chi2",
+              "observed_rate": 0.01724,
+              "p_value": 0.06246,
+              "power_note": "116 independent observations at a 5% quantile expect 5.8 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 3.47071,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.05
+          },
+          {
+            "breaches": 0,
+            "christoffersen_independence": {
+              "independent_observations": 116,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "116 independent observations at a 1% quantile expect 1.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 115,
+                "n01": 0,
+                "n10": 0,
+                "n11": 0
+              },
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "conditional_coverage": {
+              "independent_observations": 116,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "116 independent observations at a 1% quantile expect 1.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "kupiec": {
+              "boundary_note": "Zero breaches puts the unrestricted estimate on the boundary of the parameter space, where the chi-square approximation does not hold. The exact binomial p-value is reported instead.",
+              "breaches": 0,
+              "chi2_p_value": 0.12677,
+              "exact_binomial_p_value": 0.63482,
+              "exact_lower_tail": 0.31166,
+              "expected_breaches": 1.16,
+              "expected_rate": 0.01,
+              "independent_observations": 116,
+              "method": "exact_binomial",
+              "observed_rate": 0.0,
+              "p_value": 0.63482,
+              "power_note": "116 independent observations at a 1% quantile expect 1.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 2.33168,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.01
+          }
+        ],
+        "crps": {
+          "alternative_nulls": {
+            "random_walk_drift_matched": {
+              "crps": 51.957,
+              "significance": {
+                "distinguishable_from_zero": false,
+                "non_overlapping_subsample": {
+                  "hac_truncation_lag": 0,
+                  "mean_loss_differential": 0.957662,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 116,
+                  "overlapping_records": 1,
+                  "p_value": 0.4302,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(115)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 0.7917,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "overlapping_windows_hac": {
+                  "hac_truncation_lag": 4,
+                  "mean_loss_differential": 0.710489,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 577,
+                  "overlapping_records": 5,
+                  "p_value": 0.4805,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(576)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 0.7059,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+              },
+              "skill_score": -0.0137
+            }
+          },
+          "estimator": "fair (ensemble-size bias removed)",
+          "model": 52.6675,
+          "random_walk": 52.6062,
+          "reading": "Positive skill means the model beat a driftless random walk with empirical increments. Zero means it tied. Negative means it lost, and a negative number here is published rather than withheld. The sign is only half of it: read the Diebold-Mariano p-value beside it before treating any of these as a finding.",
+          "significance": {
+            "distinguishable_from_zero": false,
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.433935,
+              "null_compared": "random_walk",
+              "observations": 116,
+              "overlapping_records": 1,
+              "p_value": 0.5866,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(115)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.5453,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 4,
+              "mean_loss_differential": 0.061285,
+              "null_compared": "random_walk",
+              "observations": 577,
+              "overlapping_records": 5,
+              "p_value": 0.8983,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(576)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.1279,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+          },
+          "skill_score": -0.0012,
+          "units": "price"
+        },
+        "direction": {
+          "forecast_mean": 0.50823,
+          "gap": 0.04809,
+          "note": "Measured against spot rather than against the forecast centre, so this gap reads the whole sample drift where the PIT mean reads only what the forecast centre failed to carry.",
+          "observed_rate": 0.55633
+        },
+        "events": [
+          {
+            "base_rate": 0.5563,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 109,
+                "forecast_mean": 0.4958,
+                "lower": 0.4,
+                "observed_rate": 0.578,
+                "upper": 0.5
+              },
+              {
+                "count": 468,
+                "forecast_mean": 0.5111,
+                "lower": 0.5,
+                "observed_rate": 0.5513,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.24946,
+            "decomposition": {
+              "binning_error": -0.000161,
+              "implied_brier": 0.2493,
+              "reliability": 0.00258,
+              "resolution": 0.00011,
+              "uncertainty": 0.24683
+            },
+            "definition": "terminal price above anchor x 1",
+            "id": "direction_up",
+            "monitoring": "terminal",
+            "observations": 577,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.1369,
+            "bins": [
+              {
+                "count": 95,
+                "forecast_mean": 0.078,
+                "lower": 0.0,
+                "observed_rate": 0.0316,
+                "upper": 0.1
+              },
+              {
+                "count": 293,
+                "forecast_mean": 0.1563,
+                "lower": 0.1,
+                "observed_rate": 0.1365,
+                "upper": 0.2
+              },
+              {
+                "count": 132,
+                "forecast_mean": 0.2317,
+                "lower": 0.2,
+                "observed_rate": 0.1439,
+                "upper": 0.3
+              },
+              {
+                "count": 35,
+                "forecast_mean": 0.3362,
+                "lower": 0.3,
+                "observed_rate": 0.2286,
+                "upper": 0.4
+              },
+              {
+                "count": 19,
+                "forecast_mean": 0.4397,
+                "lower": 0.4,
+                "observed_rate": 0.4211,
+                "upper": 0.5
+              },
+              {
+                "count": 3,
+                "forecast_mean": 0.5137,
+                "lower": 0.5,
+                "observed_rate": 0.3333,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.11708,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -0.000921,
+              "implied_brier": 0.11616,
+              "reliability": 0.0032,
+              "resolution": 0.00521,
+              "uncertainty": 0.11817
+            },
+            "definition": "any session closing at or below anchor x 0.95",
+            "id": "touch_below_5pct",
+            "monitoring": "session_close",
+            "observations": 577,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.2426,
+            "bins": [
+              {
+                "count": 81,
+                "forecast_mean": 0.0787,
+                "lower": 0.0,
+                "observed_rate": 0.1728,
+                "upper": 0.1
+              },
+              {
+                "count": 240,
+                "forecast_mean": 0.1579,
+                "lower": 0.1,
+                "observed_rate": 0.2833,
+                "upper": 0.2
+              },
+              {
+                "count": 185,
+                "forecast_mean": 0.2357,
+                "lower": 0.2,
+                "observed_rate": 0.2324,
+                "upper": 0.3
+              },
+              {
+                "count": 42,
+                "forecast_mean": 0.3408,
+                "lower": 0.3,
+                "observed_rate": 0.1905,
+                "upper": 0.4
+              },
+              {
+                "count": 23,
+                "forecast_mean": 0.4487,
+                "lower": 0.4,
+                "observed_rate": 0.2174,
+                "upper": 0.5
+              },
+              {
+                "count": 6,
+                "forecast_mean": 0.5285,
+                "lower": 0.5,
+                "observed_rate": 0.3333,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.19346,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.000552,
+              "implied_brier": 0.19401,
+              "reliability": 0.01196,
+              "resolution": 0.00172,
+              "uncertainty": 0.18376
+            },
+            "definition": "any session closing at or above anchor x 1.05",
+            "id": "touch_above_5pct",
+            "monitoring": "session_close",
+            "observations": 577,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0191,
+            "bins": [
+              {
+                "count": 547,
+                "forecast_mean": 0.0249,
+                "lower": 0.0,
+                "observed_rate": 0.011,
+                "upper": 0.1
+              },
+              {
+                "count": 24,
+                "forecast_mean": 0.144,
+                "lower": 0.1,
+                "observed_rate": 0.125,
+                "upper": 0.2
+              },
+              {
+                "count": 6,
+                "forecast_mean": 0.2292,
+                "lower": 0.2,
+                "observed_rate": 0.3333,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.01728,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.000181,
+              "implied_brier": 0.01746,
+              "reliability": 0.00031,
+              "resolution": 0.00156,
+              "uncertainty": 0.0187
+            },
+            "definition": "any session closing at or below anchor x 0.9",
+            "id": "touch_below_10pct",
+            "monitoring": "session_close",
+            "observations": 577,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0555,
+            "bins": [
+              {
+                "count": 533,
+                "forecast_mean": 0.0255,
+                "lower": 0.0,
+                "observed_rate": 0.0582,
+                "upper": 0.1
+              },
+              {
+                "count": 30,
+                "forecast_mean": 0.1424,
+                "lower": 0.1,
+                "observed_rate": 0.0333,
+                "upper": 0.2
+              },
+              {
+                "count": 12,
+                "forecast_mean": 0.2301,
+                "lower": 0.2,
+                "observed_rate": 0.0,
+                "upper": 0.3
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.317,
+                "lower": 0.3,
+                "observed_rate": 0.0,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.05468,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.000652,
+              "implied_brier": 0.05533,
+              "reliability": 0.00306,
+              "resolution": 0.00011,
+              "uncertainty": 0.05238
+            },
+            "definition": "any session closing at or above anchor x 1.1",
+            "id": "touch_above_10pct",
+            "monitoring": "session_close",
+            "observations": 577,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          }
+        ],
+        "first_as_of": "2015-01-02",
+        "horizon_sessions": 21,
+        "independent_observations": 116,
+        "last_as_of": "2026-06-30",
+        "observations": 577,
+        "pit": {
+          "bins": [
+            38,
+            49,
+            46,
+            66,
+            61,
+            54,
+            62,
+            55,
+            56,
+            90
+          ],
+          "goodness_of_fit": {
+            "bins": [
+              10,
+              9,
+              8,
+              18,
+              13,
+              7,
+              9,
+              12,
+              12,
+              18
+            ],
+            "degrees_of_freedom": 9,
+            "expected_per_bin": 11.6,
+            "independent_observations": 116,
+            "p_value": 0.23765,
+            "reading": "Complements KS rather than replacing it: chi-square sees mass piled in one bin, which barely moves a cumulative statistic.",
+            "statistic": 11.58621,
+            "test": "pearson_chi_square_vs_uniform",
+            "validity_note": null
+          },
+          "mean": 0.54806,
+          "note": "Histogram over every forecast; both tests over the non-overlapping subsample only. KS and chi-square are reported together because they fail on different shapes.",
+          "uniformity": {
+            "independent_observations": 116,
+            "p_value": 0.28739,
+            "reading": "A small p-value says the predicted distributions are the wrong shape. It does not say in which direction; read the histogram for that.",
+            "statistic": 0.08996,
+            "test": "kolmogorov_smirnov_vs_uniform"
+          },
+          "uniformity_unavailable": null
+        },
+        "sampling": {
+          "horizon_sessions": 21,
+          "independent_stride": 5,
+          "overlapping": true,
+          "step_sessions": 5
+        }
+      },
+      {
+        "coverage": [
+          {
+            "breaches": 0,
+            "christoffersen_independence": {
+              "independent_observations": 64,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "64 independent observations at a 5% quantile expect 3.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 63,
+                "n01": 0,
+                "n10": 0,
+                "n11": 0
+              },
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "conditional_coverage": {
+              "independent_observations": 64,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "64 independent observations at a 5% quantile expect 3.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "kupiec": {
+              "boundary_note": "Zero breaches puts the unrestricted estimate on the boundary of the parameter space, where the chi-square approximation does not hold. The exact binomial p-value is reported instead.",
+              "breaches": 0,
+              "chi2_p_value": 0.0104,
+              "exact_binomial_p_value": 0.07782,
+              "exact_lower_tail": 0.03752,
+              "expected_breaches": 3.2,
+              "expected_rate": 0.05,
+              "independent_observations": 64,
+              "method": "exact_binomial",
+              "observed_rate": 0.0,
+              "p_value": 0.07782,
+              "power_note": "64 independent observations at a 5% quantile expect 3.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 6.56554,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.05
+          },
+          {
+            "breaches": 0,
+            "christoffersen_independence": {
+              "independent_observations": 64,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "64 independent observations at a 1% quantile expect 0.6 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 63,
+                "n01": 0,
+                "n10": 0,
+                "n11": 0
+              },
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "conditional_coverage": {
+              "independent_observations": 64,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "64 independent observations at a 1% quantile expect 0.6 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "kupiec": {
+              "boundary_note": "Zero breaches puts the unrestricted estimate on the boundary of the parameter space, where the chi-square approximation does not hold. The exact binomial p-value is reported instead.",
+              "breaches": 0,
+              "chi2_p_value": 0.2567,
+              "exact_binomial_p_value": 1.0,
+              "exact_lower_tail": 0.5256,
+              "expected_breaches": 0.64,
+              "expected_rate": 0.01,
+              "independent_observations": 64,
+              "method": "exact_binomial",
+              "observed_rate": 0.0,
+              "p_value": 1.0,
+              "power_note": "64 independent observations at a 1% quantile expect 0.6 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 1.28644,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.01
+          }
+        ],
+        "crps": {
+          "alternative_nulls": {
+            "random_walk_drift_matched": {
+              "crps": 78.7678,
+              "significance": {
+                "distinguishable_from_zero": false,
+                "non_overlapping_subsample": {
+                  "hac_truncation_lag": 0,
+                  "mean_loss_differential": 2.871469,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 64,
+                  "overlapping_records": 1,
+                  "p_value": 0.3291,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(63)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 0.9835,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "overlapping_windows_hac": {
+                  "hac_truncation_lag": 8,
+                  "mean_loss_differential": 1.720913,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 572,
+                  "overlapping_records": 9,
+                  "p_value": 0.5028,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(571)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 0.6706,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+              },
+              "skill_score": -0.0218
+            }
+          },
+          "estimator": "fair (ensemble-size bias removed)",
+          "model": 80.4887,
+          "random_walk": 80.7373,
+          "reading": "Positive skill means the model beat a driftless random walk with empirical increments. Zero means it tied. Negative means it lost, and a negative number here is published rather than withheld. The sign is only half of it: read the Diebold-Mariano p-value beside it before treating any of these as a finding.",
+          "significance": {
+            "distinguishable_from_zero": false,
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.525083,
+              "null_compared": "random_walk",
+              "observations": 64,
+              "overlapping_records": 1,
+              "p_value": 0.6988,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(63)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.3888,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 8,
+              "mean_loss_differential": -0.248535,
+              "null_compared": "random_walk",
+              "observations": 572,
+              "overlapping_records": 9,
+              "p_value": 0.7522,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(571)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.3158,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+          },
+          "skill_score": 0.0031,
+          "units": "price"
+        },
+        "direction": {
+          "forecast_mean": 0.50823,
+          "gap": 0.07918,
+          "note": "Measured against spot rather than against the forecast centre, so this gap reads the whole sample drift where the PIT mean reads only what the forecast centre failed to carry.",
+          "observed_rate": 0.58741
+        },
+        "events": [
+          {
+            "base_rate": 0.5874,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 107,
+                "forecast_mean": 0.4954,
+                "lower": 0.4,
+                "observed_rate": 0.6636,
+                "upper": 0.5
+              },
+              {
+                "count": 465,
+                "forecast_mean": 0.5112,
+                "lower": 0.5,
+                "observed_rate": 0.5699,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.24942,
+            "decomposition": {
+              "binning_error": -0.000305,
+              "implied_brier": 0.24911,
+              "reliability": 0.00809,
+              "resolution": 0.00133,
+              "uncertainty": 0.24236
+            },
+            "definition": "terminal price above anchor x 1",
+            "id": "direction_up",
+            "monitoring": "terminal",
+            "observations": 572,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.2413,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 31,
+                "forecast_mean": 0.1816,
+                "lower": 0.1,
+                "observed_rate": 0.0645,
+                "upper": 0.2
+              },
+              {
+                "count": 174,
+                "forecast_mean": 0.2564,
+                "lower": 0.2,
+                "observed_rate": 0.2126,
+                "upper": 0.3
+              },
+              {
+                "count": 278,
+                "forecast_mean": 0.3433,
+                "lower": 0.3,
+                "observed_rate": 0.2482,
+                "upper": 0.4
+              },
+              {
+                "count": 61,
+                "forecast_mean": 0.441,
+                "lower": 0.4,
+                "observed_rate": 0.2623,
+                "upper": 0.5
+              },
+              {
+                "count": 24,
+                "forecast_mean": 0.553,
+                "lower": 0.5,
+                "observed_rate": 0.4167,
+                "upper": 0.6
+              },
+              {
+                "count": 4,
+                "forecast_mean": 0.6234,
+                "lower": 0.6,
+                "observed_rate": 1.0,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.186,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.000618,
+              "implied_brier": 0.18662,
+              "reliability": 0.01089,
+              "resolution": 0.00733,
+              "uncertainty": 0.18305
+            },
+            "definition": "any session closing at or below anchor x 0.95",
+            "id": "touch_below_5pct",
+            "monitoring": "session_close",
+            "observations": 572,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.4213,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 18,
+                "forecast_mean": 0.1871,
+                "lower": 0.1,
+                "observed_rate": 0.3333,
+                "upper": 0.2
+              },
+              {
+                "count": 117,
+                "forecast_mean": 0.2539,
+                "lower": 0.2,
+                "observed_rate": 0.3761,
+                "upper": 0.3
+              },
+              {
+                "count": 295,
+                "forecast_mean": 0.3526,
+                "lower": 0.3,
+                "observed_rate": 0.4576,
+                "upper": 0.4
+              },
+              {
+                "count": 102,
+                "forecast_mean": 0.4385,
+                "lower": 0.4,
+                "observed_rate": 0.4216,
+                "upper": 0.5
+              },
+              {
+                "count": 28,
+                "forecast_mean": 0.5417,
+                "lower": 0.5,
+                "observed_rate": 0.2857,
+                "upper": 0.6
+              },
+              {
+                "count": 12,
+                "forecast_mean": 0.6273,
+                "lower": 0.6,
+                "observed_rate": 0.4167,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.25635,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -0.001176,
+              "implied_brier": 0.25518,
+              "reliability": 0.01361,
+              "resolution": 0.00224,
+              "uncertainty": 0.24381
+            },
+            "definition": "any session closing at or above anchor x 1.05",
+            "id": "touch_above_5pct",
+            "monitoring": "session_close",
+            "observations": 572,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.042,
+            "bins": [
+              {
+                "count": 411,
+                "forecast_mean": 0.062,
+                "lower": 0.0,
+                "observed_rate": 0.0146,
+                "upper": 0.1
+              },
+              {
+                "count": 130,
+                "forecast_mean": 0.1329,
+                "lower": 0.1,
+                "observed_rate": 0.0385,
+                "upper": 0.2
+              },
+              {
+                "count": 20,
+                "forecast_mean": 0.2509,
+                "lower": 0.2,
+                "observed_rate": 0.3,
+                "upper": 0.3
+              },
+              {
+                "count": 10,
+                "forecast_mean": 0.3434,
+                "lower": 0.3,
+                "observed_rate": 0.6,
+                "upper": 0.4
+              },
+              {
+                "count": 1,
+                "forecast_mean": 0.4233,
+                "lower": 0.4,
+                "observed_rate": 1.0,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.03645,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -0.000709,
+              "implied_brier": 0.03574,
+              "reliability": 0.00546,
+              "resolution": 0.00992,
+              "uncertainty": 0.0402
+            },
+            "definition": "any session closing at or below anchor x 0.9",
+            "id": "touch_below_10pct",
+            "monitoring": "session_close",
+            "observations": 572,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.1731,
+            "bins": [
+              {
+                "count": 305,
+                "forecast_mean": 0.0629,
+                "lower": 0.0,
+                "observed_rate": 0.177,
+                "upper": 0.1
+              },
+              {
+                "count": 211,
+                "forecast_mean": 0.1317,
+                "lower": 0.1,
+                "observed_rate": 0.1754,
+                "upper": 0.2
+              },
+              {
+                "count": 36,
+                "forecast_mean": 0.2398,
+                "lower": 0.2,
+                "observed_rate": 0.1944,
+                "upper": 0.3
+              },
+              {
+                "count": 15,
+                "forecast_mean": 0.3473,
+                "lower": 0.3,
+                "observed_rate": 0.0667,
+                "upper": 0.4
+              },
+              {
+                "count": 5,
+                "forecast_mean": 0.4313,
+                "lower": 0.4,
+                "observed_rate": 0.0,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.15402,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -2.5e-05,
+              "implied_brier": 0.154,
+              "reliability": 0.01147,
+              "resolution": 0.0006,
+              "uncertainty": 0.14312
+            },
+            "definition": "any session closing at or above anchor x 1.1",
+            "id": "touch_above_10pct",
+            "monitoring": "session_close",
+            "observations": 572,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          }
+        ],
+        "first_as_of": "2015-01-02",
+        "horizon_sessions": 42,
+        "independent_observations": 64,
+        "last_as_of": "2026-05-26",
+        "observations": 572,
+        "pit": {
+          "bins": [
+            24,
+            51,
+            49,
+            53,
+            63,
+            62,
+            51,
+            39,
+            74,
+            106
+          ],
+          "goodness_of_fit": {
+            "bins": [
+              3,
+              4,
+              5,
+              8,
+              6,
+              6,
+              6,
+              6,
+              10,
+              10
+            ],
+            "degrees_of_freedom": 9,
+            "expected_per_bin": 6.4,
+            "independent_observations": 64,
+            "p_value": 0.57876,
+            "reading": "Complements KS rather than replacing it: chi-square sees mass piled in one bin, which barely moves a cumulative statistic.",
+            "statistic": 7.5625,
+            "test": "pearson_chi_square_vs_uniform",
+            "validity_note": null
+          },
+          "mean": 0.57505,
+          "note": "Histogram over every forecast; both tests over the non-overlapping subsample only. KS and chi-square are reported together because they fail on different shapes.",
+          "uniformity": {
+            "independent_observations": 64,
+            "p_value": 0.08402,
+            "reading": "A small p-value says the predicted distributions are the wrong shape. It does not say in which direction; read the histogram for that.",
+            "statistic": 0.15463,
+            "test": "kolmogorov_smirnov_vs_uniform"
+          },
+          "uniformity_unavailable": null
+        },
+        "sampling": {
+          "horizon_sessions": 42,
+          "independent_stride": 9,
+          "overlapping": true,
+          "step_sessions": 5
+        }
+      },
+      {
+        "coverage": [
+          {
+            "breaches": 0,
+            "christoffersen_independence": {
+              "independent_observations": 44,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "44 independent observations at a 5% quantile expect 2.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 43,
+                "n01": 0,
+                "n10": 0,
+                "n11": 0
+              },
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "conditional_coverage": {
+              "independent_observations": 44,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "44 independent observations at a 5% quantile expect 2.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "kupiec": {
+              "boundary_note": "Zero breaches puts the unrestricted estimate on the boundary of the parameter space, where the chi-square approximation does not hold. The exact binomial p-value is reported instead.",
+              "breaches": 0,
+              "chi2_p_value": 0.03362,
+              "exact_binomial_p_value": 0.17215,
+              "exact_lower_tail": 0.10467,
+              "expected_breaches": 2.2,
+              "expected_rate": 0.05,
+              "independent_observations": 44,
+              "method": "exact_binomial",
+              "observed_rate": 0.0,
+              "p_value": 0.17215,
+              "power_note": "44 independent observations at a 5% quantile expect 2.2 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 4.51381,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.05
+          },
+          {
+            "breaches": 0,
+            "christoffersen_independence": {
+              "independent_observations": 44,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "44 independent observations at a 1% quantile expect 0.4 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_independence",
+              "transitions": {
+                "n00": 43,
+                "n01": 0,
+                "n10": 0,
+                "n11": 0
+              },
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "conditional_coverage": {
+              "independent_observations": 44,
+              "method": "likelihood_ratio_chi2",
+              "p_value": null,
+              "power_note": "44 independent observations at a 1% quantile expect 0.4 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": null,
+              "test": "christoffersen_conditional_coverage",
+              "undefined_reason": "no observation follows a breach, so the transition probability out of the breach state is not identified"
+            },
+            "kupiec": {
+              "boundary_note": "Zero breaches puts the unrestricted estimate on the boundary of the parameter space, where the chi-square approximation does not hold. The exact binomial p-value is reported instead.",
+              "breaches": 0,
+              "chi2_p_value": 0.34699,
+              "exact_binomial_p_value": 1.0,
+              "exact_lower_tail": 0.64261,
+              "expected_breaches": 0.44,
+              "expected_rate": 0.01,
+              "independent_observations": 44,
+              "method": "exact_binomial",
+              "observed_rate": 0.0,
+              "p_value": 1.0,
+              "power_note": "44 independent observations at a 1% quantile expect 0.4 breaches. The test cannot resolve a miscalibration of ordinary size at this count; read it as an absence of evidence, not as evidence of calibration.",
+              "statistic": 0.88443,
+              "test": "kupiec_pof",
+              "undefined_reason": null
+            },
+            "level": 0.01
+          }
+        ],
+        "crps": {
+          "alternative_nulls": {
+            "random_walk_drift_matched": {
+              "crps": 97.1194,
+              "significance": {
+                "distinguishable_from_zero": false,
+                "non_overlapping_subsample": {
+                  "hac_truncation_lag": 0,
+                  "mean_loss_differential": 3.41905,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 44,
+                  "overlapping_records": 1,
+                  "p_value": 0.5246,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(43)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 0.6415,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "overlapping_windows_hac": {
+                  "hac_truncation_lag": 12,
+                  "mean_loss_differential": 3.839719,
+                  "null_compared": "random_walk_drift_matched",
+                  "observations": 568,
+                  "overlapping_records": 13,
+                  "p_value": 0.3843,
+                  "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+                  "reference_distribution": "t(567)",
+                  "small_sample_correction": "harvey_leybourne_newbold",
+                  "statistic": 0.8707,
+                  "test": "diebold_mariano",
+                  "undefined_reason": null,
+                  "variance_estimator": "newey_west_bartlett"
+                },
+                "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+              },
+              "skill_score": -0.0395
+            }
+          },
+          "estimator": "fair (ensemble-size bias removed)",
+          "model": 100.9591,
+          "random_walk": 101.9158,
+          "reading": "Positive skill means the model beat a driftless random walk with empirical increments. Zero means it tied. Negative means it lost, and a negative number here is published rather than withheld. The sign is only half of it: read the Diebold-Mariano p-value beside it before treating any of these as a finding.",
+          "significance": {
+            "distinguishable_from_zero": false,
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -2.41844,
+              "null_compared": "random_walk",
+              "observations": 44,
+              "overlapping_records": 1,
+              "p_value": 0.234,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(43)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -1.2072,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 12,
+              "mean_loss_differential": -0.956707,
+              "null_compared": "random_walk",
+              "observations": 568,
+              "overlapping_records": 13,
+              "p_value": 0.3834,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(567)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.8723,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "reading": "The skill score is a difference of two sample means and the test is what decides whether that difference is a finding. Both runs must reject and agree on the sign before this reads as one."
+          },
+          "skill_score": 0.0094,
+          "units": "price"
+        },
+        "direction": {
+          "forecast_mean": 0.50897,
+          "gap": 0.1354,
+          "note": "Measured against spot rather than against the forecast centre, so this gap reads the whole sample drift where the PIT mean reads only what the forecast centre failed to carry.",
+          "observed_rate": 0.64437
+        },
+        "events": [
+          {
+            "base_rate": 0.6444,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 94,
+                "forecast_mean": 0.4949,
+                "lower": 0.4,
+                "observed_rate": 0.7447,
+                "upper": 0.5
+              },
+              {
+                "count": 474,
+                "forecast_mean": 0.5118,
+                "lower": 0.5,
+                "observed_rate": 0.6245,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.24851,
+            "decomposition": {
+              "binning_error": -0.000419,
+              "implied_brier": 0.24809,
+              "reliability": 0.02093,
+              "resolution": 0.002,
+              "uncertainty": 0.22916
+            },
+            "definition": "terminal price above anchor x 1",
+            "id": "direction_up",
+            "monitoring": "terminal",
+            "observations": 568,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.3116,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 32,
+                "forecast_mean": 0.2796,
+                "lower": 0.2,
+                "observed_rate": 0.0938,
+                "upper": 0.3
+              },
+              {
+                "count": 192,
+                "forecast_mean": 0.3601,
+                "lower": 0.3,
+                "observed_rate": 0.276,
+                "upper": 0.4
+              },
+              {
+                "count": 275,
+                "forecast_mean": 0.4429,
+                "lower": 0.4,
+                "observed_rate": 0.3455,
+                "upper": 0.5
+              },
+              {
+                "count": 47,
+                "forecast_mean": 0.5353,
+                "lower": 0.5,
+                "observed_rate": 0.2766,
+                "upper": 0.6
+              },
+              {
+                "count": 21,
+                "forecast_mean": 0.6365,
+                "lower": 0.6,
+                "observed_rate": 0.5714,
+                "upper": 0.7
+              },
+              {
+                "count": 1,
+                "forecast_mean": 0.706,
+                "lower": 0.7,
+                "observed_rate": 1.0,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.22166,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.000547,
+              "implied_brier": 0.2222,
+              "reliability": 0.01478,
+              "resolution": 0.00709,
+              "uncertainty": 0.21451
+            },
+            "definition": "any session closing at or below anchor x 0.95",
+            "id": "touch_below_5pct",
+            "monitoring": "session_close",
+            "observations": 568,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.5405,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 8,
+                "forecast_mean": 0.2835,
+                "lower": 0.2,
+                "observed_rate": 0.25,
+                "upper": 0.3
+              },
+              {
+                "count": 118,
+                "forecast_mean": 0.3546,
+                "lower": 0.3,
+                "observed_rate": 0.4915,
+                "upper": 0.4
+              },
+              {
+                "count": 319,
+                "forecast_mean": 0.4522,
+                "lower": 0.4,
+                "observed_rate": 0.5674,
+                "upper": 0.5
+              },
+              {
+                "count": 97,
+                "forecast_mean": 0.5359,
+                "lower": 0.5,
+                "observed_rate": 0.5567,
+                "upper": 0.6
+              },
+              {
+                "count": 23,
+                "forecast_mean": 0.6501,
+                "lower": 0.6,
+                "observed_rate": 0.4348,
+                "upper": 0.7
+              },
+              {
+                "count": 3,
+                "forecast_mean": 0.7105,
+                "lower": 0.7,
+                "observed_rate": 0.6667,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.26152,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -0.002506,
+              "implied_brier": 0.25902,
+              "reliability": 0.01333,
+              "resolution": 0.00267,
+              "uncertainty": 0.24836
+            },
+            "definition": "any session closing at or above anchor x 1.05",
+            "id": "touch_above_5pct",
+            "monitoring": "session_close",
+            "observations": 568,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.0704,
+            "bins": [
+              {
+                "count": 122,
+                "forecast_mean": 0.0739,
+                "lower": 0.0,
+                "observed_rate": 0.0082,
+                "upper": 0.1
+              },
+              {
+                "count": 357,
+                "forecast_mean": 0.1446,
+                "lower": 0.1,
+                "observed_rate": 0.0644,
+                "upper": 0.2
+              },
+              {
+                "count": 62,
+                "forecast_mean": 0.2357,
+                "lower": 0.2,
+                "observed_rate": 0.0484,
+                "upper": 0.3
+              },
+              {
+                "count": 18,
+                "forecast_mean": 0.3499,
+                "lower": 0.3,
+                "observed_rate": 0.2222,
+                "upper": 0.4
+              },
+              {
+                "count": 9,
+                "forecast_mean": 0.4357,
+                "lower": 0.4,
+                "observed_rate": 1.0,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.06511,
+            "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": -0.000613,
+              "implied_brier": 0.06449,
+              "reliability": 0.01436,
+              "resolution": 0.01533,
+              "uncertainty": 0.06546
+            },
+            "definition": "any session closing at or below anchor x 0.9",
+            "id": "touch_below_10pct",
+            "monitoring": "session_close",
+            "observations": 568,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          },
+          {
+            "base_rate": 0.2799,
+            "bins": [
+              {
+                "count": 85,
+                "forecast_mean": 0.0784,
+                "lower": 0.0,
+                "observed_rate": 0.2235,
+                "upper": 0.1
+              },
+              {
+                "count": 301,
+                "forecast_mean": 0.1577,
+                "lower": 0.1,
+                "observed_rate": 0.299,
+                "upper": 0.2
+              },
+              {
+                "count": 139,
+                "forecast_mean": 0.2331,
+                "lower": 0.2,
+                "observed_rate": 0.295,
+                "upper": 0.3
+              },
+              {
+                "count": 24,
+                "forecast_mean": 0.3365,
+                "lower": 0.3,
+                "observed_rate": 0.2917,
+                "upper": 0.4
+              },
+              {
+                "count": 17,
+                "forecast_mean": 0.4486,
+                "lower": 0.4,
+                "observed_rate": 0.1176,
+                "upper": 0.5
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.5255,
+                "lower": 0.5,
+                "observed_rate": 0.0,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "brier": 0.21852,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "decomposition": {
+              "binning_error": 0.000266,
+              "implied_brier": 0.21878,
+              "reliability": 0.01901,
+              "resolution": 0.00179,
+              "uncertainty": 0.20157
+            },
+            "definition": "any session closing at or above anchor x 1.1",
+            "id": "touch_above_10pct",
+            "monitoring": "session_close",
+            "observations": 568,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+          }
+        ],
+        "first_as_of": "2015-01-02",
+        "horizon_sessions": 63,
+        "independent_observations": 44,
+        "last_as_of": "2026-04-24",
+        "observations": 568,
+        "pit": {
+          "bins": [
+            20,
+            46,
+            53,
+            55,
+            34,
+            53,
+            57,
+            71,
+            75,
+            104
+          ],
+          "goodness_of_fit": {
+            "bins": [
+              0,
+              4,
+              6,
+              4,
+              1,
+              7,
+              4,
+              4,
+              4,
+              10
+            ],
+            "degrees_of_freedom": 9,
+            "expected_per_bin": 4.4,
+            "independent_observations": 44,
+            "p_value": 0.05798,
+            "reading": "Complements KS rather than replacing it: chi-square sees mass piled in one bin, which barely moves a cumulative statistic.",
+            "statistic": 16.45455,
+            "test": "pearson_chi_square_vs_uniform",
+            "validity_note": "Only 4.4 observations expected per bin; the chi-square approximation is unreliable below five and this p-value should not be read as a test."
+          },
+          "mean": 0.59796,
+          "note": "Histogram over every forecast; both tests over the non-overlapping subsample only. KS and chi-square are reported together because they fail on different shapes.",
+          "uniformity": {
+            "independent_observations": 44,
+            "p_value": 0.14055,
+            "reading": "A small p-value says the predicted distributions are the wrong shape. It does not say in which direction; read the histogram for that.",
+            "statistic": 0.16981,
+            "test": "kolmogorov_smirnov_vs_uniform"
+          },
+          "uniformity_unavailable": null
+        },
+        "sampling": {
+          "horizon_sessions": 63,
+          "independent_stride": 13,
+          "overlapping": true,
+          "step_sessions": 5
+        }
+      }
+    ],
+    "scored_forecasts": 2876,
+    "skill_decay": {
+      "block_records": 13,
+      "dates": 568,
+      "draws": 4000,
+      "intercept": -0.002494,
+      "method": "moving_block_bootstrap_over_as_of_dates",
+      "model": "skill = intercept + slope * log(horizon)",
+      "p_value": 0.731,
+      "r_squared": 0.0764,
+      "reading": "A negative slope is skill falling as the horizon lengthens, which is what mean-reverting conditional variance predicts. The test is of the sign of the trend, not of the logarithm: log horizon is the regressor because the horizons are spaced geometrically, and a different monotone transform would move the slope without moving the finding.",
+      "skill_by_horizon": [
+        {
+          "horizon_sessions": 5,
+          "skill": 0.00616
+        },
+        {
+          "horizon_sessions": 10,
+          "skill": -0.00441
+        },
+        {
+          "horizon_sessions": 21,
+          "skill": -0.0023
+        },
+        {
+          "horizon_sessions": 42,
+          "skill": 0.00147
+        },
+        {
+          "horizon_sessions": 63,
+          "skill": 0.00939
+        }
+      ],
+      "slope": 0.001535,
+      "slope_interval_95": [
+        -0.007099,
+        0.010043
+      ],
+      "test": "skill_decay_with_horizon"
+    },
+    "skipped": [],
+    "subject": {
+      "block_length": 10,
+      "breaks_excluded": 10,
+      "label": "gjr_garch",
+      "like_for_like_null": "random_walk",
+      "model": {
+        "equation": "sigma2_t = omega + (alpha + gamma*1[eps_{t-1}<0])*eps2_{t-1} + beta*sigma2_{t-1}",
+        "id": "gjr_garch",
+        "innovation": "t",
+        "mean": "zero",
+        "min_observations": 500
+      },
+      "n_paths": 4000,
+      "residual_pool": {
+        "demeaned": true,
+        "drift": "none: the resampled pool is centred, so the simulated median sits at spot and the distribution makes no directional claim"
+      },
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    "walk_forward": {
+      "horizons": [
+        5,
+        10,
+        21,
+        42,
+        63
+      ],
+      "min_observations": 750,
+      "reference_moves": [
+        0.05,
+        0.1
+      ],
+      "seed": 20260803,
+      "start": "2015-01-01",
+      "step_sessions": 5,
+      "var_levels": [
+        0.05,
+        0.01
+      ],
+      "window": "expanding"
+    }
+  },
+  "engine_version": "0.1.0",
+  "generated_at": "2026-08-04T19:52:43.434945+00:00",
+  "like_for_like_null": {
+    "null": "random_walk",
+    "why": "The subject and this null share a drift policy, so the difference between their scores is conditional variance and nothing else. The other null differs in drift as well, and its skill score should be read as the size of that difference rather than as a verdict."
+  },
+  "scope": "The asset's own quote. A currency lens composes these paths with an exchange rate through a copula and is not scored here.",
+  "source": {
+    "end": "2026-07-29",
+    "fallbacks": [],
+    "fetched_at": "2026-07-30T23:01:20.192424+00:00",
+    "has_ohlc": false,
+    "rows": 5009,
+    "series_id": "xauusd",
+    "source_name": "LBMA:gold_pm:USD",
+    "source_url": "https://prices.lbma.org.uk/json/gold_pm.json",
+    "start": "2006-08-04"
+  }
+}

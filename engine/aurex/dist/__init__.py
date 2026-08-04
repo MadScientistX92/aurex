@@ -26,10 +26,13 @@ from aurex.dist.copula import (
     pseudo_observations,
 )
 from aurex.dist.fhs import (
+    DEMEAN_BY_DEFAULT,
+    ResidualPool,
     SimulationSpec,
     block_indices,
     bootstrap_shocks,
     paths_from_returns,
+    residual_pool,
     simulate,
 )
 from aurex.dist.passage import (
@@ -44,11 +47,13 @@ from aurex.dist.paths import DEFAULT_QUANTILES, PathEnsemble
 
 __all__ = [
     "DEFAULT_QUANTILES",
+    "DEMEAN_BY_DEFAULT",
     "DependenceMode",
     "Direction",
     "FirstPassage",
     "Headline",
     "PathEnsemble",
+    "ResidualPool",
     "SimulationSpec",
     "TCopula",
     "block_indices",
@@ -60,5 +65,6 @@ __all__ = [
     "margin_call_barrier",
     "paths_from_returns",
     "pseudo_observations",
+    "residual_pool",
     "simulate",
 ]
