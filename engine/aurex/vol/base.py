@@ -89,12 +89,32 @@ class FittedVol(Protocol):
     def describe(self) -> dict[str, Any]: ...
 
 
+class DeterministicVarianceError(ValueError):
+    """A model whose paths share one variance trajectory was asked for a leveraged view."""
+
+
 @runtime_checkable
 class VolatilityModel(Protocol):
     """A fittable volatility specification."""
 
     @property
     def id(self) -> str: ...
+
+    @property
+    def per_path_variance(self) -> bool:
+        """Does each simulated path carry its own variance trajectory?
+
+        A protocol member rather than a lookup table somewhere downstream, because the
+        answer is a property of the recursion and only the model knows it. A model that
+        iterates its variance deterministically produces an ensemble in which every
+        path sees the same volatility on the same day — fine for a terminal
+        distribution, wrong for anything that reads the path. Barrier probabilities and
+        liquidation statistics are exactly that, and a leveraged position is scored on
+        the path because it is closed out on the path.
+
+        This is the flag :func:`~aurex.vol.require_per_path_variance` reads.
+        """
+        ...
 
     def fit(
         self,

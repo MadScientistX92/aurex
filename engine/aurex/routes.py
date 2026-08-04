@@ -50,6 +50,8 @@ from aurex.data.schedules.provenance import (
     read_yaml,
     require_provenance,
 )
+from aurex.vol import require_per_path_variance
+from aurex.vol.base import VolatilityModel
 
 ROUTES_FILE = "routes.yaml"
 
@@ -344,6 +346,36 @@ class RouteBook:
     def codes(self) -> tuple[str, ...]:
         """Every jurisdiction and bloc code, for the static leak guard."""
         return tuple(sorted({j.code for j in self.jurisdictions} | {b.code for b in self.blocs}))
+
+    def require_model(self, model: VolatilityModel, route_id: str, jurisdiction: str) -> None:
+        """Refuse a model that cannot honestly serve this cell's leverage.
+
+        The composition step for the §8 bar: this module knows a cell is leveraged,
+        :mod:`aurex.vol` knows which recursions give each path its own variance, and
+        neither needs to learn the other's vocabulary. Unleveraged cells accept every
+        model, because an unleveraged distribution from a deterministic model is a
+        legitimate thing to publish and is already scored.
+        """
+        require_per_path_variance(model, leveraged=self.terms_for(route_id, jurisdiction).leveraged)
+
+    def table_rows(self, asset_id: str | None = None) -> tuple[tuple[str, FrictionProfile], ...]:
+        """``(label, friction)`` pairs for :func:`aurex.trade.breakeven_table`.
+
+        This is the composition step the renderer must not do for itself: it pairs an
+        opaque display label with a profile, so the table code never learns what a
+        jurisdiction is. Labels carry the jurisdiction's own name rather than its code,
+        because the code is a leak-guard token and the label is for a reader.
+        """
+        wanted = None if asset_id is None else {entry.id for entry in self.for_asset(asset_id)}
+        labels = {entry.code: entry.label for entry in self.jurisdictions}
+        return tuple(
+            (
+                f"{self.route(entry.route_id).instrument} — {labels[entry.jurisdiction]}",
+                entry.friction,
+            )
+            for entry in self.terms
+            if wanted is None or entry.route_id in wanted
+        )
 
     def describe(self) -> dict[str, Any]:
         return {

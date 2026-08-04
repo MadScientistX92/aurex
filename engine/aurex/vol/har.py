@@ -151,6 +151,10 @@ class HarRv:
     mean: MeanSpec = "zero"
     min_observations: int = 250
     id: str = "har_rv"
+    #: The cascade is iterated deterministically — a simulated path has no intraday
+    #: range to measure realised variance from — so every path in the ensemble shares
+    #: one variance trajectory.
+    per_path_variance: bool = False
 
     def fit(
         self,

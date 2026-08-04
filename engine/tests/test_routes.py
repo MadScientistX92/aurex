@@ -21,7 +21,10 @@ import json
 from typing import Any
 
 import pytest
+from typer.testing import CliRunner
 
+from aurex.cli import app
+from aurex.config import REPO_ROOT
 from aurex.data.schedules.provenance import VALID_CONFIDENCE, ScheduleError
 from aurex.routes import (
     JURISDICTION_CODE,
@@ -31,6 +34,8 @@ from aurex.routes import (
     build_routes,
     load_routes,
 )
+from aurex.trade import breakeven_table
+from aurex.vol import DeterministicVarianceError, model_for, path_dependent_models
 
 #: A minimal well-formed table. Every invariant test starts here and breaks one thing,
 #: so a failure names the rule rather than an unrelated missing key.
@@ -386,3 +391,121 @@ class TestMarketSpreadsMayNotBorrowARegulatorsCitation:
         notes = build_routes(VALID).terms_for("spot", "AAA").friction.quote(21).notes
 
         assert any("representative dealer quotes" in note for note in notes)
+
+
+class TestHarRvIsBarredOnALeveragedRoute:
+    """§8's constraint, which needed Route to exist before it had anything to hang on.
+
+    The bar is on the *combination*, not on the model: an unleveraged distribution
+    from a deterministic-variance model is a legitimate thing to publish, and step 3a
+    scores one. What is refused is reading a path statistic off an ensemble whose
+    paths all share one variance trajectory.
+    """
+
+    def test_the_leveraged_cell_refuses_the_deterministic_model(self) -> None:
+        book = load_routes()
+
+        with pytest.raises(DeterministicVarianceError, match="shares one volatility"):
+            book.require_model(model_for("har_rv"), "cfd", "GBR")
+
+    def test_the_same_model_is_allowed_where_there_is_no_leverage(self) -> None:
+        load_routes().require_model(model_for("har_rv"), "physical_retail", "IND")
+
+    def test_the_path_dependent_model_is_allowed_everywhere(self) -> None:
+        book = load_routes()
+
+        book.require_model(model_for("gjr_garch"), "cfd", "GBR")
+        book.require_model(model_for("gjr_garch"), "physical_retail", "IND")
+
+    def test_the_refusal_names_a_model_that_would_work(self) -> None:
+        """An error that only says no makes the reader guess."""
+        with pytest.raises(DeterministicVarianceError, match="gjr_garch"):
+            model_for("har_rv", leveraged=True)
+
+    def test_exactly_one_shipped_model_carries_per_path_variance(self) -> None:
+        """If a second ever does, this test is where that gets noticed and written down."""
+        assert path_dependent_models() == ["gjr_garch"]
+
+    @pytest.mark.parametrize("model_id", ["har_rv", "rolling_std"])
+    def test_the_deterministic_models_declare_themselves(self, model_id: str) -> None:
+        assert not model_for(model_id).per_path_variance
+
+
+class TestTheGeneratedBreakevenTable:
+    def test_it_renders_a_row_per_cell(self) -> None:
+        rendered = breakeven_table(load_routes().table_rows("gold"))
+
+        assert rendered.count("\n") == len(load_routes().table_rows("gold")) + 1
+
+    def test_horizon_invariant_friction_is_flat_across_the_columns(self) -> None:
+        row = next(
+            line
+            for line in breakeven_table(load_routes().table_rows("gold")).splitlines()
+            if "India" in line
+        )
+        cells = [cell.strip() for cell in row.split("|")[2:-2]]
+
+        assert len(set(cells)) == 1
+        assert row.strip().endswith("no |")
+
+    def test_accruing_friction_grows_with_the_horizon(self) -> None:
+        row = next(
+            line
+            for line in breakeven_table(load_routes().table_rows("gold")).splitlines()
+            if line.startswith("| cfd")
+        )
+        cells = [float(cell.strip().rstrip("%")) for cell in row.split("|")[2:-2]]
+
+        assert cells == sorted(cells)
+        assert cells[0] < cells[-1]
+        assert row.strip().endswith("yes |")
+
+    def test_the_friction_thesis_survives_being_generated(self) -> None:
+        """The high-friction physical route's hurdle is an order above the CFD's.
+
+        Which is the comparison the whole step exists to make, and it comes out of the
+        data rather than out of a sentence somebody typed.
+        """
+        book = load_routes()
+        physical = book.terms_for("physical_retail", "IND").friction.quote(21)
+        cfd = book.terms_for("cfd", "GBR").friction.quote(21)
+
+        assert physical.breakeven_pct > 10.0 * cfd.breakeven_pct
+
+
+class TestTheReadmeTableIsGeneratedNotTyped:
+    """§20: the published friction table must come from the routes data.
+
+    A hand-written table drifts from its source the first time a rate changes, and the
+    copy a reader sees is the one that is wrong. This test is what makes the README's
+    copy a cache rather than a second source of truth.
+    """
+
+    MARKERS = ("<!-- BEGIN GENERATED breakeven-table -->", "<!-- END GENERATED breakeven-table -->")
+
+    def _published(self) -> str:
+        text = (REPO_ROOT / "README.md").read_text()
+        start, end = self.MARKERS
+        assert start in text and end in text, "the generated-table markers are missing"
+        return text.split(start, 1)[1].split(end, 1)[0].strip()
+
+    def test_the_published_table_matches_the_data(self) -> None:
+        assert self._published() == breakeven_table(load_routes().table_rows("gold"))
+
+    def test_the_cli_emits_exactly_what_the_readme_carries(self) -> None:
+        result = CliRunner().invoke(app, ["routes", "--asset", "gold", "--markdown"])
+
+        assert result.exit_code == 0
+        assert result.stdout.strip() == self._published()
+
+    def test_an_unknown_asset_fails_loudly_rather_than_printing_nothing(self) -> None:
+        result = CliRunner().invoke(app, ["routes", "--asset", "plutonium", "--markdown"])
+
+        assert result.exit_code == 1
+
+    def test_the_plain_listing_states_that_nothing_is_the_default(self) -> None:
+        result = CliRunner().invoke(app, ["routes"])
+
+        assert result.exit_code == 0
+        assert "No jurisdiction is the default" in result.stdout
+        assert "never advises" in result.stdout

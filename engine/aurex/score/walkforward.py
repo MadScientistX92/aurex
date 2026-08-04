@@ -569,6 +569,7 @@ def _grade(
         events={
             event.id: (event.probability(forecast), event.occurred(anchor, realised))
             for event in events
+            if event.applies_at(horizon)
         },
     )
 
@@ -638,6 +639,8 @@ def _calibrate(
 
     scored_events: list[tuple[dict[str, Any], ReliabilityCurve]] = []
     for event in events:
+        if not event.applies_at(horizon):
+            continue
         probabilities = np.array([record.events[event.id][0] for record in records], dtype=float)
         outcomes = np.array([record.events[event.id][1] for record in records], dtype=float)
         scored_events.append(

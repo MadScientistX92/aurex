@@ -82,6 +82,8 @@ class RollingStd:
     #: own binding constraint is its window.
     min_observations: int = 0
     id: str = "rolling_std"
+    #: One sigma, held flat across the horizon and shared by every path.
+    per_path_variance: bool = False
 
     def fit(
         self,

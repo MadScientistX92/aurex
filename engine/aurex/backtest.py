@@ -37,6 +37,7 @@ import pandas as pd
 
 from aurex.assets.base import Asset
 from aurex.dist.fhs import DEMEAN_BY_DEFAULT
+from aurex.score.events import BinaryEvent, default_events
 from aurex.score.forecasters import ModelForecaster, RandomWalkForecaster
 from aurex.score.walkforward import (
     DEFAULT_MIN_OBSERVATIONS,
@@ -65,6 +66,7 @@ def backtest_asset(
     n_paths: int = DEFAULT_BACKTEST_PATHS,
     block_length: int = 10,
     demean_residuals: bool = DEMEAN_BY_DEFAULT,
+    extra_events: tuple[BinaryEvent, ...] = (),
 ) -> WalkForwardResult:
     """Walk the asset's declared model forward against the random walk.
 
@@ -73,6 +75,12 @@ def backtest_asset(
     default; the required baseline stays §0's driftless walk either way, and the
     drift-matched walk rides along as the second null so both readings are always in
     the artifact.
+
+    ``extra_events`` is how the hurdle events reach the scorer. They are built by the
+    caller from a route and a jurisdiction and arrive here as ordinary binary events
+    carrying a number, so this module never learns what friction is — the same reason
+    the scorer does not. Passing none scores the price events alone, which is a complete
+    run rather than a degraded one.
     """
     defaults = asset.vol_defaults
     ask = request or WalkForwardRequest(
@@ -119,6 +127,7 @@ def backtest_asset(
         subject=subject,
         baseline=baseline,
         request=ask,
+        events=(*default_events(ask.reference_moves), *extra_events),
         extra_baselines=(drift_matched,),
     )
 
