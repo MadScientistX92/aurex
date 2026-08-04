@@ -4,6 +4,10 @@ Parity over twenty years cannot use scalar rates: GST did not exist before July 
 and the import duty has moved ten times. These loaders resolve the rate in force on a
 given date and enforce the provenance rule — every entry carries its own
 ``source_url`` and ``source_confidence``, and none inherits a table-level default.
+
+The rule itself now lives in :mod:`aurex.data.schedules.provenance`, because the routes
+table in :mod:`aurex.routes` is held to exactly the same standard and two
+implementations of one rule is one too many.
 """
 
 from __future__ import annotations
@@ -11,19 +15,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from functools import lru_cache
-from pathlib import Path
-from typing import Any, Literal, cast
 
-import yaml
+from aurex.data.schedules.provenance import (
+    VALID_CONFIDENCE,
+    Confidence,
+    ScheduleError,
+    as_date,
+    read_yaml,
+    require_provenance,
+)
 
-from aurex.config import SCHEDULE_DIR
-
-Confidence = Literal["primary", "secondary"]
-VALID_CONFIDENCE: frozenset[str] = frozenset({"primary", "secondary"})
-
-
-class ScheduleError(ValueError):
-    """A schedule file is malformed or violates the provenance rule."""
+_read_yaml = read_yaml
+_require_provenance = require_provenance
+_as_date = as_date
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,37 +57,6 @@ class PolicyBreak:
     description: str
     expected_effect: str
     source_url: str
-
-
-def _read_yaml(name: str) -> dict[str, Any]:
-    path: Path = SCHEDULE_DIR / name
-    if not path.exists():
-        raise ScheduleError(f"missing schedule file {path}")
-    loaded = yaml.safe_load(path.read_text())
-    if not isinstance(loaded, dict):
-        raise ScheduleError(f"{name}: expected a mapping at top level")
-    return loaded
-
-
-def _require_provenance(name: str, index: int, raw: dict[str, Any]) -> Confidence:
-    """Enforce the per-entry provenance rule."""
-    url = raw.get("source_url")
-    confidence = raw.get("source_confidence")
-    if not url:
-        raise ScheduleError(f"{name}[{index}]: missing source_url")
-    if not confidence:
-        raise ScheduleError(f"{name}[{index}]: missing source_confidence")
-    if confidence not in VALID_CONFIDENCE:
-        raise ScheduleError(
-            f"{name}[{index}]: source_confidence {confidence!r} not in {sorted(VALID_CONFIDENCE)}"
-        )
-    return cast("Confidence", confidence)
-
-
-def _as_date(value: Any) -> date:
-    if isinstance(value, date):
-        return value
-    return date.fromisoformat(str(value))
 
 
 @lru_cache(maxsize=1)
@@ -163,14 +136,18 @@ def gst_on(when: date) -> GstEntry | None:
 
 
 __all__ = [
+    "VALID_CONFIDENCE",
     "Confidence",
     "DutyEntry",
     "GstEntry",
     "PolicyBreak",
     "ScheduleError",
+    "as_date",
     "duty_on",
     "gst_on",
     "load_duty_schedule",
     "load_gst_schedule",
     "load_policy_breaks",
+    "read_yaml",
+    "require_provenance",
 ]

@@ -35,6 +35,7 @@ from aurex.assets.transforms import ReturnTransform
 from aurex.config import ENGINE_ROOT, REPO_ROOT
 from aurex.data.cache import CacheStore
 from aurex.pipeline import run
+from aurex.routes import load_routes
 
 START, END = date(2026, 5, 1), date(2026, 7, 30)
 
@@ -151,6 +152,42 @@ class TestStaticLeakGuard:
             if pattern.search(line)
         ]
         assert not offenders, f"asset literal {literal!r} leaked into: {offenders}"
+
+    @pytest.mark.parametrize("code", load_routes().codes())
+    def test_no_jurisdiction_code_downstream(self, code: str) -> None:
+        """The same rule as asset literals, for §20's jurisdictions.
+
+        A scoring or distribution module that names a country has hardcoded one
+        reader's tax stack, which is the §20 failure in a different costume.
+        """
+        pattern = re.compile(rf"\b{re.escape(code)}\b")
+        offenders = [
+            f"{path.relative_to(REPO_ROOT)}:{i}"
+            for path in self._guarded_files()
+            for i, line in enumerate(path.read_text(errors="replace").splitlines(), start=1)
+            if pattern.search(line)
+        ]
+        assert not offenders, f"jurisdiction code {code!r} leaked into: {offenders}"
+
+    def test_the_guard_is_case_sensitive_because_nothing_else_works(self) -> None:
+        """Why the codes are uppercase alpha-3 and matched case-sensitively.
+
+        This is the measurement §20's correction rests on, kept as a test so the
+        choice cannot be quietly relaxed to something that silently matches nothing —
+        or to something that matches ordinary English and gets disabled in frustration.
+        Alpha-2 is unusable: ``IN`` and ``IT`` are words. Case-insensitive alpha-3 is
+        unusable: ``ARE`` is a word. Case-sensitive uppercase alpha-3 is clean.
+        """
+        text = "\n".join(path.read_text(errors="replace") for path in self._guarded_files())
+
+        def hits(token: str, *, ignore_case: bool) -> int:
+            flags = re.IGNORECASE if ignore_case else 0
+            return len(re.findall(rf"\b{token}\b", text, flags))
+
+        assert hits("IN", ignore_case=True) > 50, "alpha-2 collides with English"
+        assert hits("ARE", ignore_case=True) > 10, "case-insensitive alpha-3 collides too"
+        assert hits("IND", ignore_case=False) == 0
+        assert hits("ARE", ignore_case=False) == 0
 
     def test_registry_does_not_name_an_asset(self) -> None:
         """Series resolution must be driven by what assets declare."""
