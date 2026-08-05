@@ -23,17 +23,19 @@ from typing import Any
 
 import pandas as pd
 
-from aurex import __version__
+from aurex import __version__, config
 from aurex.assets import REGISTRY
 from aurex.assets.base import Asset
 from aurex.assets.lens import LensContext
-from aurex.config import PUBLIC_DATA_DIR
-from aurex.data.base import DataUnavailableError, LoadedSeries
+from aurex.data.base import DataUnavailableError, LoadedSeries, price_column
 from aurex.data.cache import CacheStore
+from aurex.data.freshness import FreshnessVerdict, assess
 from aurex.data.parity import local_premium_bps, passthrough_diagnostic
-from aurex.data.registry import chains_for
+from aurex.data.registry import blocking_series, chains_for, freshness_for
 from aurex.data.schedules import load_policy_breaks
 from aurex.forecast import AssetForecast, ForecastRequest, describe_forecast, forecast_asset
+from aurex.provenance import code_provenance
+from aurex.record import write_forecast_log as _write_forecast_log
 
 log = logging.getLogger(__name__)
 
@@ -62,17 +64,15 @@ class PipelineResult:
     series: dict[str, LoadedSeries]
     assets: dict[str, AssetResult]
     forecasts: dict[str, AssetForecast] = field(default_factory=dict)
+    #: Always computed, never acted on here. The pipeline's job is to measure and
+    #: record; refusing to publish is the caller's, because only the caller knows
+    #: whether this run is a nightly publication or somebody reading the cache.
+    freshness: FreshnessVerdict | None = None
 
 
-def _price_column(frame: pd.DataFrame) -> pd.Series:
-    """Pick the price column, tolerating OHLC and close-only shapes."""
-    for candidate in ("close", "value"):
-        if candidate in frame.columns:
-            return frame[candidate]
-    numeric = frame.select_dtypes("number")
-    if numeric.empty:
-        raise ValueError(f"no numeric column in {list(frame.columns)}")
-    return numeric.iloc[:, 0]
+#: Re-exported under its historical name; the definition moved to :mod:`aurex.data.base`
+#: so the freshness guard measures staleness on the same column the pipeline prices from.
+_price_column = price_column
 
 
 def run(
@@ -92,6 +92,17 @@ def run(
     request = forecast or ForecastRequest()
 
     series, provenance, unavailable = _resolve(active, start, end, store, offline)
+
+    # Measured against `end` rather than against wall-clock now: a run explicitly asked
+    # for history is not stale for ending where it was told to end.
+    verdict = assess(
+        series=series,
+        unavailable=unavailable,
+        policies=freshness_for(active, store),
+        blocking=blocking_series(active),
+        run_date=end,
+    )
+
     results = {asset.id: _apply_lenses(asset, series) for asset in active}
     breaks = tuple(pd.Timestamp(b.date) for b in load_policy_breaks())
     forecasts = {
@@ -108,8 +119,15 @@ def run(
         provenance=provenance,
         unavailable=unavailable,
         offline=offline,
+        freshness=verdict,
     )
-    return PipelineResult(artifact=artifact, series=series, assets=results, forecasts=forecasts)
+    return PipelineResult(
+        artifact=artifact,
+        series=series,
+        assets=results,
+        forecasts=forecasts,
+        freshness=verdict,
+    )
 
 
 def _forecast(
@@ -322,6 +340,7 @@ def _build_artifact(
     provenance: dict[str, Any],
     unavailable: dict[str, str],
     offline: bool,
+    freshness: FreshnessVerdict,
 ) -> dict[str, Any]:
     breaks = load_policy_breaks()
 
@@ -347,9 +366,13 @@ def _build_artifact(
     }
 
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "generated_at": datetime.now(UTC).isoformat(),
         "engine_version": __version__,
+        # engine_version is a static 0.1.0 and identifies nothing. The SHA is what
+        # actually says which code produced this forecast.
+        "code": code_provenance().describe(),
+        "freshness": freshness.describe(),
         "mode": "offline" if offline else "live",
         "assets": assets_block,
         "policy_breaks": [
@@ -379,27 +402,13 @@ def _build_artifact(
 
 def write_artifact(artifact: dict[str, Any], directory: Path | None = None) -> Path:
     """Write ``latest.json`` — the current state, overwritten every run."""
-    target_dir = directory or PUBLIC_DATA_DIR
+    target_dir = directory or config.PUBLIC_DATA_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
     path = target_dir / "latest.json"
     path.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
     return path
 
 
-def write_forecast_log(artifact: dict[str, Any], directory: Path | None = None) -> Path:
-    """Write the dated copy that will be scored once its horizon elapses.
-
-    ``latest.json`` is state and gets overwritten; this is the record. §0's second rule
-    — every probability gets scored — needs a forecast that still exists in the form it
-    was published in, and the only thing making that credible is that the file is
-    committed and the history cannot be quietly rewritten.
-
-    Re-running on the same day replaces that day's file, which is deliberate: a rerun
-    is a correction to an unelapsed forecast, and git carries both versions.
-    """
-    target_dir = (directory or PUBLIC_DATA_DIR) / "forecasts"
-    target_dir.mkdir(parents=True, exist_ok=True)
-    stamp = str(artifact["generated_at"])[:10]
-    path = target_dir / f"{stamp}.json"
-    path.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
-    return path
+#: The dated record moved to :mod:`aurex.record`, which owns the rules about what may
+#: be rewritten and what may not. Re-exported so existing callers keep working.
+write_forecast_log = _write_forecast_log

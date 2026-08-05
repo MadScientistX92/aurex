@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 
 import typer
 
@@ -33,21 +34,64 @@ def pipeline(
         help="Run offline from cache and print the artifact without writing it.",
     ),
     offline: bool = typer.Option(False, "--offline", help="Never touch the network."),
+    require_fresh: bool = typer.Option(
+        True,
+        "--require-fresh/--allow-stale",
+        help=(
+            "Refuse to publish when a blocking series does not reach the run date "
+            "within its declared tolerance. Never turn this off in the nightly job."
+        ),
+    ),
 ) -> None:
-    """Resolve data, compute parity, and emit the artifact."""
+    """Resolve data, compute parity, and emit the artifact.
+
+    Exits non-zero without writing anything when the price series does not reach the
+    run date. That refusal is the point of the command in an unattended context: a
+    missing night is a hole anybody can see in the index, and a night built on
+    week-old prices is a fabrication nobody can see at all.
+    """
+    from aurex.data.freshness import StaleDataError
+    from aurex.record import write_index, write_skip_record
+
     result = run(offline=offline or dry_run)
+    verdict = result.freshness
 
     if dry_run:
         typer.echo(json.dumps(result.artifact, indent=2, sort_keys=True))
         resolved = len(result.artifact["sources"])
         missing = len(result.artifact["unavailable"])
         typer.echo(f"\ndry run: {resolved} series resolved, {missing} unavailable", err=True)
+        if verdict is not None and not verdict.publishable:
+            # Reported, never enforced: a dry run reads whatever cache it was pointed
+            # at, and the committed seed cache is deliberately old.
+            typer.echo(
+                f"dry run: {len(verdict.failures)} blocking series would refuse "
+                f"publication; --dry-run does not enforce",
+                err=True,
+            )
         return
+
+    if verdict is not None and require_fresh and not verdict.publishable:
+        when = date.fromisoformat(str(result.artifact["generated_at"])[:10])
+        record = write_skip_record(
+            when=when,
+            reason="price series did not reach the run date within its declared tolerance",
+            detail=verdict.describe(),
+        )
+        write_index()
+        try:
+            verdict.raise_if_stale()
+        except StaleDataError as exc:
+            typer.echo(str(exc), err=True)
+        typer.echo(f"recorded the skip at {record}", err=True)
+        raise typer.Exit(code=1)
 
     path = write_artifact(result.artifact)
     logged = write_forecast_log(result.artifact)
+    index = write_index()
     typer.echo(f"wrote {path}")
     typer.echo(f"logged {logged}")
+    typer.echo(f"indexed {index}")
 
 
 @app.command()
@@ -99,9 +143,9 @@ def score(
 
     import pandas as pd
 
+    from aurex import config
     from aurex.assets import get
     from aurex.backtest import backtest_asset, describe_backtest
-    from aurex.config import PUBLIC_DATA_DIR
     from aurex.data.schedules import load_policy_breaks
     from aurex.pipeline import DEFAULT_LOOKBACK_DAYS, _price_column, resolve_series
     from aurex.routes import load_routes
@@ -190,8 +234,8 @@ def score(
         typer.echo(_json.dumps(block, indent=2, sort_keys=True))
         return
 
-    PUBLIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    out = PUBLIC_DATA_DIR / f"calibration-{asset.id}.json"
+    config.PUBLIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out = config.PUBLIC_DATA_DIR / f"calibration-{asset.id}.json"
     out.write_text(_json.dumps(block, indent=2, sort_keys=True) + "\n")
     typer.echo(f"wrote {out}")
 
@@ -252,6 +296,74 @@ def routes(
     typer.echo(
         "\nNo jurisdiction is the default. Availability is informational: Aurex states "
         "what a regulator publishes and links it, and never advises."
+    )
+
+
+@app.command()
+def livelog(
+    offline: bool = typer.Option(False, "--offline", help="Never touch the network."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print without writing."),
+) -> None:
+    """Score the forecasts this engine actually published, before their outcomes existed.
+
+    Reported separately from the walk-forward and never pooled with it. Where the count
+    cannot support a test, this says so and reports the count rather than waiting until
+    the number looks like something.
+    """
+    import json as _json
+
+    from aurex.livelog import collect, summarise, write_live_log
+    from aurex.pipeline import run
+
+    result = run(offline=offline)
+    realised = {
+        asset_id: {code: lens.frame["price"] for code, lens in asset.lenses.items()}
+        for asset_id, asset in result.assets.items()
+    }
+    observations = collect(realised=realised)
+
+    if dry_run:
+        typer.echo(_json.dumps(summarise(observations), indent=2, sort_keys=True))
+        return
+
+    path = write_live_log(observations)
+    summary = summarise(observations)
+    typer.echo(f"wrote {path}")
+    typer.echo(f"live forecasts scored: {summary['total_observations']}")
+    for horizon in summary["horizons"]:
+        typer.echo(
+            f"  {horizon['horizon_sessions']:>3} sessions: "
+            f"n={horizon['observations']} "
+            f"independent={horizon['independent_observations']}  "
+            f"{horizon['test_note']}"
+        )
+    if not summary["horizons"]:
+        typer.echo(
+            "  no horizon has elapsed yet. The live log starts empty by construction: "
+            "it can only contain forecasts published before their outcome existed."
+        )
+
+
+@app.command()
+def index(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print without writing."),
+) -> None:
+    """Rebuild the forecast index, including the dates expected but missing."""
+    import json as _json
+
+    from aurex.record import build_index, write_index
+
+    if dry_run:
+        typer.echo(_json.dumps(build_index(), indent=2, sort_keys=True))
+        return
+
+    path = write_index()
+    payload = build_index()
+    counts = payload["counts"]
+    typer.echo(f"wrote {path}")
+    typer.echo(
+        f"published={counts['published']}  gaps={counts['gaps']} "
+        f"(explained={counts['gaps_explained']}, unexplained={counts['gaps_unexplained']})"
     )
 
 

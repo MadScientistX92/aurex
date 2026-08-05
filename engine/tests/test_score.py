@@ -476,6 +476,40 @@ class TestARareEventGetsAScoreButNotADiagram:
         assert curve.brier > 0.0
         assert curve.describe()["positive_events"] == 8
 
+    def test_the_mean_forecast_survives_the_withholding_too(self) -> None:
+        """A scalar is not a diagram, and withholding it with one was a reporting bug.
+
+        `mean_forecast` against `base_rate` is the model's bias on this event, and it
+        is the number that says whether a modelled tail is the right shape rather than
+        merely non-Gaussian. The argument for withholding a ten-bin curve at eight
+        positives — each bin resting on one or two events — says nothing about a single
+        mean taken over all 580 forecasts. A rare event is where that comparison
+        matters most, so withholding it there was exactly backwards.
+        """
+        probabilities, outcomes = self._rare(positives=8)
+        curve = reliability_curve(probabilities, outcomes)
+
+        assert curve.withheld
+        assert curve.bins == ()
+        assert curve.mean_forecast == pytest.approx(float(np.mean(probabilities)))
+        assert curve.describe()["mean_forecast"] == pytest.approx(
+            round(float(np.mean(probabilities)), 4)
+        )
+
+    def test_the_mean_forecast_is_taken_over_every_forecast_not_the_drawn_bins(
+        self,
+    ) -> None:
+        """Averaging the bin means would weight a bin holding one forecast equally
+        with a bin holding five hundred, and would be undefined when none are drawn."""
+        probabilities, outcomes = self._rare(positives=40)
+        curve = reliability_curve(probabilities, outcomes)
+
+        assert not curve.withheld
+        assert curve.mean_forecast == pytest.approx(float(np.mean(probabilities)))
+        assert curve.describe()["forecast_bias"] == pytest.approx(
+            round(curve.mean_forecast - curve.base_rate, 4)
+        )
+
     def test_at_the_threshold_the_curve_is_drawn(self) -> None:
         curve = reliability_curve(*self._rare(positives=MIN_POSITIVE_EVENTS))
 

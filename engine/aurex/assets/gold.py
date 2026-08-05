@@ -30,6 +30,7 @@ from aurex.config import GRAMS_PER_TROY_OUNCE
 from aurex.data.base import Loader
 from aurex.data.cache import CacheStore
 from aurex.data.chain import SourceChain
+from aurex.data.freshness import SeriesFreshness
 from aurex.data.schedules import duty_on, gst_on
 from aurex.data.sources import FredLoader, IbjaReportLoader, LbmaGoldLoader, YahooLoader
 
@@ -39,6 +40,59 @@ GST_REGIME_START = date(2017, 7, 1)
 
 #: IBJA quotes rupees per 10 grams.
 INR_QUOTE_GRAMS = 10.0
+
+#: How far behind the run date each of gold's series may fall before a forecast built
+#: on it is a fabrication rather than a forecast. See :mod:`aurex.data.freshness`.
+#:
+#: ``xauusd`` and ``usdinr`` are the blocking pair: the fix is what every lens is
+#: composed from, and the rupee lens converts through the rate. Four days is the
+#: binding number and it is set by the worst *ordinary* case rather than by the
+#: average one — a job running 02:00 UTC on the Tuesday after a Monday holiday sees
+#: Friday's fix, which is four days behind and entirely healthy. A longer closure
+#: exceeds it and is refused, which is the intended behaviour: there is no new price,
+#: so there is nothing new to publish, and the gap is recorded rather than papered over.
+_FRESHNESS: dict[str, SeriesFreshness] = {
+    "xauusd": SeriesFreshness(
+        max_lag_days=4,
+        calendar="London business days (LBMA PM fix)",
+        rationale=(
+            "The PM fix prints at 15:00 London, so it is available well before a 02:00 "
+            "UTC run the next day. The longest ordinary gap is a 02:00 Tuesday run "
+            "after a Monday holiday reading Friday's fix — four days. Anything beyond "
+            "that is a multi-day closure or a broken source, and both must refuse: "
+            "this series is the anchor every published price and every simulated path "
+            "is built from."
+        ),
+    ),
+    "usdinr": SeriesFreshness(
+        max_lag_days=4,
+        calendar="FX trading days",
+        rationale=(
+            "FX trades Sunday 22:00 to Friday 22:00 UTC, so the calendar matches the "
+            "fix's. Blocking because the rupee lens converts through it: a stale rate "
+            "over a fresh fix publishes a rupee price that was never quoted."
+        ),
+    ),
+    "xau_futures": SeriesFreshness(
+        max_lag_days=4,
+        calendar="COMEX trading days",
+        rationale=(
+            "Not blocking — futures feed the realised-volatility estimators, never a "
+            "published price. Declared and measured anyway so a Yahoo rate limit that "
+            "silently degrades the vol layer to close-only is visible in the artifact."
+        ),
+    ),
+    "ibja_gold": SeriesFreshness(
+        max_lag_days=6,
+        calendar="Indian business days",
+        rationale=(
+            "Not blocking. IBJA closes for local holidays that cluster several days "
+            "deep, and §0's sixth rule already covers the consequence: where there is "
+            "no observation the premium is NaN rather than computed. Six days keeps a "
+            "Diwali week from reading as a fault while still surfacing a dead feed."
+        ),
+    ),
+}
 
 
 def _duty_for(day: date) -> float | None:
@@ -246,7 +300,10 @@ class Gold:
             ),
             "ibja_gold": (IbjaReportLoader("ibja_gold"),),
         }
-        return {sid: SourceChain(sid, loaders, store) for sid, loaders in spec.items()}
+        return {
+            sid: SourceChain(sid, loaders, store, freshness=_FRESHNESS.get(sid))
+            for sid, loaders in spec.items()
+        }
 
     def describe(self) -> dict[str, Any]:
         return describe_asset(self)

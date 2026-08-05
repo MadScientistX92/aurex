@@ -1,0 +1,215 @@
+name: CI
+
+# Every job here installs with `uv sync --frozen`, which fails rather than resolving
+# if uv.lock and pyproject.toml disagree. §0 claims reproducibility, and a recorded
+# seed reproduces nothing if SciPy's optimiser moved underneath it — the lockfile is
+# the half of that claim the seed cannot cover on its own.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The bench extra is torch + Chronos + neuralforecast, about 2.5GB, and it exists
+  # for the step 6 shootout alone. Installing it here would dominate CI time on every
+  # push to buy nothing: nothing in the default test suite imports it.
+  UV_NO_SYNC: "0"
+
+defaults:
+  run:
+    working-directory: engine
+
+jobs:
+  lint:
+    name: ruff + mypy --strict
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+      - run: uv sync --frozen
+      - name: ruff check
+        run: uv run ruff check .
+      - name: ruff format
+        run: uv run ruff format --check .
+      - name: mypy --strict
+        run: uv run mypy --strict aurex/
+
+  test:
+    name: pytest + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+      - run: uv sync --frozen
+      - name: pytest with an 80% gate on engine/aurex/
+        run: >-
+          uv run pytest
+          --cov=aurex
+          --cov-report=term-missing
+          --cov-report=xml
+          --cov-fail-under=80
+          -m "not network"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: engine/coverage.xml
+          if-no-files-found: ignore
+
+  offline-smoke:
+    name: offline end-to-end from the seed cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+      - run: uv sync --frozen
+      # A fresh clone must be able to produce an artifact with no network at all. This
+      # is the path a new contributor takes and the one the README documents, so it
+      # gets exercised rather than assumed. --allow-stale because the seed cache is
+      # committed and therefore always older than the run date; the freshness guard is
+      # tested on its own terms in tests/test_freshness.py and enforced in the nightly.
+      - name: aurex pipeline --dry-run, no network
+        env:
+          AUREX_CACHE_DIR: tests/fixtures/seed-cache
+        run: uv run aurex pipeline --dry-run > /tmp/artifact.json
+      - name: the artifact is well-formed and cites its freshness policy
+        env:
+          AUREX_CACHE_DIR: tests/fixtures/seed-cache
+        run: |
+          uv run python - <<'PY'
+          import json, sys
+          artifact = json.load(open("/tmp/artifact.json"))
+          assert artifact["schema_version"] == 4, artifact["schema_version"]
+          assert artifact["mode"] == "offline", artifact["mode"]
+          assert artifact["sources"], "the offline run resolved no series at all"
+          assert artifact["freshness"]["series"], "no freshness block in the artifact"
+          assert artifact["code"]["commit"], "no commit recorded in the artifact"
+          print(f"offline artifact OK: {len(artifact['sources'])} series resolved")
+          PY
+      - name: the routes table in the README matches the data behind it
+        run: uv run aurex routes --markdown > /dev/null
+
+  no-secrets:
+    name: zero-API-key property
+    runs-on: ubuntu-latest
+    # This job is configured with no secrets and no environment. It is the guard on a
+    # stated README feature — "No API key is required to run Aurex" — which will not
+    # break loudly. It breaks the day a source starts reading a key and works fine for
+    # whoever added it, because their machine has one.
+    #
+    # This catches the *code-level* regression. The source-level one — an endpoint that
+    # starts demanding authentication — is caught by the nightly job, which runs
+    # keyless against live sources and fails visibly when one stops answering.
+    #
+    # `contents: read` rather than `{}`: checkout needs it, and it is the token every
+    # job already has rather than anything a source could authenticate with. No step in
+    # this workflow references `secrets.*` at all, and `persist-credentials: false`
+    # keeps even that token out of the git config the test steps run against.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+      - run: uv sync --frozen
+      - name: assert the environment really is bare
+        run: |
+          leaked=$(env | grep -iE '^[A-Z_]*(API_KEY|TOKEN|SECRET|PASSWORD)=' || true)
+          if [ -n "$leaked" ]; then
+            echo "this job must run with no credentials; found:"
+            echo "$leaked" | sed 's/=.*/=<redacted>/'
+            exit 1
+          fi
+          echo "no credentials in the environment"
+      - name: the full suite, with nothing configured
+        run: uv run pytest -q -m "not network"
+      - name: an artifact is produced with no key present
+        env:
+          AUREX_CACHE_DIR: tests/fixtures/seed-cache
+        run: uv run aurex pipeline --dry-run > /dev/null
+
+  guards:
+    name: §0 guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The elapsed-forecast check compares against the base branch, so it needs
+          # more than the default single-commit checkout.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+      - run: uv sync --frozen
+      - name: no overclaiming in user-facing text
+        run: uv run pytest -q tests/test_no_overclaiming.py
+      - name: the asset abstraction has not leaked
+        run: uv run pytest -q tests/test_asset_abstraction.py
+      - name: no forecast whose horizon has elapsed was modified
+        # The runtime guard in aurex.record refuses to rewrite a settled forecast. This
+        # is the same rule applied to the diff, which is the stronger place for it: it
+        # catches an edit made by any means, including by hand.
+        working-directory: .
+        run: |
+          base="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
+          changed=$(git diff --name-only --diff-filter=M "$base" HEAD -- 'public-data/forecasts/*.json' || true)
+          if [ -z "$changed" ]; then
+            echo "no published forecast was modified"
+            exit 0
+          fi
+          echo "$changed"
+
+          # The script goes to a file and the paths go in argv. Piping the file list
+          # into `python -` while also feeding it a heredoc makes the two redirections
+          # fight over stdin, and the loser is discarded without a word.
+          cat > /tmp/check_elapsed.py <<'PY'
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          from aurex.record import status_of
+
+          today = datetime.now(timezone.utc).date()
+          offenders = []
+          for name in sys.argv[1:]:
+              status = status_of(Path(name))
+              if status.frozen_on(today):
+                  offenders.append(f"{name}: {status.note} (frozen from {status.frozen_from})")
+
+          if offenders:
+              print("refusing: these forecasts have elapsed and may not be rewritten:")
+              for line in offenders:
+                  print(f"  - {line}")
+              print(
+                  "Correcting a live forecast is a different act from editing a settled "
+                  "one. The git history is the track record; only the first is allowed."
+              )
+              sys.exit(1)
+          print(f"every modified forecast is still live ({len(sys.argv) - 1} checked)")
+          PY
+
+          # Run from the repository root, so the paths git handed us resolve as-is.
+          uv run --project engine python /tmp/check_elapsed.py $changed

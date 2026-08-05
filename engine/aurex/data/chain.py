@@ -15,6 +15,7 @@ from datetime import date
 
 from aurex.data.base import DataUnavailableError, LoadedSeries, Loader
 from aurex.data.cache import CacheStore
+from aurex.data.freshness import SeriesFreshness
 
 log = logging.getLogger(__name__)
 
@@ -22,10 +23,19 @@ log = logging.getLogger(__name__)
 class SourceChain:
     """Resolve one series from the first source that answers.
 
+    The fallback behaviour this class exists for is also the reason
+    :mod:`aurex.data.freshness` exists: serving a cached copy is right for a human at a
+    terminal and dangerous for an unattended nightly run, which would publish it as
+    today's price. The chain therefore carries the series' declared staleness tolerance
+    so the guard can find it beside the loaders that motivated it. It is optional here
+    and fails closed there — an undeclared tolerance blocks publication of a blocking
+    series rather than defaulting to a permissive one.
+
     Args:
         series_id: Stable identifier; also the cache key.
         loaders: Sources in preference order.
         cache: Store to merge into. A fresh :class:`CacheStore` if omitted.
+        freshness: How far behind the run date this series may fall.
     """
 
     def __init__(
@@ -33,12 +43,15 @@ class SourceChain:
         series_id: str,
         loaders: Sequence[Loader],
         cache: CacheStore | None = None,
+        *,
+        freshness: SeriesFreshness | None = None,
     ) -> None:
         if not loaders:
             raise ValueError(f"{series_id}: chain needs at least one loader")
         self.series_id = series_id
         self.loaders = tuple(loaders)
         self.cache = cache or CacheStore()
+        self.freshness = freshness
 
     def load(self, start: date, end: date, *, offline: bool = False) -> LoadedSeries:
         """Return the series, preferring live sources unless ``offline``.

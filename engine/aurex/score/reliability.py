@@ -89,6 +89,15 @@ class ReliabilityCurve:
     #: because a Brier score of 0.02 on a rare event looks excellent next to one of
     #: 0.25 on a coin flip and is measuring something else entirely.
     positives: int = 0
+    #: Mean forecast probability, published whether or not the curve is drawn.
+    #:
+    #: This is the number that answers "is the modelled tail the right shape" — it sits
+    #: directly against ``base_rate``, and the gap between them is the model's bias on
+    #: this event. It used to travel only inside the bins, so withholding the diagram
+    #: withheld it too. That was wrong: a scalar is not a diagram, and the argument for
+    #: withholding a ten-bin curve at five positives says nothing about a single mean
+    #: over every forecast. Rare events are precisely where the comparison matters most.
+    mean_forecast: float = 0.0
     #: Why the diagram is not here, when it is not. ``None`` when the curve is drawn.
     withheld_reason: str | None = None
 
@@ -110,6 +119,8 @@ class ReliabilityCurve:
             "observations": self.n,
             "positive_events": self.positives,
             "base_rate": round(self.base_rate, 4),
+            "mean_forecast": round(self.mean_forecast, 4),
+            "forecast_bias": round(self.mean_forecast - self.base_rate, 4),
             "brier": round(self.brier, 5),
             "decomposition": {
                 "reliability": round(self.reliability, 5),
@@ -129,7 +140,10 @@ class ReliabilityCurve:
                 "against the uncertainty term rather than against another event's "
                 "score: a rare event has a low uncertainty and therefore a low "
                 "achievable Brier, and comparing across base rates measures the base "
-                "rates."
+                "rates. mean_forecast against base_rate is the model's bias on this "
+                "event and is published whether or not the curve is drawn: a scalar is "
+                "not a diagram, and on a rare event it is the most informative number "
+                "here."
             ),
         }
 
@@ -224,5 +238,8 @@ def reliability_curve(
         uncertainty=base_rate * (1.0 - base_rate),
         bins=tuple(entries),
         positives=positives,
+        # Computed over every forecast, not over the surviving bins, so it stays
+        # meaningful on exactly the runs where the diagram is withheld.
+        mean_forecast=float(np.mean(forecast)),
         withheld_reason=withheld,
     )
