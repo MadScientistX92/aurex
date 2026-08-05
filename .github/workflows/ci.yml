@@ -175,22 +175,24 @@ jobs:
             exit 0
           fi
           echo "$changed"
-          cd engine
-          echo "$changed" | uv run python - <<'PY'
-          import subprocess, sys
-          from datetime import date, timezone, datetime
+
+          # The script goes to a file and the paths go in argv. Piping the file list
+          # into `python -` while also feeding it a heredoc makes the two redirections
+          # fight over stdin, and the loser is discarded without a word.
+          cat > /tmp/check_elapsed.py <<'PY'
+          import sys
+          from datetime import datetime, timezone
           from pathlib import Path
+
           from aurex.record import status_of
 
           today = datetime.now(timezone.utc).date()
           offenders = []
-          for line in sys.stdin.read().splitlines():
-              name = line.strip()
-              if not name:
-                  continue
-              status = status_of(Path("..") / name)
+          for name in sys.argv[1:]:
+              status = status_of(Path(name))
               if status.frozen_on(today):
                   offenders.append(f"{name}: {status.note} (frozen from {status.frozen_from})")
+
           if offenders:
               print("refusing: these forecasts have elapsed and may not be rewritten:")
               for line in offenders:
@@ -200,5 +202,8 @@ jobs:
                   "one. The git history is the track record; only the first is allowed."
               )
               sys.exit(1)
-          print("every modified forecast is still live")
+          print(f"every modified forecast is still live ({len(sys.argv) - 1} checked)")
           PY
+
+          # Run from the repository root, so the paths git handed us resolve as-is.
+          uv run --project engine python /tmp/check_elapsed.py $changed
