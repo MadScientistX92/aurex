@@ -6,6 +6,7 @@
         "currency_lenses": [
           {
             "code": "USD",
+            "grams_per_unit": 31.1034768,
             "price_linkage": "mechanical",
             "produces_local_premium": false,
             "requires_fx": false,
@@ -15,6 +16,7 @@
           {
             "code": "INR",
             "fx_series_id": "usdinr",
+            "grams_per_unit": 10.0,
             "high_confidence_from": "2017-07-01",
             "notes": [
               "IBJA publishes its 999 rate exclusive of GST; the domestic premium is measured against price_ex_consumption_tax."
@@ -2271,6 +2273,7 @@
           "lens": {
             "code": "INR",
             "fx_series_id": "usdinr",
+            "grams_per_unit": 10.0,
             "high_confidence_from": "2017-07-01",
             "notes": [
               "IBJA publishes its 999 rate exclusive of GST; the domestic premium is measured against price_ex_consumption_tax."
@@ -4302,6 +4305,7 @@
           },
           "lens": {
             "code": "USD",
+            "grams_per_unit": 31.1034768,
             "price_linkage": "mechanical",
             "produces_local_premium": false,
             "requires_fx": false,
@@ -4314,7 +4318,7 @@
     }
   },
   "code": {
-    "commit": "302d6b5d3d888941a231be7ff3399a801f248453",
+    "commit": "70f18690aca3ddfaf86097364a0c9f5e3d5804e1",
     "dirty": true,
     "engine_version": "0.1.0",
     "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
@@ -4434,7 +4438,7 @@
       }
     ]
   },
-  "generated_at": "2026-08-05T21:41:45.376308+00:00",
+  "generated_at": "2026-08-05T22:06:47.795390+00:00",
   "mode": "live",
   "policy_breaks": [
     {
@@ -4583,7 +4587,7 @@
     "dxy": {
       "end": "2026-07-31",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:37.062918+00:00",
+      "fetched_at": "2026-08-05T22:06:39.684702+00:00",
       "has_ohlc": false,
       "rows": 5005,
       "series_id": "dxy",
@@ -4594,7 +4598,7 @@
     "ibja_gold": {
       "end": "2026-08-03",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:44.546436+00:00",
+      "fetched_at": "2026-08-05T22:06:46.961765+00:00",
       "has_ohlc": false,
       "rows": 11,
       "series_id": "ibja_gold",
@@ -4605,7 +4609,7 @@
     "real_yield_10y": {
       "end": "2026-08-04",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:35.858419+00:00",
+      "fetched_at": "2026-08-05T22:06:39.006197+00:00",
       "has_ohlc": false,
       "rows": 5003,
       "series_id": "real_yield_10y",
@@ -4616,7 +4620,7 @@
     "usdinr": {
       "end": "2026-08-05",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:39.903279+00:00",
+      "fetched_at": "2026-08-05T22:06:42.019120+00:00",
       "has_ohlc": true,
       "rows": 5185,
       "series_id": "usdinr",
@@ -4627,7 +4631,7 @@
     "vix": {
       "end": "2026-08-05",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:35.294066+00:00",
+      "fetched_at": "2026-08-05T22:06:38.025475+00:00",
       "has_ohlc": true,
       "rows": 5032,
       "series_id": "vix",
@@ -4638,7 +4642,7 @@
     "wti": {
       "end": "2026-08-03",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:37.597856+00:00",
+      "fetched_at": "2026-08-05T22:06:40.291973+00:00",
       "has_ohlc": false,
       "rows": 5018,
       "series_id": "wti",
@@ -4649,7 +4653,7 @@
     "xau_futures": {
       "end": "2026-08-05",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:39.545810+00:00",
+      "fetched_at": "2026-08-05T22:06:41.729894+00:00",
       "has_ohlc": true,
       "rows": 5031,
       "series_id": "xau_futures",
@@ -4660,7 +4664,7 @@
     "xauusd": {
       "end": "2026-08-04",
       "fallbacks": [],
-      "fetched_at": "2026-08-05T21:41:39.267137+00:00",
+      "fetched_at": "2026-08-05T22:06:41.524862+00:00",
       "has_ohlc": false,
       "rows": 5013,
       "series_id": "xauusd",

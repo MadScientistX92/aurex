@@ -15,7 +15,7 @@ import dataclasses
 import re
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pandas as pd
 import pytest
@@ -123,14 +123,48 @@ class TestStaticLeakGuard:
             files.extend((ENGINE_ROOT / "aurex" / name).rglob("*.py"))
         return files
 
+    #: Directories under ``web/`` that are build output or vendored code.
+    WEB_SKIPPED: ClassVar[frozenset[str]] = frozenset({"node_modules", ".next", "out", ".vercel"})
+    #: Source extensions scanned under ``web/``. CSS is included because a stylesheet
+    #: can carry user-facing text in a ``content`` property, and because a rule named
+    #: after an asset is the same leak wearing different syntax.
+    WEB_SUFFIXES = ("*.ts", "*.tsx", "*.css")
+
+    def _web_files(self) -> list[Path]:
+        web = REPO_ROOT / "web"
+        if not web.exists():
+            return []
+        return [
+            path
+            for suffix in self.WEB_SUFFIXES
+            for path in web.rglob(suffix)
+            if not any(part in self.WEB_SKIPPED for part in path.parts)
+        ]
+
     def _guarded_files(self) -> list[Path]:
         files = self._package_files()
         files.extend(ENGINE_ROOT / "aurex" / name for name in self.GUARDED_MODULES)
-        web = REPO_ROOT / "web"
-        if web.exists():
-            for suffix in ("*.ts", "*.tsx"):
-                files.extend(p for p in web.rglob(suffix) if "node_modules" not in p.parts)
+        files.extend(self._web_files())
         return files
+
+    def test_the_guard_actually_reaches_the_dashboard(self) -> None:
+        """The dashboard is guarded on the same terms as the engine's downstream packages.
+
+        A view that special-cases one asset or one country stops being a view of the
+        engine and becomes a second implementation of it — with its own copy of the
+        tax stack, drifting quietly from the schedule that has the citations. The guard
+        has scanned ``web/`` since before there was a ``web/``; this asserts it is now
+        finding something, because a file list that silently came back empty would let
+        every literal through while the suite stayed green.
+        """
+        files = self._web_files()
+
+        assert len(files) > 10, (
+            f"only {len(files)} files scanned under web/; the guard is not wired up"
+        )
+        assert any(path.suffix == ".tsx" for path in files), "no components are being scanned"
+        assert any(path.suffix == ".css" for path in files), "no stylesheet is being scanned"
+        assert all("node_modules" not in path.parts for path in files)
 
     def test_the_guard_covers_every_downstream_package(self) -> None:
         covered = {p.parent.name for p in self._package_files()}

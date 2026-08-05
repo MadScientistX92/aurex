@@ -6,7 +6,7 @@
 [![Nightly](https://github.com/MadScientistX92/aurex/actions/workflows/nightly.yml/badge.svg)](https://github.com/MadScientistX92/aurex/actions/workflows/nightly.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
-> **Build status: steps 1, 1.5, 2, 3a, 3b and the automation half of 7 are complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, the scoring layer with a walk-forward backtest from 2015, routes with per-jurisdiction friction and the breakeven hurdle, and the nightly job that publishes one dated forecast a night or refuses and says why. Not built: factor attribution, the scenario engine, the dashboard, the benchmark shootout, and the second asset. The deploy half of step 7 waits on step 5 — there is no `web/` to deploy, and a placeholder site is worse than none. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
+> **Build status: steps 1, 1.5, 2, 3a, 3b, 7 and most of 5 are complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, the scoring layer with a walk-forward backtest from 2015, routes with per-jurisdiction friction and the breakeven hurdle, the nightly job that publishes one dated forecast a night or refuses and says why, and the dashboard's three buildable views. Not built: factor attribution, the scenario engine, the benchmark shootout, and the second asset. The dashboard's *Drivers* and *Scenarios* views wait on step 4's factor loadings and are omitted rather than stubbed. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
 >
 > **Calibration has now been measured, and the headline is a negative result.** Across 2,876 out-of-sample forecasts from January 2015, the CRPS skill against the random walk is between −0.4% and +0.9% depending on the horizon, and a Diebold-Mariano test rejects at none of them — the smallest p-value in the table is 0.23. The distributions are close to the right *shape*: PIT uniformity survives a KS test at all five horizons, and a chi-square rejects at one of them. Direction carries no information at all. An earlier version of this section reported up to +4.6% CRPS skill; that number was a model carrying drift beating a null that had been denied one, it has been withdrawn, and the simulation no longer carries the drift. It would not have survived a Diebold-Mariano test either — measured, p = 0.27. Everything below is published with the test behind it, in both directions.
 
@@ -79,6 +79,14 @@ uv run aurex livelog                             # score the forecasts published
 
 # offline from the committed seed cache, no network at all
 AUREX_CACHE_DIR=tests/fixtures/seed-cache uv run aurex pipeline --dry-run
+```
+
+The dashboard reads the committed artifacts and nothing else:
+
+```bash
+cd ..                     # repository root; the site reads ../public-data from web/
+npm --prefix web ci
+npm --prefix web run dev   # http://localhost:3000
 ```
 
 `aurex pipeline` exits non-zero and writes no forecast when the price series does not reach the run date — see [Nightly automation](#nightly-automation). The committed seed cache is always older than today, so exploring from it needs `--allow-stale`, which is opt-in for exactly that reason.
@@ -406,6 +414,42 @@ The correct reading is about the hurdle, not about the route: **at low friction 
 
 **At zero breaches the chi-square approximation is not usable.** Kupiec's statistic is asymptotically chi-square, and zero breaches puts the unrestricted estimate on the boundary of the parameter space, where that asymptotics does not hold. Both p-values are always computed and the exact binomial is the one reported at a boundary. It matters: 0 breaches in 44 windows against a 5% quantile gives a chi-square p of 0.034 and an exact p of 0.17. An earlier version of the table above reported the first and read it as the run's only rejection. It was not one.
 
+## The dashboard
+
+Next.js 15, TypeScript, statically prerendered on Vercel. It reads the committed JSON in `public-data/` and nothing else: no model on the server, no runtime fetch, no API key in the browser. The consequence is the point — **there is no code path that could compute a fresher number, so there is no code path that could invent one.** A stale deploy is visibly stale rather than quietly wrong, and the nightly commit is what triggers the next build.
+
+### A dashboard is where honest uncertainty goes to die
+
+Every interface convention pushes toward one number, one arrow, one confident headline. This engine's entire finding is that it cannot produce one. So the resistance is structural rather than tasteful — the things that would let a page overclaim do not exist to reach for:
+
+- **The hero is the distribution.** There is no hero-number class in the stylesheet, no trend arrow, no success colour. The largest element on the page is a fan chart; the figures beside it sit in a definition list at body size, so none can become the headline by typography alone.
+- **The hurdle is a required prop, not an option.** `FanChart` and `ExceedanceChart` will not compile without one, so a forecast cannot be rendered without the move it has to beat drawn across it and labelled with the number. On the exceedance chart the hurdle is a vertical rule, and where it crosses the curve *is* the probability of clearing it — a geometric fact rather than a figure quoted beside a picture.
+- **Below even odds, the headline is the loss.** `P(profit) = 0.089` and `P(loss) = 0.911` are the same measurement; the first reads as an opportunity and the second reads as what it is. The rule already existed in the engine; the interface is where it bites.
+- **No jurisdiction is the default.** The control opens unset, and unset is a real state: the quote-currency benchmark with friction *excluded and labelled*, never one country's tax stack applied because it sorted first.
+- **The negative result is on the front page**, above the distribution it qualifies — not filed under methodology where a reader will not go.
+
+### What is there, and what is deliberately not
+
+| View | Status |
+|---|---|
+| **Today** | The distribution across horizons, the exceedance curve against breakeven, and every route × jurisdiction hurdle with its odds |
+| **Track record** | Sample window and the command that reproduces it, CRPS skill with its Diebold-Mariano p-values, PIT histograms, reliability diagrams, and the live log |
+| **Calculator** | Grams, route, jurisdiction → the specific breakeven, the gross gain needed, and the published odds of clearing it |
+| ~~Drivers~~ | **Omitted.** Needs step 4's factor loadings |
+| ~~Scenarios~~ | **Omitted.** Needs step 4 |
+
+The last two are absent rather than stubbed. An empty tab implies the work is done and merely unpopulated; naming them as missing costs a line and says something true.
+
+**The empty state is the content.** The live log has `n = 0` today and will be in single digits for months. It renders the count and *"no test is possible yet"* rather than hiding until it looks like something — a visitor who sees `n = 3` beside that label learns more about how this repository works than one who sees a section that quietly does not exist.
+
+### Rules the dashboard inherits
+
+- **The leak guard extends to `web/`.** No asset literal, no jurisdiction code, in `.ts`, `.tsx` or `.css`. The site iterates over whatever the artifacts declare; a view that special-cases one asset stops being a view of the engine and becomes a second implementation of it, with its own copy of the tax stack drifting from the schedule that has the citations. It caught a driver named in a caption during the build.
+- **Nothing is recomputed.** Probabilities come from a committed exceedance grid by lookup — 101 points at half-percent steps — and breakevens come from the routes artifact. A round-trip hurdle lands wherever a dealer spread and a tax rate put it, almost never on a published quantile, and interpolating a five-point grid in a browser would put invented precision in front of the one number a reader would act on.
+- **Every chart carries a table.** Not a nicety: the `Figure` component cannot render without one. Charts are unreadable to a screen reader, in forced-colors mode, and to anyone the light-mode aqua fails contrast for.
+- **Monospace tabular figures on every numeral**, because these tables are meant to be read down a column.
+- **Accessibility: 100/100 on Lighthouse** for all three views at a 412×823 mobile viewport, with no failing audits. Visible keyboard focus, one orchestrated entrance that `prefers-reduced-motion` removes, and colour never the sole encoding — the hurdle is dashed *and* labelled, the legend is always present, and both themes are stepped and validated rather than flipped.
+
 ## Nightly automation
 
 One forecast a night, committed to this repository, or no forecast and a loud failure. There is no third outcome, and the reason is the whole of this section.
@@ -524,6 +568,8 @@ Every model must beat a **driftless random walk** on out-of-sample CRPS. Models 
 - **Retail friction varies enormously.** The defaults are representative, not universal. Enter your own dealer's actual quotes. Dealer premiums and buyback discounts carry a `spread_basis` saying they are representative and user-editable; they are structurally prevented from sharing the citation that covers the tax rate on the same entry, because one of those two numbers has a regulator behind it and the other does not.
 - **The routes table is four jurisdictions and two routes.** It is not a survey. Where a route is not listed as available somewhere, that is an absence of data in Aurex and never a statement about what a reader may hold — availability is informational and the lookup says so when it fails. Leverage caps are recorded only where the national regulator's own instrument was read.
 - **The hurdle event is unmeasurable at short horizons and high friction.** Zero positive events at five sessions and five at ten, against a pre-registered expectation of about fifteen. That expectation was wrong because its sigma was wrong — 22% annualised where the sample carries 15.9% — and the residual gap between a Gaussian rate and the measured one is the fat tail. The reliability curve is withheld there rather than drawn on noise, and the base rate, count and mean forecast are published beside every score so a low Brier on a rare event cannot be read as a good forecast.
+- **The dashboard is deployed from a snapshot, not a live feed.** Pages are prerendered at build time from the committed artifacts, so what a visitor sees is what the engine had published when the site last built — and the nightly commit is what rebuilds it. A deploy that has not run shows yesterday's forecast with yesterday's date on it, which is the failure mode this design prefers to a page that recomputes.
+- **The exceedance grid is half-percent steps, and the calculator interpolates between them.** That is a real approximation, bounded by half a percent of move — far tighter than the sampling error on a 20,000-path ensemble, which is why it is acceptable here and would not be on a five-point quantile grid. A hurdle outside the published ±25% range gets no probability rather than an extrapolated one.
 - **The live track record is empty, and will be small for months.** The nightly job has published nothing yet. Until it accrues 30 independent windows at a horizon, no test is possible on it and none will be reported — the count and the distributions will be, labelled as untestable. It is never pooled with the walk-forward, so nothing here will make the live sample look larger than it is.
 - **The staleness tolerances are judgements, not vendor guarantees.** They were set from observed publication lag on a handful of runs, and each carries the calendar and the reasoning behind it so a reader can disagree with a specific number rather than with the idea. A source that changes its schedule will read as a fault until the tolerance is revisited, which is the failure direction to prefer.
 - **The safe-haven channel is not yet estimated.** The factor set declares a geopolitical-risk regressor, but no source is wired to it, so it currently reports as unavailable. This matters more than it looks: without it, a scenario chain like *escalation → crude up → inflation up → Fed hawkish → gold down* runs entirely through the real-yield and dollar channels, and would very likely produce the wrong sign with honestly-estimated loadings and a clean causal story attached — gold historically rallies on escalation. Omitted-variable bias is more dangerous here than a hand-typed view, because it survives the check against hand-typed views.
@@ -536,7 +582,7 @@ Every model must beat a **driftless random walk** on out-of-sample CRPS. Models 
 | ~~3a~~ | ~~Scoring the distributions the engine already produces: PIT, CRPS skill against the random walk, Kupiec, Christoffersen, reliability. Walk-forward, expanding window, 2015→present~~ — **done**, results above |
 | ~~3b~~ | ~~Routes and jurisdictions; friction per route; the breakeven hurdle and the calibration of clearing it~~ — **done**, results above |
 | 4 | Elastic-net factor attribution; market-sourced scenario priors; the crude → CPI → policy → rupee transmission chain by local projections |
-| 5 | Dashboard, currency toggle, uncertainty decomposition, user-set leverage with the liquidation probability recomputed live |
+| 5 | ~~Dashboard: Today, Track record, Calculator~~ — **done**, above. Uncertainty decomposition and user-set leverage with a live liquidation probability remain, and the Drivers and Scenarios views wait on step 4 |
 | 6 | Benchmark shootout vs random walk, AutoARIMA, NHITS, Chronos — **including the rows where Aurex loses** |
 | 7 | ~~Nightly automation: CI, the staleness refusal, track-record integrity, the live log~~ — **done**, above. Deploy waits on step 5 |
 | 8 | A second asset, as a traded instrument: exchange-listed rupee-quoted futures, shifted-log returns, roll friction at each expiry, futures friction including transaction tax |

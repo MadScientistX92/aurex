@@ -551,7 +551,7 @@
     }
   ],
   "code": {
-    "commit": "302d6b5d3d888941a231be7ff3399a801f248453",
+    "commit": "70f18690aca3ddfaf86097364a0c9f5e3d5804e1",
     "dirty": true,
     "engine_version": "0.1.0",
     "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
@@ -565,7 +565,7 @@
     "restricted_in": "Derived from available_in against the known jurisdictions, never stored, so the two cannot disagree."
   },
   "engine_version": "0.1.0",
-  "generated_at": "2026-08-05T21:42:07.354172+00:00",
+  "generated_at": "2026-08-05T22:06:48.513384+00:00",
   "horizons": [
     5,
     10,

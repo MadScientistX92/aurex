@@ -162,11 +162,13 @@ class Gold:
             code="USD",
             unit_label="troy_ounce",
             units_per_base=1.0,
+            grams_per_unit=GRAMS_PER_TROY_OUNCE,
         ),
         TaxedImportLens(
             code="INR",
             unit_label="10g",
             units_per_base=INR_QUOTE_GRAMS / GRAMS_PER_TROY_OUNCE,
+            grams_per_unit=INR_QUOTE_GRAMS,
             fx_series_id="usdinr",
             duty_resolver=_duty_for,
             tax_resolver=_gst_for,
