@@ -1204,6 +1204,96 @@ class TestWalkForward:
             self._run(prices.iloc[::-1])
 
 
+class TestTheSampleWindowIsReproducible:
+    """A published number has to carry the window it came from.
+
+    Before `--to` existed the run ended at wall-clock, so the sample depended on the
+    day the command was typed and no reader could re-derive the published table. These
+    tests are about that specific failure: the bound has to hold, it has to bound the
+    *outcomes* as well as the forecasts, and it has to be recorded in a form that can
+    be passed back.
+    """
+
+    REQUEST = WalkForwardRequest(horizons=(5, 21), step=5, min_observations=750)
+
+    def _run(self, prices: pd.Series, request: WalkForwardRequest) -> object:
+        return walk_forward(
+            prices,
+            subject=ModelForecaster(
+                model=model_for("gjr_garch"), transform=LogReturn(), n_paths=400
+            ),
+            baseline=RandomWalkForecaster(transform=LogReturn(), n_paths=400),
+            request=request,
+        )
+
+    def test_the_end_bound_truncates_the_sample(self) -> None:
+        prices = price_series(periods=1_100)
+        cut = prices.index[900]
+
+        result = self._run(prices, dataclasses.replace(self.REQUEST, end=cut))
+
+        assert result.sample is not None  # type: ignore[attr-defined]
+        assert result.sample.resolved_end == cut  # type: ignore[attr-defined]
+        assert result.sample.available_end == prices.index[-1]  # type: ignore[attr-defined]
+        assert result.sample.truncated  # type: ignore[attr-defined]
+        assert all(record.as_of <= cut for record in result.records)  # type: ignore[attr-defined]
+
+    def test_nothing_after_the_end_bound_is_scored_against(self) -> None:
+        """The bound covers realised outcomes, not just as-of dates.
+
+        Filtering only the forecast dates would leave a window near the end scored
+        against prices the declared sample says are not in it — which is lookahead
+        dressed as a reproducibility flag.
+        """
+        prices = price_series(periods=1_100)
+        cut = prices.index[900]
+
+        truncated = self._run(prices, dataclasses.replace(self.REQUEST, end=cut))
+        rewritten = prices.copy()
+        rewritten.iloc[901:] *= 5.0
+        tampered = self._run(rewritten, dataclasses.replace(self.REQUEST, end=cut))
+
+        before = {(r.as_of, r.horizon): r.crps for r in truncated.records}  # type: ignore[attr-defined]
+        after = {(r.as_of, r.horizon): r.crps for r in tampered.records}  # type: ignore[attr-defined]
+
+        assert before.keys() == after.keys()
+        assert before == pytest.approx(after)
+
+    def test_the_last_scored_window_ends_inside_the_sample(self) -> None:
+        prices = price_series(periods=1_100)
+        cut = prices.index[900]
+
+        result = self._run(prices, dataclasses.replace(self.REQUEST, end=cut))
+
+        positions = {stamp: i for i, stamp in enumerate(prices.index)}
+        for record in result.records:  # type: ignore[attr-defined]
+            assert positions[record.as_of] + record.horizon <= 900
+
+    def test_the_window_is_published_with_both_what_was_asked_and_what_resolved(
+        self,
+    ) -> None:
+        """The default case — no `--to` at all — is the one every published number came
+        from, so recording only the request would document the wrong thing."""
+        prices = price_series(periods=1_100)
+
+        block = self._run(prices, self.REQUEST).sample.describe()  # type: ignore[attr-defined]
+
+        assert block["requested"]["to"] is None
+        assert block["resolved"]["to"] == prices.index[-1].date().isoformat()
+        assert block["truncated"] is False
+        assert "--to" in block["note"]
+
+    def test_a_sample_ending_before_it_starts_is_refused(self) -> None:
+        with pytest.raises(ValueError, match=r"ends .* before it starts"):
+            WalkForwardRequest(start=pd.Timestamp("2020-01-01"), end=pd.Timestamp("2019-01-01"))
+
+    def test_an_end_before_the_series_begins_is_refused_with_the_reason(self) -> None:
+        prices = price_series(periods=1_100)
+
+        with pytest.raises(ValueError, match="no observations at or before"):
+            self._run(prices, dataclasses.replace(self.REQUEST, end=pd.Timestamp("1990-01-01")))
+
+
 class TestCalibrationReport:
     def _report(self, **process: float) -> object:
         prices = price_series(periods=1_600, **process)

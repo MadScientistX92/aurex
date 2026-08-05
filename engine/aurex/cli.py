@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING, Any
 
 import typer
 
 from aurex import __version__
 from aurex.data.schedules import duty_on, gst_on, load_duty_schedule
 from aurex.pipeline import run, write_artifact, write_forecast_log
+from aurex.provenance import code_provenance
+
+if TYPE_CHECKING:
+    from aurex.routes import RouteBook
 
 app = typer.Typer(
     add_completion=False,
@@ -126,10 +131,50 @@ def schedule() -> None:
         )
 
 
+def _score_command(
+    *,
+    asset_id: str,
+    since: str,
+    until: str,
+    step: int,
+    horizons: str,
+    paths: int,
+    model: str,
+) -> str:
+    """The command that reproduces this artifact, spelled out in full.
+
+    Every option is written even where it matches the default. A reader running the
+    short form gets whatever the defaults are on the day they run it, and a default
+    that moved between then and now is exactly the kind of silent difference a
+    reproduction instruction exists to rule out.
+    """
+    parts = [
+        "uv run aurex score",
+        f"--asset {asset_id}",
+        f"--from {since}",
+        f"--to {until}",
+        f"--step {step}",
+        f"--horizons {horizons}",
+        f"--paths {paths}",
+    ]
+    if model:
+        parts.append(f"--model {model}")
+    return " ".join(parts)
+
+
 @app.command()
 def score(
     asset_id: str = typer.Option("gold", "--asset", help="Which registered asset to grade."),
     since: str = typer.Option("2015-01-01", "--from", help="First forecast date, YYYY-MM-DD."),
+    until: str = typer.Option(
+        "",
+        "--to",
+        help=(
+            "Last observation the run may see, YYYY-MM-DD. Defaults to the series' own "
+            "last observation, never to today. Pass the resolved value from a previous "
+            "artifact to reproduce its numbers exactly."
+        ),
+    ),
     step: int = typer.Option(5, "--step", help="Sessions between forecasts."),
     horizons: str = typer.Option("5,21,63", "--horizons", help="Comma-separated session counts."),
     paths: int = typer.Option(4_000, "--paths", help="Simulated paths per forecast."),
@@ -177,10 +222,25 @@ def score(
     if asset.ohlc_series_id is not None and asset.ohlc_series_id in series:
         ohlc = series[asset.ohlc_series_id].frame
 
+    # Named for the series rather than the column it came out of, so the sample window
+    # in the artifact says `xauusd` rather than `close`.
+    prices = _price_column(price.frame).rename(asset.price_series_id)
+
+    # Defaults to the series' last observation, never to today. Those differ whenever
+    # the market was shut or a source lagged, and defaulting to today would silently
+    # make the sample bound depend on when the command was typed rather than on what
+    # data existed — which is the whole reason a reader could not reproduce the
+    # published table before this flag existed.
+    if until.strip():
+        end_stamp = pd.Timestamp(date.fromisoformat(until.strip()))
+    else:
+        end_stamp = pd.Timestamp(prices.dropna().index[-1])
+
     request = WalkForwardRequest(
         horizons=tuple(int(h) for h in horizons.split(",") if h.strip()),
         step=step,
         start=pd.Timestamp(start_date),
+        end=end_stamp,
     )
 
     # The composition §20 asks for, and the only place in the engine that holds an
@@ -215,7 +275,7 @@ def score(
 
     result = backtest_asset(
         asset,
-        prices=_price_column(price.frame),
+        prices=prices,
         ohlc=ohlc,
         breaks=tuple(pd.Timestamp(b.date) for b in load_policy_breaks()),
         request=request,
@@ -227,7 +287,23 @@ def score(
     block = describe_backtest(asset, result) | {
         "generated_at": datetime.now(UTC).isoformat(),
         "engine_version": __version__,
+        "code": code_provenance().describe(),
         "source": price.meta.to_dict(),
+        # Built from the *resolved* window rather than from what was typed, so the
+        # command in the artifact reproduces the artifact even when --to was omitted.
+        "reproduce": _score_command(
+            asset_id=asset.id,
+            since=start_date.isoformat(),
+            until=(
+                result.sample.resolved_end.date().isoformat()
+                if result.sample is not None
+                else end_stamp.date().isoformat()
+            ),
+            step=step,
+            horizons=horizons,
+            paths=paths,
+            model=model,
+        ),
     }
 
     if dry_run:
@@ -262,12 +338,73 @@ def score(
         )
 
 
+def _routes_export(book: RouteBook, *, horizons: tuple[int, ...]) -> dict[str, Any]:
+    """The route table as published JSON, with the breakeven each cell implies.
+
+    Written to ``public-data/`` because the dashboard reads committed JSON and nothing
+    else — no engine on the server, no model execution behind the page. The breakeven
+    is resolved here, per horizon, rather than left for a client to recompute from
+    friction components: the arithmetic is `(1 + premium)(1 + tax) / (1 - buyback)`
+    plus accrual, and a second implementation of it in TypeScript is a second place for
+    it to be wrong. The client looks the number up; it never derives one.
+    """
+    from aurex.trade import hurdle_for
+
+    cells: list[dict[str, Any]] = []
+    for terms in book.terms:
+        route = book.route(terms.route_id)
+        quotes = {}
+        for horizon in horizons:
+            quote = hurdle_for(
+                terms.friction,
+                horizon_days=horizon,
+                label=f"{route.instrument}_{terms.jurisdiction}",
+            )
+            quotes[str(horizon)] = {
+                "required_move": round(quote.required_move, 8),
+                "required_move_pct": round(quote.required_move_pct, 6),
+                "multiple": round(quote.multiple, 8),
+                "horizon_dependent": quote.horizon_dependent,
+                "components": {k: round(v, 8) for k, v in quote.components.items()},
+            }
+        cells.append(
+            terms.describe()
+            | {
+                "route": route.describe(),
+                "breakeven": quotes,
+            }
+        )
+
+    return book.describe() | {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "engine_version": __version__,
+        "code": code_provenance().describe(),
+        "horizons": list(horizons),
+        "cells": cells,
+        "reading": (
+            "One entry per (route, jurisdiction). breakeven is the round-trip move "
+            "required before a position is above water, resolved per horizon because "
+            "carry accrues and a door charge does not. There is no default "
+            "jurisdiction: with none set the correct view is the quote-currency "
+            "benchmark with friction excluded and labelled, never one country's stack "
+            "applied silently."
+        ),
+    }
+
+
 @app.command()
 def routes(
     asset_id: str = typer.Option("", "--asset", help="Restrict to one registered asset."),
     markdown: bool = typer.Option(
         False, "--markdown", help="Emit the generated breakeven table for the README."
     ),
+    to_json: bool = typer.Option(
+        False, "--json", help="Write public-data/routes.json for the dashboard."
+    ),
+    horizons: str = typer.Option(
+        "5,10,21,42,63,252", "--horizons", help="Horizons to resolve breakeven at."
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print without writing."),
 ) -> None:
     """Print the route x jurisdiction table, or the breakeven markdown it generates."""
     from aurex.routes import load_routes
@@ -281,6 +418,23 @@ def routes(
 
     if markdown:
         typer.echo(breakeven_table(rows))
+        return
+
+    if to_json:
+        import json as _json
+
+        from aurex import config
+
+        block = _routes_export(
+            book, horizons=tuple(int(h) for h in horizons.split(",") if h.strip())
+        )
+        if dry_run:
+            typer.echo(_json.dumps(block, indent=2, sort_keys=True))
+            return
+        config.PUBLIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        out = config.PUBLIC_DATA_DIR / "routes.json"
+        out.write_text(_json.dumps(block, indent=2, sort_keys=True) + "\n")
+        typer.echo(f"wrote {out}")
         return
 
     for terms in book.terms:

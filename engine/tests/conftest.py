@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Iterator
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +30,72 @@ def ibja_text() -> str:
 @pytest.fixture
 def cache(tmp_path: Path) -> CacheStore:
     return CacheStore(tmp_path / "cache")
+
+
+def wandering_series(
+    end: str,
+    *,
+    series_id: str = "xauusd",
+    periods: int = 600,
+    column: str = "close",
+    trailing_nans: int = 0,
+    seed: int = 4,
+) -> LoadedSeries:
+    """A price series ending on ``end`` that actually moves.
+
+    Prices wander rather than sitting flat, because everything downstream of a variance
+    divides by it: a constant fixture fails a GARCH fit with a linear algebra error
+    instead of exercising whatever was under test.
+    """
+    index = pd.bdate_range(end=end, periods=periods, name="date")
+    rng = np.random.default_rng(seed)
+    values = 100.0 * np.exp(np.cumsum(rng.normal(0.0, 0.01, size=len(index))))
+    if trailing_nans:
+        values[-trailing_nans:] = np.nan
+    frame = pd.DataFrame({column: values}, index=index)
+    return LoadedSeries(
+        frame=frame,
+        meta=SeriesMeta(
+            series_id=series_id,
+            source_name="test:source",
+            source_url="https://example.invalid/series",
+            fetched_at=datetime.now(UTC),
+            rows=len(frame),
+            start=index[0].date(),
+            end=index[-1].date(),
+        ),
+    )
+
+
+def _pinned_cache(root: Path, monkeypatch: pytest.MonkeyPatch, *, last_observation: str) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    store = CacheStore(root)
+    store.write(wandering_series(last_observation, series_id="xauusd"))
+    store.write(wandering_series(last_observation, series_id="usdinr", seed=9))
+    monkeypatch.setattr("aurex.config.CACHE_DIR", root)
+    return root
+
+
+@pytest.fixture
+def stale_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A cache whose prices stopped a fortnight ago, wherever today happens to land.
+
+    Pinned rather than borrowed from the developer's own ``.cache/``. Tests that
+    asserted a refusal used to read whatever was lying there, so they passed only while
+    that data happened to be old — one live pipeline run turned three assertions about
+    refusing into assertions about publishing, and the guard's tests stopped testing
+    the guard without failing.
+    """
+    stale = (date.today() - timedelta(days=14)).isoformat()
+    return _pinned_cache(tmp_path / "stale-cache", monkeypatch, last_observation=stale)
+
+
+@pytest.fixture
+def fresh_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A cache reaching today, so the publishing path is exercised on its own terms."""
+    return _pinned_cache(
+        tmp_path / "fresh-cache", monkeypatch, last_observation=date.today().isoformat()
+    )
 
 
 def make_series(

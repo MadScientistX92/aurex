@@ -66,6 +66,13 @@ class ForecastRequest:
     seed: int = 20260731
     #: Adverse moves to report touch-versus-terminal against, as fractions.
     reference_moves: tuple[float, ...] = (0.05, 0.10, 0.20)
+    #: Moves to publish an exceedance probability at, as fractions.
+    #:
+    #: Half-percent steps across ±25%, which covers every round-trip breakeven in the
+    #: routes table with room for a leveraged one. The grid is published rather than a
+    #: fitted curve so a consumer reads a number the paths actually produced instead of
+    #: interpolating a distribution whose shape is the entire point of not assuming.
+    exceedance_grid: tuple[float, ...] = tuple(round(-0.25 + 0.005 * i, 4) for i in range(101))
     dependence: DependenceMode = "t_copula"
     #: Resample the residual pool with its mean removed. §0's position on drift, and
     #: the default; see :mod:`aurex.dist.fhs`. Set false to simulate the drift the
@@ -90,6 +97,7 @@ class ForecastRequest:
             "block_length": self.block_length,
             "seed": self.seed,
             "reference_moves": list(self.reference_moves),
+            "exceedance_grid_steps": len(self.exceedance_grid),
             "dependence": self.dependence,
             "demean_residuals": self.demean_residuals,
         }
@@ -397,8 +405,40 @@ def _horizon_block(ensemble: PathEnsemble, request: ForecastRequest) -> dict[str
     return {
         "quantiles": {key: round(value, 4) for key, value in ensemble.quantiles().items()},
         "adverse_moves": [_adverse_move_block(ensemble, move) for move in request.reference_moves],
+        "exceedance": _exceedance_block(ensemble, request),
         "n_paths": ensemble.n_paths,
     }
+
+
+def _exceedance_block(ensemble: PathEnsemble, request: ForecastRequest) -> list[dict[str, Any]]:
+    """P(move at or beyond x), computed from the paths across a grid of moves.
+
+    Exists so a reader can ask "what are the odds of clearing *this* hurdle" without
+    re-running the model. Five published quantiles cannot answer that: a round-trip
+    breakeven lands wherever a dealer spread and a tax rate put it, almost never on a
+    quantile, and interpolating a CDF from five points in a browser would put an
+    invented precision in front of the one number a holder would act on.
+
+    Both readings are kept because they answer different questions and §18 is about the
+    gap between them. ``terminal`` is whether the position is above water *at* the
+    horizon, which is what a round trip held to term faces. ``touch`` is whether it was
+    ever above water on the way, which is what a holder who can exit early faces, and it
+    is a floor because paths are monitored at session close.
+    """
+    anchor = ensemble.anchor
+    if anchor <= 0.0:
+        return []
+    return [
+        {
+            "move": round(move, 4),
+            "level": round(anchor * (1.0 + move), 4),
+            "terminal_probability": round(
+                ensemble.probability_above(anchor * (1.0 + move), terminal_only=True), 5
+            ),
+            "touch_probability": round(ensemble.probability_above(anchor * (1.0 + move)), 5),
+        }
+        for move in request.exceedance_grid
+    ]
 
 
 def _adverse_move_block(ensemble: PathEnsemble, move: float) -> dict[str, Any]:

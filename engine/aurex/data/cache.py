@@ -14,7 +14,7 @@ from typing import Any
 
 import pandas as pd
 
-from aurex.config import CACHE_DIR
+from aurex import config
 from aurex.data.base import LoadedSeries, SeriesMeta
 
 
@@ -36,7 +36,11 @@ class CacheStore:
     """Read/write cached series under ``root``."""
 
     def __init__(self, root: Path | None = None) -> None:
-        self.root = root or CACHE_DIR
+        # Resolved through the module rather than bound at import, for the same reason
+        # PUBLIC_DATA_DIR is: one place to redirect. A test that redirects the output
+        # but not the input silently exercises whatever the developer's own cache
+        # happens to hold, which makes it pass or fail on the age of ambient data.
+        self.root = root or config.CACHE_DIR
 
     def _paths(self, series_id: str) -> tuple[Path, Path]:
         return (

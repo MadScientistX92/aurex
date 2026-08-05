@@ -57,7 +57,7 @@ class TestTheNightlyWritesOnlyPublicData:
     """
 
     def test_a_published_run_leaves_the_readme_untouched(
-        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+        self, fresh_cache, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from aurex.config import REPO_ROOT
 
@@ -65,12 +65,13 @@ class TestTheNightlyWritesOnlyPublicData:
         before = hashlib.sha256(readme.read_bytes()).hexdigest()
         monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", tmp_path / "public-data")
 
-        runner.invoke(app, ["pipeline", "--offline", "--allow-stale"])
+        result = runner.invoke(app, ["pipeline", "--offline"])
 
+        assert result.exit_code == 0, result.output
         assert hashlib.sha256(readme.read_bytes()).hexdigest() == before
 
     def test_a_refused_run_leaves_the_readme_untouched(
-        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+        self, stale_cache, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The failure path writes a skip record, and that is all it writes."""
         from aurex.config import REPO_ROOT
@@ -85,12 +86,12 @@ class TestTheNightlyWritesOnlyPublicData:
         assert hashlib.sha256(readme.read_bytes()).hexdigest() == before
 
     def test_everything_written_lands_under_public_data(
-        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+        self, fresh_cache, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         target = tmp_path / "public-data"
         monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", target)
 
-        runner.invoke(app, ["pipeline", "--offline", "--allow-stale"])
+        runner.invoke(app, ["pipeline", "--offline"])
 
         written = sorted(p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file())
         assert written, "the run must have written something"

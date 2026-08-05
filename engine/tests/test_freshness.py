@@ -52,10 +52,18 @@ def series_ending(
     periods: int = 30,
     column: str = "close",
     trailing_nans: int = 0,
+    seed: int = 4,
 ) -> LoadedSeries:
-    """A series whose index ends on ``end``, optionally with a NaN tail."""
+    """A series whose index ends on ``end``, optionally with a NaN tail.
+
+    Prices wander rather than sitting flat. A constant series has zero variance, and
+    everything downstream of a variance — the GARCH fit, the copula, the standardised
+    residuals — divides by it, so a flat fixture fails the pipeline with a linear
+    algebra error instead of exercising the freshness question under test.
+    """
     index = pd.bdate_range(end=end, periods=periods, name="date")
-    values = np.full(len(index), 100.0)
+    rng = np.random.default_rng(seed)
+    values = 100.0 * np.exp(np.cumsum(rng.normal(0.0, 0.01, size=len(index))))
     if trailing_nans:
         values[-trailing_nans:] = np.nan
     frame = pd.DataFrame({column: values}, index=index)
@@ -263,7 +271,7 @@ class TestTheArtifactCitesIt:
 
 class TestTheNightlyExit:
     def test_a_stale_run_exits_non_zero_and_writes_no_forecast(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, stale_cache: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Not a warning, not a flag in the artifact — a non-zero exit and no artifact."""
         target = tmp_path / "public-data"
@@ -271,12 +279,12 @@ class TestTheNightlyExit:
 
         result = runner.invoke(app, ["pipeline", "--offline"])
 
-        assert result.exit_code == 1
+        assert result.exit_code == 1, result.output
         assert not (target / "latest.json").exists(), "a refused run must publish nothing"
-        assert not list((target / "forecasts").glob("2026-*.json"))
+        assert not list((target / "forecasts").glob("20*.json"))
 
     def test_a_refused_night_still_leaves_a_trace(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, stale_cache: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The refusal is itself data. A gap nothing explains is the weaker position."""
         target = tmp_path / "public-data"
@@ -289,6 +297,21 @@ class TestTheNightlyExit:
         record = json.loads(skipped[0].read_text())
         assert "tolerance" in record["reason"]
         assert record["detail"]["series"], "the skip record must carry what it measured"
+
+    def test_a_fresh_run_publishes(
+        self, fresh_cache: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The other half of the guard, and the half that keeps it honest.
+
+        A guard asserted only against stale data would still pass if it refused
+        everything, which is the failure mode that gets it disabled rather than fixed.
+        """
+        monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", tmp_path / "public-data")
+
+        result = runner.invoke(app, ["pipeline", "--offline"])
+
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "public-data" / "latest.json").exists()
 
     def test_allow_stale_is_opt_in_and_publishes(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

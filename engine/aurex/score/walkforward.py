@@ -89,6 +89,15 @@ class WalkForwardRequest:
     step: int = 5
     min_observations: int = DEFAULT_MIN_OBSERVATIONS
     start: pd.Timestamp | None = None
+    #: Last observation the run may see, for forecasting *or* for scoring.
+    #:
+    #: Without it a run ends wherever wall-clock left it, and a published number cannot
+    #: be reproduced by anyone who reads it later — the sample they get is not the
+    #: sample it came from. Truncating the price series rather than filtering the as-of
+    #: dates is deliberate: it bounds the realised outcomes too, so a forecast whose
+    #: horizon would run past the stated end is dropped rather than scored against data
+    #: the stated window says is not there.
+    end: pd.Timestamp | None = None
     #: Lower-tail quantiles to test coverage at, i.e. 95% and 99% VaR.
     var_levels: tuple[float, ...] = (0.05, 0.01)
     reference_moves: tuple[float, ...] = (0.05, 0.10)
@@ -105,6 +114,8 @@ class WalkForwardRequest:
             raise ValueError(f"horizons must stay below {_SEED_STRIDE} to keep seeds distinct")
         if self.step < 1:
             raise ValueError(f"step must be positive, got {self.step}")
+        if self.start is not None and self.end is not None and self.end < self.start:
+            raise ValueError(f"sample ends {self.end} before it starts {self.start}")
         for level in self.var_levels:
             if not 0.0 < level < 1.0:
                 raise ValueError(f"VaR levels are tail probabilities in (0, 1), got {level}")
@@ -118,6 +129,7 @@ class WalkForwardRequest:
             "step_sessions": self.step,
             "min_observations": self.min_observations,
             "start": None if self.start is None else self.start.date().isoformat(),
+            "end": None if self.end is None else self.end.date().isoformat(),
             "var_levels": list(self.var_levels),
             "reference_moves": list(self.reference_moves),
             "seed": self.seed,
@@ -368,6 +380,59 @@ class CalibrationReport:
 
 
 @dataclass(frozen=True, slots=True)
+class SampleWindow:
+    """The price history a run actually saw, and the bounds that were asked for.
+
+    Published so a number carries the sample that produced it. Both halves matter and
+    they are not the same: ``requested_end`` is what the caller typed and may be
+    ``None``; ``resolved_end`` is the last observation the run could see, which is what
+    a reader has to pass back to get these numbers again. Recording only the request
+    would leave the default case — no ``--to`` at all — undocumented, and that is the
+    case every published number here came from.
+    """
+
+    series_id: str
+    requested_start: pd.Timestamp | None
+    requested_end: pd.Timestamp | None
+    resolved_start: pd.Timestamp
+    resolved_end: pd.Timestamp
+    observations: int
+    #: Where the underlying series ends regardless of truncation, so a reader can see
+    #: how much data was deliberately held back.
+    available_end: pd.Timestamp
+
+    @property
+    def truncated(self) -> bool:
+        return self.resolved_end < self.available_end
+
+    def describe(self) -> dict[str, Any]:
+        def stamp(value: pd.Timestamp | None) -> str | None:
+            return None if value is None else str(value.date().isoformat())
+
+        return {
+            "series_id": self.series_id,
+            "requested": {
+                "from": stamp(self.requested_start),
+                "to": stamp(self.requested_end),
+            },
+            "resolved": {
+                "from": stamp(self.resolved_start),
+                "to": stamp(self.resolved_end),
+            },
+            "observations": self.observations,
+            "series_available_to": stamp(self.available_end),
+            "truncated": self.truncated,
+            "note": (
+                "resolved.to is the last observation this run could see, for "
+                "forecasting and for scoring alike. Pass it back as --to to reproduce "
+                "these numbers: without it the run ends at whatever the data happened "
+                "to reach on the day, and the sample is not the one these numbers came "
+                "from."
+            ),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class WalkForwardResult:
     """The graded forecasts, before anything is aggregated."""
 
@@ -377,6 +442,8 @@ class WalkForwardResult:
     subject: dict[str, Any]
     baseline: dict[str, Any]
     events: tuple[BinaryEvent, ...]
+    #: The price history this run actually saw, after any requested truncation.
+    sample: SampleWindow | None = None
 
     def for_horizon(self, horizon: int) -> tuple[ScoreRecord, ...]:
         return tuple(record for record in self.records if record.horizon == horizon)
@@ -465,6 +532,20 @@ def walk_forward(
         raise TypeError("prices must be indexed by date to be walked forward")
     if not clean.index.is_monotonic_increasing:
         raise ValueError("prices must be sorted by date; a walk-forward cannot reorder them")
+    if clean.empty:
+        raise ValueError("no observations to walk forward over")
+
+    available_end = clean.index[-1]
+    if ask.end is not None:
+        # Truncate the series rather than filter the as-of dates: this has to bound the
+        # realised outcomes too, or a forecast near the stated end would be scored
+        # against prices the declared window says are not in the sample.
+        clean = clean.loc[: ask.end]
+        if clean.empty:
+            raise ValueError(
+                f"no observations at or before {ask.end.date()}; the series begins "
+                f"{prices.dropna().index[0].date()}"
+            )
 
     total = int(clean.size)
     first = ask.min_observations
@@ -526,6 +607,15 @@ def walk_forward(
         subject=subject.describe(),
         baseline=baseline.describe(),
         events=graded,
+        sample=SampleWindow(
+            series_id=str(prices.name or "prices"),
+            requested_start=ask.start,
+            requested_end=ask.end,
+            resolved_start=clean.index[0],
+            resolved_end=clean.index[-1],
+            observations=total,
+            available_end=available_end,
+        ),
     )
 
 

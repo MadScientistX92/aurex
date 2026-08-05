@@ -252,7 +252,17 @@ A forecast that is never scored is marketing. Aurex grades itself on:
 
 ### Results
 
-Walk-forward, expanding window, no lookahead. One refit every five sessions from 2 January 2015 to 21 July 2026, 4,000 paths per forecast, GJR-GARCH(1,1,1) with Student-t innovations and filtered historical simulation over a centred residual pool. 2,876 scored forecasts, no skipped dates. Reproduce with `uv run aurex score --asset gold --from 2015-01-01 --horizons 5,10,21,42,63`.
+Walk-forward, expanding window, no lookahead. One refit every five sessions, 4,000 paths per forecast, GJR-GARCH(1,1,1) with Student-t innovations and filtered historical simulation over a centred residual pool. 2,876 scored forecasts, no skipped dates.
+
+**The sample is bounded at both ends, and the command below is the one that produced every number in this section:**
+
+```bash
+uv run aurex score --asset gold --from 2015-01-01 --to 2026-07-29 --step 5 --horizons 5,10,21,42,63 --paths 4000
+```
+
+`--to` matters more than it looks. Without it the run ends at whatever the price series had reached on the day it was typed, so the sample depends on the clock and a reader re-running the command gets a different one — a table nobody else can reproduce is not a published result. The bound truncates the price series rather than filtering the forecast dates, so it holds back the *outcomes* too: a window that would run past the stated end is dropped rather than scored against data the declared sample says is not there. It defaults to the series' own last observation, never to today, and `calibration-gold.json` records the window it resolved to alongside the command that reproduces it.
+
+The 2,876 forecasts here span **2 January 2015 to 21 July 2026** as-of dates, over a price series running to 29 July 2026 — the gap at the end is the longest horizon needing somewhere to land.
 
 The null is the driftless random walk §0 names: iid empirical increments with the sample mean removed. It is also the like-for-like null, because the model is now driftless too — which is the whole reason this table can be read as a measurement of the volatility layer.
 
@@ -366,15 +376,19 @@ Being consistent about *which* sigma matters here, because the difference is the
 | 5.10% | 10 | 0.0579 | **0.0528** | 0.0639 |
 | 5.10% | 21 | 0.1388 | **0.1212** | 0.1681 |
 | 5.10% | 63 | 0.2654 | **0.2500** | 0.3750 |
-| 9.37% | 10 | 0.0023 | _withheld_ | 0.0086 |
+| 9.37% | 10 | 0.0023 | **0.0079** | 0.0086 |
 | 9.37% | 21 | 0.0253 | **0.0290** | 0.0381 |
 | 9.37% | 63 | 0.1296 | **0.1177** | 0.1989 |
 
-**Where the tail is what decides the answer, it is close to the right shape.** At five sessions against the 5.10% hurdle — the deepest genuinely measurable case, at 2.2 sigma — a Gaussian forecasts 1.31% against a realised 1.90%, and Aurex forecasts 1.74%. The empirical tail closes about **three quarters** of the Gaussian's shortfall. At twenty-one sessions against the 9.37% hurdle, at 1.95 sigma, the same pattern: Gaussian 2.53%, Aurex 2.90%, realised 3.81%. In both cases Aurex sits between the Gaussian and the truth, and on the correct side of the Gaussian.
+**Where the tail is what decides the answer, it is close to the right shape.** The sharpest case is the 9.37% hurdle at ten sessions — 2.83 sigma, the deepest event in this table with a non-zero count. A driftless Gaussian forecasts **0.23%**. Aurex forecasts **0.79%**. It happened at **0.86%**. The empirical tail closes roughly **nine tenths** of the Gaussian's shortfall on the one event where tail shape is nearly the whole answer.
+
+The pattern repeats wherever the tail dominates. At five sessions against the 5.10% hurdle, at 2.2 sigma: Gaussian 1.31%, Aurex 1.74%, realised 1.90%. At twenty-one sessions against 9.37%, at 1.95 sigma: Gaussian 2.53%, Aurex 2.90%, realised 3.81%. In every case Aurex sits between the Gaussian and the truth, and on the correct side of the Gaussian.
+
+This is the clearest evidence in the repository that filtered historical simulation is doing real work, and it was invisible until step 5 — the mean forecast was being withheld along with the reliability diagram, so the two rows that carry the sharpest result were the two rows showing nothing.
 
 **Where the horizon is long, the engine falls *below* the Gaussian, and that is the drift displacement rather than the tail.** At sixty-three sessions the hurdle is barely a tail event at all — 0.63 sigma at 5.10% — so tail shape stops mattering and location takes over. A model centred at spot, scored over a sample that rose, under-forecasts every upside event, and the gap widens with the horizon exactly as [the displacement law above](#one-mechanism-named) predicts. That is the same finding appearing in a third place, not a new one, and it is the price of refusing to forecast a direction rather than a defect in the distribution's shape.
 
-**The two hurdle rows the tail cannot be read at are the ones the withholding rule already covers.** At five and ten sessions the India event has zero and five positives, the reliability curve is withheld, and the binned forecast means go with it. The scalar mean forecast is not a diagram and should not have been withheld with one; that is a reporting bug rather than a finding, and the event block now carries `mean_forecast` beside `base_rate` and `positive_events` whether or not the curve is drawn. The two cells above fill in on the next scoring run.
+**Only the zero-count row cannot be read.** At five sessions the India event has no positives at all, so there is nothing to compare a forecast against — Aurex says 0.17%, which over 580 windows is about one expected event, and observing none is entirely consistent with that. Everything else in the table is a live comparison, including the two rows that used to be blank: the reliability *curve* is still withheld below ten positives, but `mean_forecast` is a scalar over every forecast rather than a ten-bin diagram, and withholding it with the curve was a reporting bug rather than a finding.
 
 **The comparison the pre-registration named is the finding, and it is not the one the counts first suggest.** On the same metal, the same distribution and the same 580 days, the CFD route clears its hurdle 293 times at five sessions and the retail Indian route clears it zero times. It is tempting to read 293 as a score. It is not one. At five sessions the CFD hurdle is 0.14%, its base rate is **0.5052**, and the event has collapsed into "did gold end higher" — which the same run shows has a resolution of 0.002 or less at every horizon. So 293 clears are **293 coin flips landing heads**, not 293 wins.
 

@@ -139,6 +139,10 @@ def describe_backtest(asset: Asset, result: WalkForwardResult) -> dict[str, Any]
     # that names the wrong null as the fair one and reads perfectly well doing it.
     like_for_like = result.subject["like_for_like_null"]
     return {
+        # The window every number below came from. Published at the top level rather
+        # than only per horizon, because the per-horizon first/last as-of dates describe
+        # where forecasts happened to land, not what the run was allowed to see.
+        "sample": None if result.sample is None else result.sample.describe(),
         "asset": {
             "id": asset.id,
             "label": asset.label,

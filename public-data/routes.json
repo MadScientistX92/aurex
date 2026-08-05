@@ -1,0 +1,754 @@
+{
+  "blocs": [
+    {
+      "code": "EU",
+      "instrument": "Council Directive 2006/112/EC on the common system of value added tax, Title XII Chapter 5 \u2014 the special scheme for investment gold. Exemption is required of member states and enacted in each one's national law, which is why every member below cites its own statute rather than this Directive.",
+      "label": "European Union",
+      "members": [
+        "DEU"
+      ],
+      "note": "A bloc is not a jurisdiction. Its instrument is implemented in each member's national law, and every member's terms cite that law rather than this one.",
+      "source_confidence": "primary",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32006L0112"
+    }
+  ],
+  "cells": [
+    {
+      "breakeven": {
+        "10": {
+          "components": {
+            "bid_ask_spread": 0.0005,
+            "expense": 0.0,
+            "roll_drag": 0.00082192
+          },
+          "horizon_dependent": true,
+          "multiple": 1.00182324,
+          "required_move": 0.00182324,
+          "required_move_pct": 0.182324
+        },
+        "21": {
+          "components": {
+            "bid_ask_spread": 0.0005,
+            "expense": 0.0,
+            "roll_drag": 0.00172603
+          },
+          "horizon_dependent": true,
+          "multiple": 1.00272825,
+          "required_move": 0.00272825,
+          "required_move_pct": 0.272825
+        },
+        "252": {
+          "components": {
+            "bid_ask_spread": 0.0005,
+            "expense": 0.0,
+            "roll_drag": 0.02071233
+          },
+          "horizon_dependent": true,
+          "multiple": 1.02173355,
+          "required_move": 0.02173355,
+          "required_move_pct": 2.173355
+        },
+        "42": {
+          "components": {
+            "bid_ask_spread": 0.0005,
+            "expense": 0.0,
+            "roll_drag": 0.00345205
+          },
+          "horizon_dependent": true,
+          "multiple": 1.00445601,
+          "required_move": 0.00445601,
+          "required_move_pct": 0.445601
+        },
+        "5": {
+          "components": {
+            "bid_ask_spread": 0.0005,
+            "expense": 0.0,
+            "roll_drag": 0.00041096
+          },
+          "horizon_dependent": true,
+          "multiple": 1.00141187,
+          "required_move": 0.00141187,
+          "required_move_pct": 0.141187
+        },
+        "63": {
+          "components": {
+            "bid_ask_spread": 0.0005,
+            "expense": 0.0,
+            "roll_drag": 0.00517808
+          },
+          "horizon_dependent": true,
+          "multiple": 1.00618376,
+          "required_move": 0.00618376,
+          "required_move_pct": 0.618376
+        }
+      },
+      "friction": {
+        "annual_expense_ratio": 0.0,
+        "annual_roll_drag": 0.03,
+        "bid_ask_spread": 0.0005,
+        "horizon_dependent": true,
+        "id": "cfd.GBR",
+        "kind": "roll",
+        "label": "UK retail gold CFD",
+        "notes": [
+          "FCA instrument 2019/78, COBS 22.5.11R(2), fetched 2026-08-05: a retail client must post margin of at least 5% of exposure where the underlying is gold. 5% margin is 20:1 leverage. COBS 22.5.11R(3) sets 10% for commodities other than gold, so this number is specific to the metal.",
+          "Cited to the FCA rather than to any pan-regional body: the FCA is who publishes the number binding on a UK retail client.",
+          "Financing accrues daily, so the hurdle grows with holding period. Modelled as roll friction for that reason.",
+          "Spread parameters: Representative of retail CFD quoted spreads and user-editable. Not a published rate; the FCA citation covers the margin requirement only."
+        ],
+        "pinned_days": 30
+      },
+      "jurisdiction": "GBR",
+      "max_leverage": 20.0,
+      "notes": [],
+      "route": {
+        "asset_id": "gold",
+        "available_in": [
+          "GBR"
+        ],
+        "id": "cfd",
+        "instrument": "cfd",
+        "notes": [
+          "Listed for one jurisdiction only because that is where a cap has been read from the regulator's own instrument. Absence elsewhere is missing data in Aurex, not a statement about availability."
+        ],
+        "quote_currency": "USD",
+        "source_confidence": "primary",
+        "source_url": "https://www.fca.org.uk/firms/contract-for-differences",
+        "venue": "broker"
+      },
+      "route_id": "cfd",
+      "source_confidence": "primary",
+      "source_url": "https://www.fca.org.uk/publication/policy/ps19-18.pdf"
+    },
+    {
+      "breakeven": {
+        "10": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "21": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "252": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "42": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "5": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "63": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        }
+      },
+      "friction": {
+        "buyback_discount": 0.02,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.DEU",
+        "kind": "physical",
+        "label": "Germany retail bullion",
+        "notes": [
+          "Anlagegold is steuerfrei under \u00a7 25c UStG \u2014 the national implementation of the Directive, cited directly rather than through it.",
+          "Spread parameters: Representative of German retail bullion dealer quotes and user-editable. Not a published rate."
+        ]
+      },
+      "jurisdiction": "DEU",
+      "max_leverage": null,
+      "notes": [],
+      "route": {
+        "asset_id": "gold",
+        "available_in": [
+          "IND",
+          "USA",
+          "GBR",
+          "DEU"
+        ],
+        "id": "physical_retail",
+        "instrument": "physical",
+        "notes": [
+          "Retail physical, bought from a dealer and sold back to one. The round trip is paid at the door, so the hurdle does not shrink with holding period."
+        ],
+        "quote_currency": "XAU",
+        "source_confidence": "primary",
+        "source_url": "https://www.lbma.org.uk/good-delivery",
+        "venue": "over_the_counter"
+      },
+      "route_id": "physical_retail",
+      "source_confidence": "primary",
+      "source_url": "https://www.gesetze-im-internet.de/ustg_1980/__25c.html"
+    },
+    {
+      "breakeven": {
+        "10": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "21": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "252": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "42": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "5": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "63": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        }
+      },
+      "friction": {
+        "buyback_discount": 0.02,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.GBR",
+        "kind": "physical",
+        "label": "UK retail bullion",
+        "notes": [
+          "Investment gold is VAT-exempt under VAT Notice 701/21, subject to an option to tax, so consumption tax is 0% for qualifying bullion.",
+          "Spread parameters: Representative of UK retail bullion dealer quotes and user-editable. Not a published rate."
+        ]
+      },
+      "jurisdiction": "GBR",
+      "max_leverage": null,
+      "notes": [],
+      "route": {
+        "asset_id": "gold",
+        "available_in": [
+          "IND",
+          "USA",
+          "GBR",
+          "DEU"
+        ],
+        "id": "physical_retail",
+        "instrument": "physical",
+        "notes": [
+          "Retail physical, bought from a dealer and sold back to one. The round trip is paid at the door, so the hurdle does not shrink with holding period."
+        ],
+        "quote_currency": "XAU",
+        "source_confidence": "primary",
+        "source_url": "https://www.lbma.org.uk/good-delivery",
+        "venue": "over_the_counter"
+      },
+      "route_id": "physical_retail",
+      "source_confidence": "primary",
+      "source_url": "https://www.gov.uk/guidance/gold-acquisitions-imports-investments-and-vat-notice-70121"
+    },
+    {
+      "breakeven": {
+        "10": {
+          "components": {
+            "buyback_discount": 0.03,
+            "consumption_tax": 0.03,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.09371134,
+          "required_move": 0.09371134,
+          "required_move_pct": 9.371134
+        },
+        "21": {
+          "components": {
+            "buyback_discount": 0.03,
+            "consumption_tax": 0.03,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.09371134,
+          "required_move": 0.09371134,
+          "required_move_pct": 9.371134
+        },
+        "252": {
+          "components": {
+            "buyback_discount": 0.03,
+            "consumption_tax": 0.03,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.09371134,
+          "required_move": 0.09371134,
+          "required_move_pct": 9.371134
+        },
+        "42": {
+          "components": {
+            "buyback_discount": 0.03,
+            "consumption_tax": 0.03,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.09371134,
+          "required_move": 0.09371134,
+          "required_move_pct": 9.371134
+        },
+        "5": {
+          "components": {
+            "buyback_discount": 0.03,
+            "consumption_tax": 0.03,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.09371134,
+          "required_move": 0.09371134,
+          "required_move_pct": 9.371134
+        },
+        "63": {
+          "components": {
+            "buyback_discount": 0.03,
+            "consumption_tax": 0.03,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.09371134,
+          "required_move": 0.09371134,
+          "required_move_pct": 9.371134
+        }
+      },
+      "friction": {
+        "buyback_discount": 0.03,
+        "consumption_tax": 0.03,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.IND",
+        "kind": "physical",
+        "label": "India retail jeweller",
+        "notes": [
+          "GST on metal is 3%; making charges are taxed separately at 5%.",
+          "Spread parameters: Representative of Indian retail jeweller quotes and user-editable. Not a published rate and not sourced to the citation above, which covers the 3% GST on metal only."
+        ]
+      },
+      "jurisdiction": "IND",
+      "max_leverage": null,
+      "notes": [],
+      "route": {
+        "asset_id": "gold",
+        "available_in": [
+          "IND",
+          "USA",
+          "GBR",
+          "DEU"
+        ],
+        "id": "physical_retail",
+        "instrument": "physical",
+        "notes": [
+          "Retail physical, bought from a dealer and sold back to one. The round trip is paid at the door, so the hurdle does not shrink with holding period."
+        ],
+        "quote_currency": "XAU",
+        "source_confidence": "primary",
+        "source_url": "https://www.lbma.org.uk/good-delivery",
+        "venue": "over_the_counter"
+      },
+      "route_id": "physical_retail",
+      "source_confidence": "secondary",
+      "source_url": "https://cleartax.in/s/gst-impact-on-gold"
+    },
+    {
+      "breakeven": {
+        "10": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "21": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "252": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "42": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "5": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        },
+        "63": {
+          "components": {
+            "buyback_discount": 0.02,
+            "consumption_tax": 0.0,
+            "dealer_premium": 0.03
+          },
+          "horizon_dependent": false,
+          "multiple": 1.05102041,
+          "required_move": 0.05102041,
+          "required_move_pct": 5.102041
+        }
+      },
+      "friction": {
+        "buyback_discount": 0.02,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.USA",
+        "kind": "physical",
+        "label": "US retail coin",
+        "notes": [
+          "Sales tax defaults to 0%: it is set per state and many states exempt bullion. User-editable.",
+          "US long-term capital gains on physical gold are taxed as a collectible, at a higher maximum rate than equities. Aurex states that this treatment exists and links it; it never computes a liability.",
+          "Spread parameters: Representative of US retail coin dealer quotes and user-editable. Not a published rate."
+        ]
+      },
+      "jurisdiction": "USA",
+      "max_leverage": null,
+      "notes": [],
+      "route": {
+        "asset_id": "gold",
+        "available_in": [
+          "IND",
+          "USA",
+          "GBR",
+          "DEU"
+        ],
+        "id": "physical_retail",
+        "instrument": "physical",
+        "notes": [
+          "Retail physical, bought from a dealer and sold back to one. The round trip is paid at the door, so the hurdle does not shrink with holding period."
+        ],
+        "quote_currency": "XAU",
+        "source_confidence": "primary",
+        "source_url": "https://www.lbma.org.uk/good-delivery",
+        "venue": "over_the_counter"
+      },
+      "route_id": "physical_retail",
+      "source_confidence": "primary",
+      "source_url": "https://www.irs.gov/taxtopics/tc409"
+    }
+  ],
+  "code": {
+    "commit": "302d6b5d3d888941a231be7ff3399a801f248453",
+    "dirty": true,
+    "engine_version": "0.1.0",
+    "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
+    "ref": "main",
+    "source": "git"
+  },
+  "conventions": {
+    "availability": "Informational. Aurex states what a regulator publishes and links it; it never gates a calculation or advises.",
+    "default_jurisdiction": null,
+    "leverage_and_friction": "Set per (route, jurisdiction). Route carries only what does not vary by jurisdiction.",
+    "restricted_in": "Derived from available_in against the known jurisdictions, never stored, so the two cannot disagree."
+  },
+  "engine_version": "0.1.0",
+  "generated_at": "2026-08-05T21:42:07.354172+00:00",
+  "horizons": [
+    5,
+    10,
+    21,
+    42,
+    63,
+    252
+  ],
+  "jurisdictions": [
+    {
+      "bloc": "EU",
+      "code": "DEU",
+      "label": "Germany",
+      "source_confidence": "primary",
+      "source_url": "https://www.gesetze-im-internet.de/ustg_1980/__25c.html"
+    },
+    {
+      "bloc": null,
+      "code": "GBR",
+      "label": "United Kingdom",
+      "source_confidence": "primary",
+      "source_url": "https://www.gov.uk/guidance/gold-acquisitions-imports-investments-and-vat-notice-70121"
+    },
+    {
+      "bloc": null,
+      "code": "IND",
+      "label": "India",
+      "source_confidence": "secondary",
+      "source_url": "https://cleartax.in/s/gst-impact-on-gold"
+    },
+    {
+      "bloc": null,
+      "code": "USA",
+      "label": "United States",
+      "source_confidence": "primary",
+      "source_url": "https://www.irs.gov/taxtopics/tc409"
+    }
+  ],
+  "reading": "One entry per (route, jurisdiction). breakeven is the round-trip move required before a position is above water, resolved per horizon because carry accrues and a door charge does not. There is no default jurisdiction: with none set the correct view is the quote-currency benchmark with friction excluded and labelled, never one country's stack applied silently.",
+  "routes": [
+    {
+      "asset_id": "gold",
+      "available_in": [
+        "GBR"
+      ],
+      "id": "cfd",
+      "instrument": "cfd",
+      "notes": [
+        "Listed for one jurisdiction only because that is where a cap has been read from the regulator's own instrument. Absence elsewhere is missing data in Aurex, not a statement about availability."
+      ],
+      "quote_currency": "USD",
+      "source_confidence": "primary",
+      "source_url": "https://www.fca.org.uk/firms/contract-for-differences",
+      "venue": "broker"
+    },
+    {
+      "asset_id": "gold",
+      "available_in": [
+        "IND",
+        "USA",
+        "GBR",
+        "DEU"
+      ],
+      "id": "physical_retail",
+      "instrument": "physical",
+      "notes": [
+        "Retail physical, bought from a dealer and sold back to one. The round trip is paid at the door, so the hurdle does not shrink with holding period."
+      ],
+      "quote_currency": "XAU",
+      "source_confidence": "primary",
+      "source_url": "https://www.lbma.org.uk/good-delivery",
+      "venue": "over_the_counter"
+    }
+  ],
+  "terms": [
+    {
+      "friction": {
+        "annual_expense_ratio": 0.0,
+        "annual_roll_drag": 0.03,
+        "bid_ask_spread": 0.0005,
+        "horizon_dependent": true,
+        "id": "cfd.GBR",
+        "kind": "roll",
+        "label": "UK retail gold CFD",
+        "notes": [
+          "FCA instrument 2019/78, COBS 22.5.11R(2), fetched 2026-08-05: a retail client must post margin of at least 5% of exposure where the underlying is gold. 5% margin is 20:1 leverage. COBS 22.5.11R(3) sets 10% for commodities other than gold, so this number is specific to the metal.",
+          "Cited to the FCA rather than to any pan-regional body: the FCA is who publishes the number binding on a UK retail client.",
+          "Financing accrues daily, so the hurdle grows with holding period. Modelled as roll friction for that reason.",
+          "Spread parameters: Representative of retail CFD quoted spreads and user-editable. Not a published rate; the FCA citation covers the margin requirement only."
+        ],
+        "pinned_days": 30
+      },
+      "jurisdiction": "GBR",
+      "max_leverage": 20.0,
+      "notes": [],
+      "route_id": "cfd",
+      "source_confidence": "primary",
+      "source_url": "https://www.fca.org.uk/publication/policy/ps19-18.pdf"
+    },
+    {
+      "friction": {
+        "buyback_discount": 0.02,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.DEU",
+        "kind": "physical",
+        "label": "Germany retail bullion",
+        "notes": [
+          "Anlagegold is steuerfrei under \u00a7 25c UStG \u2014 the national implementation of the Directive, cited directly rather than through it.",
+          "Spread parameters: Representative of German retail bullion dealer quotes and user-editable. Not a published rate."
+        ]
+      },
+      "jurisdiction": "DEU",
+      "max_leverage": null,
+      "notes": [],
+      "route_id": "physical_retail",
+      "source_confidence": "primary",
+      "source_url": "https://www.gesetze-im-internet.de/ustg_1980/__25c.html"
+    },
+    {
+      "friction": {
+        "buyback_discount": 0.02,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.GBR",
+        "kind": "physical",
+        "label": "UK retail bullion",
+        "notes": [
+          "Investment gold is VAT-exempt under VAT Notice 701/21, subject to an option to tax, so consumption tax is 0% for qualifying bullion.",
+          "Spread parameters: Representative of UK retail bullion dealer quotes and user-editable. Not a published rate."
+        ]
+      },
+      "jurisdiction": "GBR",
+      "max_leverage": null,
+      "notes": [],
+      "route_id": "physical_retail",
+      "source_confidence": "primary",
+      "source_url": "https://www.gov.uk/guidance/gold-acquisitions-imports-investments-and-vat-notice-70121"
+    },
+    {
+      "friction": {
+        "buyback_discount": 0.03,
+        "consumption_tax": 0.03,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.IND",
+        "kind": "physical",
+        "label": "India retail jeweller",
+        "notes": [
+          "GST on metal is 3%; making charges are taxed separately at 5%.",
+          "Spread parameters: Representative of Indian retail jeweller quotes and user-editable. Not a published rate and not sourced to the citation above, which covers the 3% GST on metal only."
+        ]
+      },
+      "jurisdiction": "IND",
+      "max_leverage": null,
+      "notes": [],
+      "route_id": "physical_retail",
+      "source_confidence": "secondary",
+      "source_url": "https://cleartax.in/s/gst-impact-on-gold"
+    },
+    {
+      "friction": {
+        "buyback_discount": 0.02,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "physical_retail.USA",
+        "kind": "physical",
+        "label": "US retail coin",
+        "notes": [
+          "Sales tax defaults to 0%: it is set per state and many states exempt bullion. User-editable.",
+          "US long-term capital gains on physical gold are taxed as a collectible, at a higher maximum rate than equities. Aurex states that this treatment exists and links it; it never computes a liability.",
+          "Spread parameters: Representative of US retail coin dealer quotes and user-editable. Not a published rate."
+        ]
+      },
+      "jurisdiction": "USA",
+      "max_leverage": null,
+      "notes": [],
+      "route_id": "physical_retail",
+      "source_confidence": "primary",
+      "source_url": "https://www.irs.gov/taxtopics/tc409"
+    }
+  ]
+}
