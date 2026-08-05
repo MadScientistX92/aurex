@@ -1,0 +1,131 @@
+name: Nightly
+
+# One forecast per night, committed to the repository, and a loud failure instead of a
+# quiet one when the data is not there.
+#
+# The failure mode this workflow is built around: a runner is a fresh machine with no
+# cache, Yahoo rate-limits, IBJA does not publish on Indian holidays, and the source
+# chain falls back gracefully by design. Left alone, those combine into a run that
+# resolves week-old prices and commits a forecast dated today. That is fabrication with
+# a timestamp on it, and it is invisible afterwards — it has the same shape, the same
+# fields and the same date as a real forecast.
+#
+# So the engine refuses, and this workflow is arranged so that the refusal still leaves
+# a trace: the skip record is committed even though the job then fails. A missing night
+# is a visible hole in the track record. A fabricated one is not visible at all.
+
+on:
+  schedule:
+    # 02:00 UTC. After the New York close and well after the London PM fix, so the
+    # previous session is fully published by the time the run starts.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      allow_stale:
+        description: "Publish even if the price series is stale (do not use routinely)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: engine
+
+jobs:
+  forecast:
+    name: publish tonight's forecast
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+
+      # --frozen, so the forecast committed tonight was produced by the dependency set
+      # the lockfile names. Without it the nightly silently re-resolves and a published
+      # distribution stops being reproducible from the commit it records.
+      - run: uv sync --frozen
+
+      # No secrets are configured for this job, and that is deliberate: it is the
+      # live check on the README's zero-API-key claim. If a source starts requiring
+      # authentication, this run fails rather than quietly falling back.
+      - name: run the pipeline
+        id: forecast
+        continue-on-error: true
+        run: uv run aurex pipeline
+
+      - name: score the forecasts whose horizons have elapsed
+        if: steps.forecast.outcome == 'success'
+        run: uv run aurex livelog
+
+      # Explicitly `git add public-data/` and nothing else. The nightly must never
+      # touch the README: it runs unattended at 02:00, and a job that edits prose can
+      # trip the §0 no-overclaiming guard with nobody watching. The check below is
+      # belt-and-braces on top of the engine-level test that asserts the same thing.
+      - name: commit public-data, and only public-data
+        if: always()
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git config user.name "aurex-nightly[bot]"
+          git config user.email "aurex-nightly@users.noreply.github.com"
+
+          git add public-data/
+
+          outside=$(git diff --cached --name-only | grep -v '^public-data/' || true)
+          if [ -n "$outside" ]; then
+            echo "the nightly job staged files outside public-data/:"
+            echo "$outside"
+            exit 1
+          fi
+
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+
+          today=$(date -u +%Y-%m-%d)
+          if [ "${{ steps.forecast.outcome }}" = "success" ]; then
+            subject="chore(nightly): forecast for ${today}"
+            body="Published by the nightly job from ${GITHUB_SHA}."
+          else
+            subject="chore(nightly): no forecast for ${today}"
+            body="The engine refused to publish; the skip record in this commit says why. A night with no forecast is a visible hole in the track record, and a night built on stale prices would not be visible at all."
+          fi
+
+          git commit -m "$subject" -m "$body"
+
+          # A human pushing to main while the nightly runs would otherwise lose the
+          # night's record to a rejected push. Rebase keeps public-data/ append-only
+          # in practice: this job is its only writer, so there is nothing to conflict.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}); rebasing onto the remote"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          done
+          echo "could not push the night's record after three attempts"
+          exit 1
+
+      # The job's own verdict, reported after the record has been committed. Ordering
+      # matters: the trace is worth more than the exit code, so it is written first and
+      # the failure is raised second.
+      - name: fail the run if no forecast was published
+        if: steps.forecast.outcome != 'success'
+        run: |
+          echo "::error title=No forecast published::The engine refused to publish tonight."
+          echo "The most likely cause is a price series that did not reach the run date"
+          echo "within its declared staleness tolerance. See the skip record committed"
+          echo "under public-data/forecasts/skipped/ for the series and the lag."
+          exit 1

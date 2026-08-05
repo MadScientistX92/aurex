@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -17,7 +18,7 @@ class TestPipelineCommand:
     def test_dry_run_prints_an_artifact_and_writes_nothing(
         self, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("aurex.pipeline.PUBLIC_DATA_DIR", tmp_path / "public-data")
+        monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", tmp_path / "public-data")
         result = runner.invoke(app, ["pipeline", "--dry-run"])
 
         assert result.exit_code == 0, result.output
@@ -30,12 +31,14 @@ class TestPipelineCommand:
         self, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         target = tmp_path / "public-data"
-        monkeypatch.setattr("aurex.pipeline.PUBLIC_DATA_DIR", target)
-        result = runner.invoke(app, ["pipeline", "--offline"])
+        monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", target)
+        # The seed cache this runs from is committed and therefore always old; the
+        # freshness guard is exercised on its own terms in test_freshness.py.
+        result = runner.invoke(app, ["pipeline", "--offline", "--allow-stale"])
 
         assert result.exit_code == 0, result.output
         written = json.loads((target / "latest.json").read_text())
-        assert written["schema_version"] == 3
+        assert written["schema_version"] == 4
 
     def test_dry_run_output_contains_no_point_forecast_keys(self) -> None:
         """Structural guard: step 1 emits data and parity, never a predicted level."""
@@ -43,6 +46,58 @@ class TestPipelineCommand:
         payload = json.loads(result.stdout)
         forbidden = {"forecast_price", "predicted_price", "target", "point_forecast"}
         assert forbidden.isdisjoint(payload.keys())
+
+
+class TestTheNightlyWritesOnlyPublicData:
+    """A job that edits prose can trip the §0 guard at 02:00 UTC with nobody watching.
+
+    The workflow enforces this too, by only ever committing ``public-data/``. This is
+    the same rule one layer down: if the command itself never writes anything else,
+    the workflow's restriction cannot be defeated by a future change to the command.
+    """
+
+    def test_a_published_run_leaves_the_readme_untouched(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from aurex.config import REPO_ROOT
+
+        readme = REPO_ROOT / "README.md"
+        before = hashlib.sha256(readme.read_bytes()).hexdigest()
+        monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", tmp_path / "public-data")
+
+        runner.invoke(app, ["pipeline", "--offline", "--allow-stale"])
+
+        assert hashlib.sha256(readme.read_bytes()).hexdigest() == before
+
+    def test_a_refused_run_leaves_the_readme_untouched(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The failure path writes a skip record, and that is all it writes."""
+        from aurex.config import REPO_ROOT
+
+        readme = REPO_ROOT / "README.md"
+        before = hashlib.sha256(readme.read_bytes()).hexdigest()
+        monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", tmp_path / "public-data")
+
+        result = runner.invoke(app, ["pipeline", "--offline"])
+
+        assert result.exit_code == 1
+        assert hashlib.sha256(readme.read_bytes()).hexdigest() == before
+
+    def test_everything_written_lands_under_public_data(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        target = tmp_path / "public-data"
+        monkeypatch.setattr("aurex.config.PUBLIC_DATA_DIR", target)
+
+        runner.invoke(app, ["pipeline", "--offline", "--allow-stale"])
+
+        written = sorted(p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file())
+        assert written, "the run must have written something"
+        assert all(name == "latest.json" or name.startswith("forecasts/") for name in written), (
+            written
+        )
+        assert "forecasts/index.json" in written
 
 
 class TestDutyCommand:

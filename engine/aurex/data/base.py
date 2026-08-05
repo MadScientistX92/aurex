@@ -84,6 +84,23 @@ class Loader(Protocol):
         ...
 
 
+def price_column(frame: pd.DataFrame) -> pd.Series:
+    """Pick the column carrying the price, tolerating OHLC and close-only shapes.
+
+    Shared rather than private to the pipeline because the freshness guard has to
+    measure staleness on the *same* column the pipeline will price from. Two
+    definitions of "the price" would let a series pass the guard on one column and
+    publish from another.
+    """
+    for candidate in ("close", "value"):
+        if candidate in frame.columns:
+            return frame[candidate]
+    numeric = frame.select_dtypes("number")
+    if numeric.empty:
+        raise ValueError(f"no numeric column in {list(frame.columns)}")
+    return numeric.iloc[:, 0]
+
+
 def build_meta(
     *,
     series_id: str,

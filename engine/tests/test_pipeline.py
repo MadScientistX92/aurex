@@ -58,7 +58,7 @@ class TestOfflineRun:
     def test_runs_offline_and_produces_an_artifact(self, seeded_cache: CacheStore) -> None:
         artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
         assert artifact["mode"] == "offline"
-        assert artifact["schema_version"] == 3
+        assert artifact["schema_version"] == 4
 
     def test_emits_one_block_per_lens(self, seeded_cache: CacheStore) -> None:
         assert set(gold_block(seeded_cache)["lenses"]) == {"USD", "INR"}
@@ -226,7 +226,7 @@ class TestArtifactWriting:
         artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact
         path = write_artifact(artifact, tmp_path)
         assert path.name == "latest.json"
-        assert json.loads(path.read_text())["schema_version"] == 3
+        assert json.loads(path.read_text())["schema_version"] == 4
 
     def test_creates_the_directory(self, seeded_cache: CacheStore, tmp_path: Path) -> None:
         artifact = run(offline=True, start=START, end=END, cache=seeded_cache).artifact

@@ -25,11 +25,29 @@ from aurex.assets.transforms import ReturnTransform, ShiftedLogReturn
 from aurex.data.base import LoadedSeries, build_meta
 from aurex.data.cache import CacheStore
 from aurex.data.chain import SourceChain
+from aurex.data.freshness import SeriesFreshness
 from aurex.vol.limits import SessionLimit
 
 #: ISO 4217 reserves XTS for testing, so it can never collide with a real currency.
 TEST_CURRENCY = "XTS"
 TEST_LENS_CURRENCY = "XTT"
+
+#: The synthetic asset declares staleness tolerances like any other, because the
+#: freshness guard is part of the abstraction and an asset that skipped it would let
+#: the guard become gold-specific without the leak test noticing. Generated series are
+#: business-day dense, so four days covers a weekend run with room to spare.
+_FRESHNESS: dict[str, SeriesFreshness] = {
+    sid: SeriesFreshness(
+        max_lag_days=4,
+        calendar="generated business days",
+        rationale=(
+            "Generated in-process over a business-day index, so the only gap is the "
+            "weekend. Declared rather than defaulted so this asset exercises the same "
+            "path gold does."
+        ),
+    )
+    for sid in ("widget_price", "widget_fx", "widget_local")
+}
 
 
 class GeneratedLoader:
@@ -151,7 +169,10 @@ class SyntheticAsset:
             # Sits slightly above parity, so the premium is non-zero and signed.
             "widget_local": (GeneratedLoader("widget_local", 1_400.0, seed=3),),
         }
-        return {sid: SourceChain(sid, loaders, store) for sid, loaders in spec.items()}
+        return {
+            sid: SourceChain(sid, loaders, store, freshness=_FRESHNESS[sid])
+            for sid, loaders in spec.items()
+        }
 
     def describe(self) -> dict[str, Any]:
         return describe_asset(self)

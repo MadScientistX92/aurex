@@ -2,9 +2,11 @@
 
 **A calibrated uncertainty engine for gold. Distributions, not predictions.**
 
+[![CI](https://github.com/MadScientistX92/aurex/actions/workflows/ci.yml/badge.svg)](https://github.com/MadScientistX92/aurex/actions/workflows/ci.yml)
+[![Nightly](https://github.com/MadScientistX92/aurex/actions/workflows/nightly.yml/badge.svg)](https://github.com/MadScientistX92/aurex/actions/workflows/nightly.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
-> **Build status: steps 1, 1.5, 2, 3a and 3b of 9 complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, the scoring layer with a walk-forward backtest from 2015, and routes with per-jurisdiction friction and the breakeven hurdle. Not built: factor attribution, the scenario engine, the dashboard, the benchmark shootout, and the second asset. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
+> **Build status: steps 1, 1.5, 2, 3a, 3b and the automation half of 7 are complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, the scoring layer with a walk-forward backtest from 2015, routes with per-jurisdiction friction and the breakeven hurdle, and the nightly job that publishes one dated forecast a night or refuses and says why. Not built: factor attribution, the scenario engine, the dashboard, the benchmark shootout, and the second asset. The deploy half of step 7 waits on step 5 — there is no `web/` to deploy, and a placeholder site is worse than none. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
 >
 > **Calibration has now been measured, and the headline is a negative result.** Across 2,876 out-of-sample forecasts from January 2015, the CRPS skill against the random walk is between −0.4% and +0.9% depending on the horizon, and a Diebold-Mariano test rejects at none of them — the smallest p-value in the table is 0.23. The distributions are close to the right *shape*: PIT uniformity survives a KS test at all five horizons, and a chi-square rejects at one of them. Direction carries no information at all. An earlier version of this section reported up to +4.6% CRPS skill; that number was a model carrying drift beating a null that had been denied one, it has been withdrawn, and the simulation no longer carries the drift. It would not have survived a Diebold-Mariano test either — measured, p = 0.27. Everything below is published with the test behind it, in both directions.
 
@@ -18,7 +20,7 @@ Aurex takes the opposite position:
 
 > Short-horizon price **direction** is not reliably forecastable. Short-horizon **volatility** partly is. So Aurex never predicts a price — it produces a probability distribution, and then publicly grades how well-calibrated that distribution turned out to be.
 
-Every forecast is timestamped and committed to this repository. Once its horizon elapses, it is scored automatically. The git history is the track record, and it cannot be quietly edited after the fact. Each run writes a dated copy to `public-data/forecasts/`, because `latest.json` is state and a track record needs a record.
+Every forecast is timestamped and committed to this repository. Once its horizon elapses, it is scored automatically — and from that moment the file may never be rewritten, which is enforced by code and by CI rather than by good intentions. The git history is the track record. Each run writes a dated copy to `public-data/forecasts/`, because `latest.json` is state and a track record needs a record. A night the engine could not price honestly produces no forecast and a failed build, never a forecast built on last week's prices.
 
 Five rules follow, and they are enforced in code rather than promised in prose:
 
@@ -44,6 +46,7 @@ A sixth rule emerged while building the data layer, and it earned its place:
 - Models the **real cost of a round trip per route and jurisdiction** — dealer premium, consumption tax, buyback spread, carry — and reports the move required to break even, with every regulatory rate carrying its own source
 - Scores **whether that hurdle was cleared** as one more binary event through the same reliability machinery, withholding the diagram where the positive count cannot support one
 - **Grades itself**: walks the engine forward over eleven years of history, one refit per week, and scores every distribution it would have published on PIT, CRPS against the random walk, VaR coverage, and reliability — with a Diebold-Mariano test on every skill score, so a win and a shrug are held to the same standard
+- **Publishes one dated forecast a night, or refuses and says why** — a declared staleness tolerance per series, a non-zero exit rather than a warning, and an index that lists the dates a forecast is missing from so an outage cannot pass for a quiet run of unscored days
 
 ## What it does not do yet
 
@@ -65,16 +68,20 @@ git clone https://github.com/MadScientistX92/aurex.git
 cd aurex/engine
 uv sync
 
-uv run pytest                                    # 575 tests, no network
+uv run pytest                                    # 644 tests, no network
 uv run aurex schedule                            # duty history with provenance
 uv run aurex duty 2026-07-29                     # rate in force, and its source
-uv run aurex pipeline                            # live run, writes public-data/latest.json
+uv run aurex pipeline                            # live run; refuses on stale prices
 uv run aurex score --from 2015-01-01             # walk-forward backtest and calibration report
 uv run aurex routes --asset gold                 # route x jurisdiction terms, with provenance
+uv run aurex index                               # published forecasts, and the dates missing
+uv run aurex livelog                             # score the forecasts published in real time
 
 # offline from the committed seed cache, no network at all
 AUREX_CACHE_DIR=tests/fixtures/seed-cache uv run aurex pipeline --dry-run
 ```
+
+`aurex pipeline` exits non-zero and writes no forecast when the price series does not reach the run date — see [Nightly automation](#nightly-automation). The committed seed cache is always older than today, so exploring from it needs `--allow-stale`, which is opt-in for exactly that reason.
 
 The working cache at `engine/.cache/` is gitignored; a fresh clone either runs once online or uses the committed seed cache shown above.
 
@@ -198,7 +205,7 @@ This table is **generated from `engine/aurex/data/schedules/routes.yaml`** and a
 
 Friction takes a **horizon**, because the two shapes are structurally different: physical friction is paid at the door, while carry friction accrues — visible above as the only row whose numbers move across the columns. The `Accrues` column exists so that is readable rather than inferred.
 
-This is why the project exists. The friction is deterministic and knowable; the price move is not. Most retail tools model the uncertain part and ignore the certain one. At retail physical parameters the hurdle is +9.4%, against a two-week one-standard-deviation move of roughly ±4.4% — a two-sigma requirement in one specific direction. What that does to a probability forecast is measured below rather than asserted.
+This is why the project exists. The friction is deterministic and knowable; the price move is not. Most retail tools model the uncertain part and ignore the certain one. At retail physical parameters the hurdle is +9.4%, against a two-week one-standard-deviation move of roughly ±3.2% — close to a **three**-sigma requirement in one specific direction. What that does to a probability forecast is measured below rather than asserted, and the sigma behind that sentence is this sample's rather than a remembered one: gold's daily standard deviation over 2015–2026 is 1.00%, which annualises to 15.9%.
 
 ## Asset abstraction
 
@@ -347,7 +354,31 @@ Measured over the same 2,876 forecasts, with the hurdle for each route and juris
 
 **The prediction was right in direction and optimistic in magnitude.** It said the base rate would be near 2–3% and that 580 windows would yield about fifteen positive events at ten sessions. The measured base rate at ten sessions is **0.86%** and the count is **five** — about a third of what was predicted, so the event is rarer and less measurable than the pre-registration allowed for. At five sessions the retail hurdle was cleared **zero** times in eleven years. The withholding rule fired exactly where it was designed to: the curve is withheld at five and ten sessions and drawn from twenty-one onwards, and no diagram was ever drawn on counts that could not support one.
 
-**The comparison the pre-registration named is the finding, and it is stark.** On the same metal, the same distribution and the same 580 days, the low-friction route clears its hurdle 293 times at five sessions and the high-friction one clears it zero times. Nothing about the forecast changed between those two rows — only what the holder had to pay to get in and out. That is the project's thesis in event counts: the friction is the part that decides the outcome, and it is the part that was knowable in advance.
+**The prediction missed because the volatility input was wrong, and that is worth naming precisely.** The pre-registered arithmetic used ±4.4% for a ten-session one-standard-deviation move, which came from 22% annualised — a crisis-period figure, not this sample's. Gold's 2015–2026 daily standard deviation is **1.00%**, so ten-session sigma is **3.16%**, not 4.4%. The 9.37% hurdle is therefore about **2.97 sigma** in simple-return terms rather than the 2.1 that was written down, and the pre-registration's "2–3%, so about fifteen events" followed from the wrong denominator rather than from a wrong method.
+
+Being consistent about *which* sigma matters here, because the difference is the whole point of the next paragraph. The engine simulates log returns, so the like-for-like comparison puts the hurdle in log space too: `ln(1.0937) / 0.0316` = **2.83 sigma**, and a driftless Gaussian at 2.83 sigma gives **0.23%**. The simple-return reading gives 2.97 sigma and 0.15%. Both are far below the measured 0.86% — the realised rate is roughly four times the Gaussian one on the like-for-like figure and nearly six times on the simple-return one — and the log-space number is the one to read against this engine, because it is the only one measured on the same scale the model works in.
+
+**The residual gap is the fat tail, which is exactly what filtered historical simulation exists to preserve.** Gold's daily returns over this sample carry an excess kurtosis of 4.9 and a skew of −0.38. A Gaussian assumption discards both by construction; resampling the empirical standardised residuals keeps them. So the question worth asking is not whether the engine is non-Gaussian — it is by construction — but whether its tail is the *right* shape. That has an answer, and it is the model's own forecast probability against the realised rate:
+
+| Hurdle | Horizon | Driftless Gaussian | **Aurex forecast** | Realised |
+|---|---|---|---|---|
+| 5.10% | 5 | 0.0131 | **0.0174** | 0.0190 |
+| 5.10% | 10 | 0.0579 | **0.0528** | 0.0639 |
+| 5.10% | 21 | 0.1388 | **0.1212** | 0.1681 |
+| 5.10% | 63 | 0.2654 | **0.2500** | 0.3750 |
+| 9.37% | 10 | 0.0023 | _withheld_ | 0.0086 |
+| 9.37% | 21 | 0.0253 | **0.0290** | 0.0381 |
+| 9.37% | 63 | 0.1296 | **0.1177** | 0.1989 |
+
+**Where the tail is what decides the answer, it is close to the right shape.** At five sessions against the 5.10% hurdle — the deepest genuinely measurable case, at 2.2 sigma — a Gaussian forecasts 1.31% against a realised 1.90%, and Aurex forecasts 1.74%. The empirical tail closes about **three quarters** of the Gaussian's shortfall. At twenty-one sessions against the 9.37% hurdle, at 1.95 sigma, the same pattern: Gaussian 2.53%, Aurex 2.90%, realised 3.81%. In both cases Aurex sits between the Gaussian and the truth, and on the correct side of the Gaussian.
+
+**Where the horizon is long, the engine falls *below* the Gaussian, and that is the drift displacement rather than the tail.** At sixty-three sessions the hurdle is barely a tail event at all — 0.63 sigma at 5.10% — so tail shape stops mattering and location takes over. A model centred at spot, scored over a sample that rose, under-forecasts every upside event, and the gap widens with the horizon exactly as [the displacement law above](#one-mechanism-named) predicts. That is the same finding appearing in a third place, not a new one, and it is the price of refusing to forecast a direction rather than a defect in the distribution's shape.
+
+**The two hurdle rows the tail cannot be read at are the ones the withholding rule already covers.** At five and ten sessions the India event has zero and five positives, the reliability curve is withheld, and the binned forecast means go with it. The scalar mean forecast is not a diagram and should not have been withheld with one; that is a reporting bug rather than a finding, and the event block now carries `mean_forecast` beside `base_rate` and `positive_events` whether or not the curve is drawn. The two cells above fill in on the next scoring run.
+
+**The comparison the pre-registration named is the finding, and it is not the one the counts first suggest.** On the same metal, the same distribution and the same 580 days, the CFD route clears its hurdle 293 times at five sessions and the retail Indian route clears it zero times. It is tempting to read 293 as a score. It is not one. At five sessions the CFD hurdle is 0.14%, its base rate is **0.5052**, and the event has collapsed into "did gold end higher" — which the same run shows has a resolution of 0.002 or less at every horizon. So 293 clears are **293 coin flips landing heads**, not 293 wins.
+
+The correct reading is about the hurdle, not about the route: **at low friction the hurdle is irrelevant, and at high friction it is decisive.** At 0.14% the breakeven test tells you nothing you did not already know from the sign of the move; at 9.37% it is the entire question, and eleven years of five-session windows never answered it once. Nobody succeeded at anything in this table. What changed between the two rows is not skill and not the forecast — it is what the holder had to pay to get in and out, which was knowable in advance and is the only part of this that was.
 
 **Resolution is nil at every friction level, which is the same negative result as direction.** The largest resolution term anywhere in the table is 0.002. Where the event is near-even the Brier score sits at its uncertainty term; where it is rare the Brier score is small because the event is rare. The model cannot tell a window in which the hurdle will be cleared from one in which it will not, at any hurdle, at any horizon. This is what makes the friction comparison above a statement about arithmetic rather than about forecasting.
 
@@ -360,6 +391,78 @@ Measured over the same 2,876 forecasts, with the hurdle for each route and juris
 **Overlapping windows are not independent observations.** Sampling a 21-session horizon weekly makes consecutive scores share three quarters of their path, which is fine for a PIT histogram or a mean CRPS and fatal for a breach-independence test. Every p-value is therefore computed on the thinned subsample, and the function that computes one *raises* on an overlapping series rather than quietly returning a number — 568 forecasts at a 63-session horizon are 44 observations, and a test told otherwise reports a confidence it has not earned. Diebold-Mariano is the single exception, and it is granted the exception because it models the overlap in its variance estimator instead of assuming it away; it is still reported on the thinned subsample too.
 
 **At zero breaches the chi-square approximation is not usable.** Kupiec's statistic is asymptotically chi-square, and zero breaches puts the unrestricted estimate on the boundary of the parameter space, where that asymptotics does not hold. Both p-values are always computed and the exact binomial is the one reported at a boundary. It matters: 0 breaches in 44 windows against a 5% quantile gives a chi-square p of 0.034 and an exact p of 0.17. An earlier version of the table above reported the first and read it as the run's only rejection. It was not one.
+
+## Nightly automation
+
+One forecast a night, committed to this repository, or no forecast and a loud failure. There is no third outcome, and the reason is the whole of this section.
+
+### The failure mode this is built around
+
+A nightly runner is a fresh machine with no cache. Yahoo rate-limits, IBJA does not publish on Indian holidays, and the source chain is deliberately built to fall back rather than fail — which is right for a human at a terminal and dangerous for an unattended job. Combine the three and you get a run that quietly resolves week-old prices, simulates from them, and commits a forecast dated today.
+
+That is fabrication with a timestamp on it, and it is the exact class of error this repository exists to catch. It is also invisible afterwards: it has the same shape, the same fields and the same date as a real forecast. **A missing night is a visible hole in the track record. A fabricated night is not visible at all**, and every claim in §0 rests on the dated log being what the engine actually said on the day it is dated.
+
+So the job **refuses to publish**, exits non-zero, and writes nothing but a record of the refusal:
+
+| Series | Blocking | Tolerance | Calendar |
+|---|---|---|---|
+| `xauusd` (LBMA PM fix) | **yes** | 4 days | London business days |
+| `usdinr` | **yes** | 4 days | FX trading days |
+| `xau_futures` | no | 4 days | COMEX trading days |
+| `ibja_gold` | no | 6 days | Indian business days |
+| `real_yield_10y`, `vix` | no | 5 days | US business days |
+| `wti` | no | 7 days | US business days, in arrears |
+| `dxy` | no | 10 days | US business days, in arrears |
+
+Every tolerance is declared beside the loaders it describes, carries the publication calendar it was derived from and a written rationale, and is cited in the artifact of any forecast that passed it. Four days is the binding number and it is set by the worst *ordinary* case rather than the average one: a 02:00 UTC run on the Tuesday after a Monday holiday reads Friday's fix, which is four days behind and entirely healthy. A guard that fired there would be switched off within a week.
+
+Three properties are worth stating because each was a decision:
+
+- **Only the price series and a published lens's exchange rate block.** Those are the inputs a fabricated price would come from. A stale factor moves a fitted loading, which is a smaller and different problem — and `dxy` runs about a week behind by FRED's own schedule in the ordinary case, so blocking on it would mean refusing most healthy nights. Non-blocking series are still measured and reported.
+- **An undeclared tolerance blocks too.** A series added without a policy would otherwise inherit "anything goes" and the guard would degrade one series at a time with nothing failing. A test asserts every registered series declares one.
+- **Freshness is measured on the price column, not the index.** A frame whose dates reach today over a NaN close is what a partial fetch leaves behind, and judging it on the index alone would pass exactly the case the guard exists for.
+
+A long market closure exceeds the tolerance and is refused. That is intended: there is no new price, so there is nothing new to publish, and the gap is recorded rather than papered over.
+
+### Track record integrity
+
+**A forecast whose horizon has elapsed may never be rewritten.** Before it elapses, a rerun is a correction to a live forecast and git carries both versions. After it elapses the outcome exists, and rewriting the forecast that preceded it is editing the past. The rule is enforced in code rather than by discipline, in two places: the writer refuses, and CI refuses a diff that modifies a settled file — the second being the stronger of the two, because it catches an edit made by any means including by hand.
+
+Two details decide whether that rule means anything:
+
+- **The clock starts at the anchor, not at the run time.** A Monday run prices from Friday's fix, so the horizon started on Friday. Dating the freeze from `generated_at` would start the clock late and leave a forecast rewritable after its horizon had actually run.
+- **The shortest horizon freezes the file, not the longest.** Once any horizon has an outcome, rewriting the file revises a claim whose result is known — even though the quarterly horizon beside it is still live. The ability to correct the live part is not worth the ability to quietly revise the settled one.
+
+**A gap has to be detectable in the data, not merely absent.** A three-week outage that leaves no trace is indistinguishable from three weeks of forecasts nobody scored. So a refusal writes a skip record — the refusal is itself data — and `public-data/forecasts/index.json` lists every date that should carry a forecast and does not, split by whether anything explains it:
+
+```json
+"counts": { "published": 41, "gaps": 3, "gaps_explained": 2, "gaps_unexplained": 1 }
+```
+
+An *explained* gap is an outage the engine noticed and declined to paper over. An *unexplained* one is a night nothing survives from — the job died, never started, or was never scheduled — and it is the materially weaker position. Publishing both under one heading, distinguished by whether an explanation exists, is what stops a silence from reading like a run of unscored forecasts.
+
+**The nightly writes `public-data/` and nothing else.** It never touches this file. A job that edits prose can trip the §0 no-overclaiming guard at 02:00 UTC with nobody watching, so the workflow stages `public-data/` explicitly and fails if anything else is staged, and a test asserts the command itself writes nowhere else.
+
+### The live log is not the backtest
+
+The walk-forward above is a *simulation of what the engine would have said*. Every one of its 2,876 forecasts was scored against an outcome that already existed when the code ran. That is a legitimate measurement and a weaker claim than it is usually read as.
+
+The nightly log is what the engine **did** say, committed to a public repository before the outcome existed. It cannot be re-run, tuned, or accidentally given lookahead. It is the stronger claim by some distance and it will have `n` in single digits for months.
+
+**The two are reported separately, each with its own count, and they are never pooled.** Pooling would make the live sample look testable years earlier by diluting it with observations carrying a weaker guarantee. The threshold for reporting any p-value on the live log — **30 independent windows**, thinned to non-overlapping, the same discipline every other p-value here follows — is fixed in advance rather than chosen once the numbers exist. At a five-session horizon a nightly job accrues roughly one a week, so that is on the order of half a year. Publishing `n = 4` with *no test is possible* is the honest output for that whole period, not a placeholder.
+
+Two things the live log deliberately does not report. **CRPS skill**, because it needs the null's distribution for the same date and the published artifact does not carry one. And an **uncensored PIT**: the artifact carries quantiles rather than paths, so the live PIT is interpolated on a five-point grid and a realised value outside that grid is recorded as censored rather than clamped to zero or one. A clamped PIT is a number that looks measured and is not.
+
+### Reproducibility, since the log claims it
+
+- **`uv.lock` is committed and CI installs with `uv sync --frozen`.** A recorded seed reproduces nothing if SciPy's optimiser moved underneath it, and `--frozen` fails rather than silently re-resolving.
+- **Every artifact records the git SHA** beside `engine_version`, which is a static `0.1.0` carried by every forecast this project has ever published — including the ones produced by the drift-carrying simulation that was later withdrawn. It identifies nothing; the commit does. A dirty working tree is published as `dirty: true` rather than implying a reproducibility the SHA does not cover.
+
+### CI
+
+`ruff`, `mypy --strict`, the full suite behind an 80% coverage gate on `engine/aurex/`, an offline end-to-end run from the committed seed cache, and the §0 guards. The `bench` extra — torch, Chronos, neuralforecast, about 2.5GB — stays out: it exists for the step 6 shootout alone and nothing in the default suite imports it.
+
+One job runs with **no secrets configured at all**, asserting the environment really is bare before it starts. "No API key is required to run Aurex" is a stated feature, which makes it a claim, which means it needs a guard — and it is the kind that will not break loudly. It breaks the day someone adds a source that reads a key and works fine on their machine because their machine has one. That job catches the code-level regression; the nightly catches the source-level one, because it runs keyless against live endpoints and fails visibly when one starts demanding authentication.
 
 ## Benchmarks *(not built yet — step 6)*
 
@@ -406,7 +509,9 @@ Every model must beat a **driftless random walk** on out-of-sample CRPS. Models 
 - **Factor loadings will be unstable.** Gold's relationship to its drivers shifts with regime. The confidence intervals are wide for a reason — read them.
 - **Retail friction varies enormously.** The defaults are representative, not universal. Enter your own dealer's actual quotes. Dealer premiums and buyback discounts carry a `spread_basis` saying they are representative and user-editable; they are structurally prevented from sharing the citation that covers the tax rate on the same entry, because one of those two numbers has a regulator behind it and the other does not.
 - **The routes table is four jurisdictions and two routes.** It is not a survey. Where a route is not listed as available somewhere, that is an absence of data in Aurex and never a statement about what a reader may hold — availability is informational and the lookup says so when it fails. Leverage caps are recorded only where the national regulator's own instrument was read.
-- **The hurdle event is unmeasurable at short horizons and high friction.** Zero positive events at five sessions and five at ten, against a pre-registered expectation of about fifteen. The reliability curve is withheld there rather than drawn on noise, and the base rate and count are published beside every score so a low Brier on a rare event cannot be read as a good forecast.
+- **The hurdle event is unmeasurable at short horizons and high friction.** Zero positive events at five sessions and five at ten, against a pre-registered expectation of about fifteen. That expectation was wrong because its sigma was wrong — 22% annualised where the sample carries 15.9% — and the residual gap between a Gaussian rate and the measured one is the fat tail. The reliability curve is withheld there rather than drawn on noise, and the base rate, count and mean forecast are published beside every score so a low Brier on a rare event cannot be read as a good forecast.
+- **The live track record is empty, and will be small for months.** The nightly job has published nothing yet. Until it accrues 30 independent windows at a horizon, no test is possible on it and none will be reported — the count and the distributions will be, labelled as untestable. It is never pooled with the walk-forward, so nothing here will make the live sample look larger than it is.
+- **The staleness tolerances are judgements, not vendor guarantees.** They were set from observed publication lag on a handful of runs, and each carries the calendar and the reasoning behind it so a reader can disagree with a specific number rather than with the idea. A source that changes its schedule will read as a fault until the tolerance is revisited, which is the failure direction to prefer.
 - **The safe-haven channel is not yet estimated.** The factor set declares a geopolitical-risk regressor, but no source is wired to it, so it currently reports as unavailable. This matters more than it looks: without it, a scenario chain like *escalation → crude up → inflation up → Fed hawkish → gold down* runs entirely through the real-yield and dollar channels, and would very likely produce the wrong sign with honestly-estimated loadings and a clean causal story attached — gold historically rallies on escalation. Omitted-variable bias is more dangerous here than a hand-typed view, because it survives the check against hand-typed views.
 - **Calibration is not accuracy.** A well-calibrated model that says "55/45" is honest, not useful for timing. That distinction is the whole point.
 
@@ -419,7 +524,7 @@ Every model must beat a **driftless random walk** on out-of-sample CRPS. Models 
 | 4 | Elastic-net factor attribution; market-sourced scenario priors; the crude → CPI → policy → rupee transmission chain by local projections |
 | 5 | Dashboard, currency toggle, uncertainty decomposition, user-set leverage with the liquidation probability recomputed live |
 | 6 | Benchmark shootout vs random walk, AutoARIMA, NHITS, Chronos — **including the rows where Aurex loses** |
-| 7 | Nightly automation and deploy |
+| 7 | ~~Nightly automation: CI, the staleness refusal, track-record integrity, the live log~~ — **done**, above. Deploy waits on step 5 |
 | 8 | A second asset, as a traded instrument: exchange-listed rupee-quoted futures, shifted-log returns, roll friction at each expiry, futures friction including transaction tax |
 | 9 | Cross-asset scenario view — one geopolitical tree, two conditional distributions |
 
