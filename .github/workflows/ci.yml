@@ -118,7 +118,13 @@ jobs:
     # This catches the *code-level* regression. The source-level one — an endpoint that
     # starts demanding authentication — is caught by the nightly job, which runs
     # keyless against live sources and fails visibly when one stops answering.
-    permissions: {}
+    #
+    # `contents: read` rather than `{}`: checkout needs it, and it is the token every
+    # job already has rather than anything a source could authenticate with. No step in
+    # this workflow references `secrets.*` at all, and `persist-credentials: false`
+    # keeps even that token out of the git config the test steps run against.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
