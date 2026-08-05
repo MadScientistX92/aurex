@@ -30,6 +30,8 @@ from aurex.assets.synthetic import SYNTHETIC
 from aurex.assets.transforms import LogReturn
 from aurex.backtest import backtest_asset, describe_backtest
 from aurex.score import (
+    MIN_POSITIVE_EVENTS,
+    ClearsHurdle,
     HorizonDisplacement,
     HorizonLosses,
     ModelForecaster,
@@ -56,6 +58,7 @@ from aurex.score import (
     uniformity,
     walk_forward,
 )
+from aurex.score.coverage import MIN_EXPECTED_BREACHES
 from aurex.score.sampling import OverlappingWindowsError
 from aurex.vol import model_for
 from tests.conftest import simulate_gjr_path
@@ -437,11 +440,144 @@ class TestReliability:
             brier_score(np.array([1.4]), np.array([1.0]))
 
     def test_empty_bins_are_kept(self) -> None:
-        curve = reliability_curve(np.full(10, 0.05), np.zeros(10))
+        """``min_positives=0`` because this is the axis rule, not the withholding rule."""
+        curve = reliability_curve(np.full(10, 0.05), np.zeros(10), min_positives=0)
         empty = [b for b in curve.bins if b.count == 0]
 
         assert len(empty) == 9
         assert all(b.observed_rate is None for b in empty)
+
+
+class TestARareEventGetsAScoreButNotADiagram:
+    """The pre-registered rule, written before the hurdle event existed.
+
+    Fifteen positives in 580 windows cannot support a ten-bin diagram. The score, the
+    base rate and the count survive at any sample size and are what the reader gets.
+    """
+
+    def _rare(self, positives: int, n: int = 580) -> tuple[np.ndarray, np.ndarray]:
+        outcomes = np.zeros(n)
+        outcomes[:positives] = 1.0
+        rng = np.random.default_rng(3)
+        return np.clip(rng.normal(positives / n, 0.01, n), 0.0, 1.0), outcomes
+
+    def test_below_the_threshold_the_curve_is_withheld(self) -> None:
+        curve = reliability_curve(*self._rare(positives=8))
+
+        assert curve.withheld
+        assert curve.bins == ()
+        assert "too few to draw" in (curve.withheld_reason or "")
+
+    def test_the_score_and_the_count_survive_the_withholding(self) -> None:
+        curve = reliability_curve(*self._rare(positives=8))
+
+        assert curve.positives == 8
+        assert curve.base_rate == pytest.approx(8 / 580)
+        assert curve.brier > 0.0
+        assert curve.describe()["positive_events"] == 8
+
+    def test_at_the_threshold_the_curve_is_drawn(self) -> None:
+        curve = reliability_curve(*self._rare(positives=MIN_POSITIVE_EVENTS))
+
+        assert not curve.withheld
+        assert curve.bins
+
+    def test_the_threshold_is_the_one_the_coverage_tests_already_use(self) -> None:
+        """Taken from the neighbouring test rather than tuned to this event."""
+        assert float(MIN_POSITIVE_EVENTS) == MIN_EXPECTED_BREACHES
+
+    def test_a_low_brier_on_a_rare_event_is_not_a_better_forecast(self) -> None:
+        """Why the count is published beside the score: these are not comparable."""
+        rare = reliability_curve(*self._rare(positives=15))
+        coin = reliability_curve(np.full(580, 0.5), np.array([1.0, 0.0] * 290))
+
+        assert rare.brier < coin.brier
+        assert rare.uncertainty < coin.uncertainty
+        # Against its own uncertainty term the rare event has learned nothing either.
+        assert rare.resolution == pytest.approx(0.0, abs=1e-3)
+
+
+class TestTheHurdleEvent:
+    """The one event friction defines, graded by the machinery that already existed."""
+
+    ENSEMBLE = None
+
+    def _ensemble(self, terminals: np.ndarray) -> object:
+        from aurex.dist.paths import PathEnsemble
+
+        return PathEnsemble(prices=terminals.reshape(-1, 1), anchor=100.0, diagnostics={})
+
+    def test_it_is_a_binary_event_like_any_other(self) -> None:
+        """The design bet: friction changes the level, not the kind of question."""
+        from aurex.score.events import BinaryEvent
+
+        assert isinstance(ClearsHurdle(multiple=1.0937), BinaryEvent)
+
+    def test_the_probability_is_the_share_of_paths_clearing_the_hurdle(self) -> None:
+        # Deliberately off the boundary: anchor * multiple is a float product, so a
+        # terminal sitting exactly on the level is decided by rounding rather than by
+        # anything meaningful. Real ensembles land there with probability zero.
+        ensemble = self._ensemble(np.array([100.0, 105.0, 111.0, 115.0]))
+
+        assert ClearsHurdle(multiple=1.10).probability(ensemble) == pytest.approx(0.5)
+
+    def test_it_is_resolved_at_the_horizon_not_on_the_way(self) -> None:
+        """A round trip is closed at the end; a path that touched and fell back did not
+        clear it for the holder this event grades."""
+        event = ClearsHurdle(multiple=1.05)
+        touched_and_fell_back = RealisedPath(np.array([100.0, 108.0, 101.0]))
+
+        assert event.monitoring == "terminal"
+        assert not event.occurred(100.0, touched_and_fell_back)
+
+    def test_a_hurdle_of_zero_or_less_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="must exceed 1"):
+            ClearsHurdle(multiple=1.0)
+
+    def test_a_horizon_priced_hurdle_is_scored_only_at_its_own_horizon(self) -> None:
+        """Accruing friction: the quarterly hurdle is a cost a weekly holder never paid."""
+        event = ClearsHurdle(multiple=1.006, label="x", horizon=63)
+
+        assert event.applies_at(63)
+        assert not event.applies_at(5)
+
+    def test_a_hurdle_paid_at_the_door_applies_everywhere(self) -> None:
+        event = ClearsHurdle(multiple=1.0937, label="x")
+
+        assert all(event.applies_at(h) for h in (5, 21, 63, 252))
+
+    def test_the_price_events_apply_at_every_horizon(self) -> None:
+        for event in default_events():
+            assert all(event.applies_at(h) for h in (5, 21, 63))
+
+    def test_the_harness_scores_each_event_only_where_it_applies(self) -> None:
+        prices = price_series(periods=1_100)
+        weekly = ClearsHurdle(multiple=1.01, label="acc", horizon=5)
+        quarterly = ClearsHurdle(multiple=1.05, label="acc", horizon=21)
+
+        result = walk_forward(
+            prices,
+            subject=ModelForecaster(
+                model=model_for("gjr_garch"), transform=LogReturn(), n_paths=600
+            ),
+            baseline=RandomWalkForecaster(transform=LogReturn(), n_paths=600),
+            request=WalkForwardRequest(horizons=(5, 21), step=5, min_observations=750),
+            events=(TerminalAbove(), weekly, quarterly),
+        )
+        by_horizon = {
+            h.horizon: {e["id"] for e, _ in h.events} for h in result.calibration().horizons
+        }
+
+        assert weekly.id in by_horizon[5] and weekly.id not in by_horizon[21]
+        assert quarterly.id in by_horizon[21] and quarterly.id not in by_horizon[5]
+        assert all(TerminalAbove().id in ids for ids in by_horizon.values())
+
+    def test_the_id_carries_the_hurdle_so_two_routes_never_collide(self) -> None:
+        first = ClearsHurdle(multiple=1.0937, label="a")
+        second = ClearsHurdle(multiple=1.0510, label="b")
+
+        assert first.id != second.id
+        assert "9.37" in first.id
 
 
 class TestRealisedPathIsCloseOnly:

@@ -1,0 +1,205 @@
+# Routes and jurisdictions — §20.
+#
+# Every entry carries its own source_url and source_confidence, enforced by the same
+# require_provenance() that guards duty.yaml and gst.yaml. No entry inherits a
+# table-level default.
+#
+# THE SPLIT: `routes` holds only what does not vary by jurisdiction. Anything a
+# regulator or a tax authority sets — consumption tax, leverage cap — lives in `terms`,
+# keyed by (route_id, jurisdiction). Declaring `friction` or `max_leverage` on a route
+# is refused at load, because it makes whichever jurisdiction was written first into
+# the silent default.
+#
+# `restricted_in` is never written here. It is derived from `available_in` against the
+# known jurisdictions.
+#
+# Every regulatory source below was fetched and read on 2026-08-05, not asserted.
+# Dealer spreads are market conventions with no regulator; they declare `spread_basis`
+# separately so they cannot shelter under a regulatory citation.
+
+jurisdictions:
+  IND:
+    label: "India"
+    bloc: null
+    source_url: "https://cleartax.in/s/gst-impact-on-gold"
+    source_confidence: secondary
+    note: >-
+      GST on gold metal at 3%. Marked SECONDARY on the same grounds as the entry in
+      gst.yaml: the CBIC primary notification is not machine-retrievable.
+
+  USA:
+    label: "United States"
+    bloc: null
+    source_url: "https://www.irs.gov/taxtopics/tc409"
+    source_confidence: primary
+    note: >-
+      No federal consumption tax on bullion. Sales tax is set per state and many
+      exempt bullion, so the route default is 0% and user-editable. The IRS topic is
+      cited for the collectibles treatment Aurex states and never computes.
+
+  GBR:
+    label: "United Kingdom"
+    bloc: null
+    source_url: "https://www.gov.uk/guidance/gold-acquisitions-imports-investments-and-vat-notice-70121"
+    source_confidence: primary
+    note: >-
+      HMRC VAT Notice 701/21, fetched 2026-08-05: "Investment gold is exempt from VAT,
+      subject to an option to tax." Exempt supplies fall under Group 15 of Schedule 9.
+
+  DEU:
+    label: "Germany"
+    bloc: "EU"
+    source_url: "https://www.gesetze-im-internet.de/ustg_1980/__25c.html"
+    source_confidence: primary
+    note: >-
+      § 25c UStG, fetched 2026-08-05: "Die Lieferung, die Einfuhr und der
+      innergemeinschaftliche Erwerb von Anlagegold ... sind steuerfrei." The national
+      instrument, not the Directive it implements.
+
+blocs:
+  EU:
+    label: "European Union"
+    members: ["DEU"]
+    instrument: >-
+      Council Directive 2006/112/EC on the common system of value added tax, Title XII
+      Chapter 5 — the special scheme for investment gold. Exemption is required of
+      member states and enacted in each one's national law, which is why every member
+      below cites its own statute rather than this Directive.
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32006L0112"
+    source_confidence: primary
+
+routes:
+  physical_retail:
+    asset_id: "gold"
+    venue: "over_the_counter"
+    instrument: "physical"
+    quote_currency: "XAU"
+    available_in: ["IND", "USA", "GBR", "DEU"]
+    source_url: "https://www.lbma.org.uk/good-delivery"
+    source_confidence: primary
+    notes:
+      - >-
+        Retail physical, bought from a dealer and sold back to one. The round trip is
+        paid at the door, so the hurdle does not shrink with holding period.
+
+  cfd:
+    asset_id: "gold"
+    venue: "broker"
+    instrument: "cfd"
+    quote_currency: "USD"
+    available_in: ["GBR"]
+    source_url: "https://www.fca.org.uk/firms/contract-for-differences"
+    source_confidence: primary
+    notes:
+      - >-
+        Listed for one jurisdiction only because that is where a cap has been read
+        from the regulator's own instrument. Absence elsewhere is missing data in
+        Aurex, not a statement about availability.
+
+terms:
+  - route_id: "physical_retail"
+    jurisdiction: "IND"
+    source_url: "https://cleartax.in/s/gst-impact-on-gold"
+    source_confidence: secondary
+    max_leverage: null
+    friction:
+      kind: "physical"
+      label: "India retail jeweller"
+      dealer_premium: 0.03
+      consumption_tax: 0.03
+      buyback_discount: 0.03
+      spread_basis: >-
+        Representative of Indian retail jeweller quotes and user-editable. Not a
+        published rate and not sourced to the citation above, which covers the 3% GST
+        on metal only.
+      notes:
+        - "GST on metal is 3%; making charges are taxed separately at 5%."
+
+  - route_id: "physical_retail"
+    jurisdiction: "USA"
+    source_url: "https://www.irs.gov/taxtopics/tc409"
+    source_confidence: primary
+    max_leverage: null
+    friction:
+      kind: "physical"
+      label: "US retail coin"
+      dealer_premium: 0.03
+      consumption_tax: 0.0
+      buyback_discount: 0.02
+      spread_basis: >-
+        Representative of US retail coin dealer quotes and user-editable. Not a
+        published rate.
+      notes:
+        - >-
+          Sales tax defaults to 0%: it is set per state and many states exempt
+          bullion. User-editable.
+        - >-
+          US long-term capital gains on physical gold are taxed as a collectible, at a
+          higher maximum rate than equities. Aurex states that this treatment exists
+          and links it; it never computes a liability.
+
+  - route_id: "physical_retail"
+    jurisdiction: "GBR"
+    source_url: "https://www.gov.uk/guidance/gold-acquisitions-imports-investments-and-vat-notice-70121"
+    source_confidence: primary
+    max_leverage: null
+    friction:
+      kind: "physical"
+      label: "UK retail bullion"
+      dealer_premium: 0.03
+      consumption_tax: 0.0
+      buyback_discount: 0.02
+      spread_basis: >-
+        Representative of UK retail bullion dealer quotes and user-editable. Not a
+        published rate.
+      notes:
+        - >-
+          Investment gold is VAT-exempt under VAT Notice 701/21, subject to an option
+          to tax, so consumption tax is 0% for qualifying bullion.
+
+  - route_id: "physical_retail"
+    jurisdiction: "DEU"
+    source_url: "https://www.gesetze-im-internet.de/ustg_1980/__25c.html"
+    source_confidence: primary
+    max_leverage: null
+    friction:
+      kind: "physical"
+      label: "Germany retail bullion"
+      dealer_premium: 0.03
+      consumption_tax: 0.0
+      buyback_discount: 0.02
+      spread_basis: >-
+        Representative of German retail bullion dealer quotes and user-editable. Not a
+        published rate.
+      notes:
+        - >-
+          Anlagegold is steuerfrei under § 25c UStG — the national implementation of
+          the Directive, cited directly rather than through it.
+
+  - route_id: "cfd"
+    jurisdiction: "GBR"
+    source_url: "https://www.fca.org.uk/publication/policy/ps19-18.pdf"
+    source_confidence: primary
+    max_leverage: 20.0
+    friction:
+      kind: "roll"
+      label: "UK retail gold CFD"
+      annual_expense_ratio: 0.0
+      annual_roll_drag: 0.03
+      bid_ask_spread: 0.0005
+      pinned_days: 30
+      spread_basis: >-
+        Representative of retail CFD quoted spreads and user-editable. Not a published
+        rate; the FCA citation covers the margin requirement only.
+      notes:
+        - >-
+          FCA instrument 2019/78, COBS 22.5.11R(2), fetched 2026-08-05: a retail
+          client must post margin of at least 5% of exposure where the underlying is
+          gold. 5% margin is 20:1 leverage. COBS 22.5.11R(3) sets 10% for commodities
+          other than gold, so this number is specific to the metal.
+        - >-
+          Cited to the FCA rather than to any pan-regional body: the FCA is who
+          publishes the number binding on a UK retail client.
+        - >-
+          Financing accrues daily, so the hurdle grows with holding period. Modelled
+          as roll friction for that reason.

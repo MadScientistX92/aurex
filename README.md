@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
-> **Build status: steps 1, 1.5, 2 and 3a of 9 complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, and the scoring layer with a walk-forward backtest from 2015. Not built: routes and per-jurisdiction friction, factor attribution, the scenario engine, the dashboard, the benchmark shootout, and the second asset. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
+> **Build status: steps 1, 1.5, 2, 3a and 3b of 9 complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, the scoring layer with a walk-forward backtest from 2015, and routes with per-jurisdiction friction and the breakeven hurdle. Not built: factor attribution, the scenario engine, the dashboard, the benchmark shootout, and the second asset. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
 >
 > **Calibration has now been measured, and the headline is a negative result.** Across 2,876 out-of-sample forecasts from January 2015, the CRPS skill against the random walk is between −0.4% and +0.9% depending on the horizon, and a Diebold-Mariano test rejects at none of them — the smallest p-value in the table is 0.23. The distributions are close to the right *shape*: PIT uniformity survives a KS test at all five horizons, and a chi-square rejects at one of them. Direction carries no information at all. An earlier version of this section reported up to +4.6% CRPS skill; that number was a model carrying drift beating a null that had been denied one, it has been withdrawn, and the simulation no longer carries the drift. It would not have survived a Diebold-Mariano test either — measured, p = 0.27. Everything below is published with the test behind it, in both directions.
 
@@ -41,12 +41,12 @@ A sixth rule emerged while building the data layer, and it earned its place:
 - Generates return distributions by **filtered historical simulation** — no assumed parametric shape — and **keeps the paths**
 - Reports **first-passage statistics**: what share of paths touch a level, how long they take, and what the survivors are holding
 - Couples the two exposures with a **t-copula** so tail co-movement survives into the rupee price
-- Models the **real cost of physical gold in India** — dealer premium, GST, buyback spread — and reports the move required to break even
+- Models the **real cost of a round trip per route and jurisdiction** — dealer premium, consumption tax, buyback spread, carry — and reports the move required to break even, with every regulatory rate carrying its own source
+- Scores **whether that hurdle was cleared** as one more binary event through the same reliability machinery, withholding the diagram where the positive count cannot support one
 - **Grades itself**: walks the engine forward over eleven years of history, one refit per week, and scores every distribution it would have published on PIT, CRPS against the random walk, VaR coverage, and reliability — with a Diebold-Mariano test on every skill score, so a win and a shrug are held to the same standard
 
 ## What it does not do yet
 
-- **Routes and jurisdictions**: friction per route, the breakeven hurdle, and whether clearing it is a calibrated probability *(step 3b)*
 - **Factor attribution** and the crude → CPI → policy → rupee transmission chain *(step 4)*
 - **Event scenarios** with probabilities sourced from prediction markets *(steps 4–5)*
 - **The dashboard**, the currency toggle, and user-set leverage *(step 5)*
@@ -65,11 +65,12 @@ git clone https://github.com/MadScientistX92/aurex.git
 cd aurex/engine
 uv sync
 
-uv run pytest                                    # 497 tests, no network
+uv run pytest                                    # 575 tests, no network
 uv run aurex schedule                            # duty history with provenance
 uv run aurex duty 2026-07-29                     # rate in force, and its source
 uv run aurex pipeline                            # live run, writes public-data/latest.json
 uv run aurex score --from 2015-01-01             # walk-forward backtest and calibration report
+uv run aurex routes --asset gold                 # route x jurisdiction terms, with provenance
 
 # offline from the committed seed cache, no network at all
 AUREX_CACHE_DIR=tests/fixtures/seed-cache uv run aurex pipeline --dry-run
@@ -181,11 +182,23 @@ proceeds  = grams × spot_T × (1 − buyback)
 breakeven = (1 + premium)(1 + gst) / (1 − buyback)
 ```
 
-At typical Indian retail parameters — 3% dealer premium, 3% GST, 3% buyback discount — the break-even move is **+9.4%**, before gold has done anything at all. Against a two-week one-standard-deviation move of roughly ±4.4%, that is a two-sigma requirement in one specific direction.
+**No jurisdiction is the default**, so there is no single breakeven number. The same metal reached by a different route, or held in a different country, faces a different hurdle — which is the whole of §20 and the reason the table below has rows rather than a headline. Leaving the jurisdiction unset is a supported state: it gives the quote-currency benchmark with friction *excluded and labelled*, never one country's tax stack applied silently.
 
-This is why the project exists. The friction is deterministic and knowable; the price move is not. Most retail tools model the uncertain part and ignore the certain one.
+<!-- BEGIN GENERATED breakeven-table -->
+| Route | 5 sessions | 21 sessions | 63 sessions | 252 sessions | Accrues |
+|---|---|---|---|---|---|
+| cfd — United Kingdom | 0.14% | 0.27% | 0.62% | 2.17% | yes |
+| physical — Germany | 5.10% | 5.10% | 5.10% | 5.10% | no |
+| physical — United Kingdom | 5.10% | 5.10% | 5.10% | 5.10% | no |
+| physical — India | 9.37% | 9.37% | 9.37% | 9.37% | no |
+| physical — United States | 5.10% | 5.10% | 5.10% | 5.10% | no |
+<!-- END GENERATED breakeven-table -->
 
-Friction takes a **horizon**, because the two shapes are structurally different: physical friction is paid at the door and is horizon-independent, while a futures roll drag compounds. Profiles for gold ETFs and sovereign gold bonds are included for comparison. Attaching this to simulated P&L is step 3b, along with the routes that decide which friction applies and the jurisdiction that sets its rate.
+This table is **generated from `engine/aurex/data/schedules/routes.yaml`** and a test regenerates it and compares, so it cannot drift from the data behind it. Reproduce with `uv run aurex routes --markdown`. Three of the physical rows agree only because their representative dealer spreads happen to be the same and all three jurisdictions exempt investment gold; the tax rates behind them are cited separately and independently.
+
+Friction takes a **horizon**, because the two shapes are structurally different: physical friction is paid at the door, while carry friction accrues — visible above as the only row whose numbers move across the columns. The `Accrues` column exists so that is readable rather than inferred.
+
+This is why the project exists. The friction is deterministic and knowable; the price move is not. Most retail tools model the uncertain part and ignore the certain one. At retail physical parameters the hurdle is +9.4%, against a two-week one-standard-deviation move of roughly ±4.4% — a two-sigma requirement in one specific direction. What that does to a probability forecast is measured below rather than asserted.
 
 ## Asset abstraction
 
@@ -306,6 +319,40 @@ The two symptoms are the same displacement read from different reference points.
 
 **None of this is an argument for fitting a drift.** A fitted mean over a rising sample is a directional forecast wearing a mean's clothes. The displacement is measured and published; it is not tuned away.
 
+### Pre-registered: what the hurdle event was expected to do
+
+Step 3b adds one event to the machinery above — did the realised move clear the round-trip breakeven a route and jurisdiction define. This section was written **before** that event existed, because its failure mode was predictable and a limitation discovered after the fact reads like an excuse. It is left exactly as written; the measured outcome follows it.
+
+**The arithmetic.** At Indian retail parameters the hurdle is around +9.4%. A one-standard-deviation move at ten sessions is roughly ±4.4%, so the hurdle is about 2.1 sigma in one specific direction. That puts the base rate somewhere near 2–3%, and over roughly 580 walk-forward windows that is on the order of **15 positive events**.
+
+**What that means for the score.** Fifteen positives cannot support a ten-bin reliability diagram. The Brier score will be dominated by its uncertainty term — a base rate of 0.025 has an uncertainty of 0.024, and any forecaster that says "probably not" every time will score close to that. Resolution will be unmeasurable at short horizons, and a reliability curve drawn on those counts would be a picture of sampling noise with an axis on it.
+
+**So the following are fixed now, not chosen after seeing the numbers:**
+
+- Every hurdle Brier score is reported with its **base rate and its positive-event count** beside it. A Brier score of 0.02 that looks excellent next to direction's 0.25 is measuring a rare event, not a better forecast, and the count is what makes that visible.
+- The reliability curve is **withheld** where the positive count cannot support one. The threshold is **10 positive events**, chosen to match the `MIN_EXPECTED_BREACHES` rule of thumb the coverage tests already use rather than tuned to what this event happens to produce. Below it the score, base rate and count are still published; the diagram is not, and the artifact says why.
+- Resolution and reliability terms are still computed and published where the curve is withheld, because they are functions of the score rather than of the diagram — but a withheld curve is the signal that neither should be read as a measurement.
+
+**The comparison is the point, and it is also pre-registered.** Different jurisdictions face different hurdles on the same metal and the same distribution. If a low-friction route clears its hurdle often enough to score and a high-friction one does not, that difference is not an inconvenience in the reporting — it *is* the finding, and it is the project's thesis stated in event counts rather than in prose. The expectation stated in advance: the hurdle rises with friction, the base rate falls with it, and at the top of the friction range the event becomes unmeasurable on eleven years of data. If that is what happens, the honest output is a table of base rates and counts with most of the reliability column empty, and that table is the result rather than a failure to produce one.
+
+### The hurdle result, against that prediction
+
+Measured over the same 2,876 forecasts, with the hurdle for each route and jurisdiction generated from the routes table. Counts are positive events — times the realised move cleared the round-trip breakeven — out of 580, 579, 577, 572 and 568 windows.
+
+| Route (hurdle) | 5 | 10 | 21 | 42 | 63 |
+|---|---|---|---|---|---|
+| CFD, United Kingdom (0.14% → 0.62%, accrues) | 293 | 303 | 307 | 312 | 353 |
+| Physical, United States / United Kingdom / Germany (5.10%) | **11** | 37 | 97 | 177 | 213 |
+| Physical, India (9.37%) | **0** | **5** | 22 | 70 | 113 |
+
+**The prediction was right in direction and optimistic in magnitude.** It said the base rate would be near 2–3% and that 580 windows would yield about fifteen positive events at ten sessions. The measured base rate at ten sessions is **0.86%** and the count is **five** — about a third of what was predicted, so the event is rarer and less measurable than the pre-registration allowed for. At five sessions the retail hurdle was cleared **zero** times in eleven years. The withholding rule fired exactly where it was designed to: the curve is withheld at five and ten sessions and drawn from twenty-one onwards, and no diagram was ever drawn on counts that could not support one.
+
+**The comparison the pre-registration named is the finding, and it is stark.** On the same metal, the same distribution and the same 580 days, the low-friction route clears its hurdle 293 times at five sessions and the high-friction one clears it zero times. Nothing about the forecast changed between those two rows — only what the holder had to pay to get in and out. That is the project's thesis in event counts: the friction is the part that decides the outcome, and it is the part that was knowable in advance.
+
+**Resolution is nil at every friction level, which is the same negative result as direction.** The largest resolution term anywhere in the table is 0.002. Where the event is near-even the Brier score sits at its uncertainty term; where it is rare the Brier score is small because the event is rare. The model cannot tell a window in which the hurdle will be cleared from one in which it will not, at any hurdle, at any horizon. This is what makes the friction comparison above a statement about arithmetic rather than about forecasting.
+
+**Read the Brier scores down a column, never across one.** The India row at five sessions has a Brier score of 0.00004 and the CFD row has 0.25034. The first is not six thousand times better: it is a forecast of an event with a base rate of zero. Every hurdle score is published with its base rate and its positive count for exactly this reason, and the artifact says so in the same block.
+
 ### Two conventions fixed in advance, because both would otherwise look like results
 
 **A realised touch is measured at session close**, the same convention the forecast uses. Scoring simulated closes against intraday extremes would charge the model for a floor it already declares. The enforcement is structural: the object carrying a realised outcome holds closes and nothing else, so there is no high or low available to score against.
@@ -333,6 +380,11 @@ Every model must beat a **driftless random walk** on out-of-sample CRPS. Models 
 
 **Expected outcome, stated in advance so it cannot be retrofitted:** the GARCH family should win on volatility and distribution shape. No model, including the time-series foundation models, is expected to beat the random walk on 10-day *directional* accuracy. If that is what the data shows, it will be published as the headline result rather than buried — a rigorous public demonstration that a modern foundation model cannot call two-week gold direction is more useful than another repository claiming it can.
 
+**Two methodological requirements recorded now, so step 6 cannot be built without them.** Both follow from step 3a and are cheaper to design in than to retrofit:
+
+- **Six models against one null is a multiple-comparisons problem, and six Diebold-Mariano tests at α = 0.05 is the wrong instrument for it.** Run enough pairwise tests and one rejects by construction; a shootout scored that way finds a winner whether or not there is one. Step 6 uses Hansen's Superior Predictive Ability test, or the Model Confidence Set where the question is which models cannot be excluded rather than whether any beats the benchmark. The per-model DM statistic is still reported, as a description rather than as a decision.
+- **The minimum detectable effect gets computed per horizon, and published whether or not anything rejects.** Given the observed loss-differential variance and the independent window count, there is a smallest CRPS skill the test could have detected at 80% power. *"We could have detected anything above X% and did not"* is a result. *"We found nothing"* is not — it is a sentence that reads identically whether the effect is absent or the sample is too small, and step 3a has already shown which of those this repository is usually in.
+
 ## Limitations
 
 - **Calibration is measured on one asset, one model, one sample.** The results above are gold, GJR-GARCH, and 2015–2026. A sample containing one regime is not evidence about another, and the wider shootout against AutoARIMA, NHITS and Chronos is still step 6.
@@ -352,7 +404,9 @@ Every model must beat a **driftless random walk** on out-of-sample CRPS. Models 
 - **Spot is close-only.** The London fix has no intraday range, so OHLC-based volatility estimators must use `xau_futures` and accept the basis.
 - **Horizon.** Everything here targets 5–30 trading days. Longer horizons have different dynamics and are out of scope.
 - **Factor loadings will be unstable.** Gold's relationship to its drivers shifts with regime. The confidence intervals are wide for a reason — read them.
-- **Retail friction varies enormously.** The defaults are representative, not universal. Enter your own dealer's actual quotes.
+- **Retail friction varies enormously.** The defaults are representative, not universal. Enter your own dealer's actual quotes. Dealer premiums and buyback discounts carry a `spread_basis` saying they are representative and user-editable; they are structurally prevented from sharing the citation that covers the tax rate on the same entry, because one of those two numbers has a regulator behind it and the other does not.
+- **The routes table is four jurisdictions and two routes.** It is not a survey. Where a route is not listed as available somewhere, that is an absence of data in Aurex and never a statement about what a reader may hold — availability is informational and the lookup says so when it fails. Leverage caps are recorded only where the national regulator's own instrument was read.
+- **The hurdle event is unmeasurable at short horizons and high friction.** Zero positive events at five sessions and five at ten, against a pre-registered expectation of about fifteen. The reliability curve is withheld there rather than drawn on noise, and the base rate and count are published beside every score so a low Brier on a rare event cannot be read as a good forecast.
 - **The safe-haven channel is not yet estimated.** The factor set declares a geopolitical-risk regressor, but no source is wired to it, so it currently reports as unavailable. This matters more than it looks: without it, a scenario chain like *escalation → crude up → inflation up → Fed hawkish → gold down* runs entirely through the real-yield and dollar channels, and would very likely produce the wrong sign with honestly-estimated loadings and a clean causal story attached — gold historically rallies on escalation. Omitted-variable bias is more dangerous here than a hand-typed view, because it survives the check against hand-typed views.
 - **Calibration is not accuracy.** A well-calibrated model that says "55/45" is honest, not useful for timing. That distinction is the whole point.
 
@@ -361,7 +415,7 @@ Every model must beat a **driftless random walk** on out-of-sample CRPS. Models 
 | Step | Scope |
 |---|---|
 | ~~3a~~ | ~~Scoring the distributions the engine already produces: PIT, CRPS skill against the random walk, Kupiec, Christoffersen, reliability. Walk-forward, expanding window, 2015→present~~ — **done**, results above |
-| 3b | Routes and jurisdictions; friction per route; the breakeven hurdle and the calibration of clearing it |
+| ~~3b~~ | ~~Routes and jurisdictions; friction per route; the breakeven hurdle and the calibration of clearing it~~ — **done**, results above |
 | 4 | Elastic-net factor attribution; market-sourced scenario priors; the crude → CPI → policy → rupee transmission chain by local projections |
 | 5 | Dashboard, currency toggle, uncertainty decomposition, user-set leverage with the liquidation probability recomputed live |
 | 6 | Benchmark shootout vs random walk, AutoARIMA, NHITS, Chronos — **including the rows where Aurex loses** |

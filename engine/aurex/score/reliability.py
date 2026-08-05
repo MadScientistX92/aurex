@@ -21,6 +21,20 @@ computed from binned forecasts, so they only reconstruct the Brier score exactly
 every forecast within a bin is identical. Both numbers are reported — the exact score
 and the one the decomposition implies — so the gap between them is visible rather than
 absorbed. A wide gap means the bins are too coarse to describe what the model did.
+
+**A rare event gets a score but not a diagram.** The Brier score, the base rate and the
+positive count are meaningful at any sample size. A ten-bin reliability curve is not:
+below a handful of positives the observed rate in each bin is one or two events, and
+drawing that produces a picture of sampling noise with an axis on it. So the curve is
+*withheld* below :data:`MIN_POSITIVE_EVENTS` positives and the artifact says why, while
+the score, base rate and count are published as usual.
+
+This matters most for the event friction defines — clearing a breakeven hurdle is a
+two-sigma move in one direction, so at retail friction it happens on the order of
+fifteen times in eleven years — but the rule is not special-cased to it. Every rare
+event has the same problem, including a touch of a distant barrier, and a threshold that
+applied to one event and not another would be a threshold chosen after seeing which
+results it flattered.
 """
 
 from __future__ import annotations
@@ -32,6 +46,12 @@ import numpy as np
 
 #: Ten equal-width bins over [0, 1], the conventional reliability diagram.
 DEFAULT_BINS = 10
+
+#: Positives required before a reliability diagram is drawn at all. Ten, matching the
+#: rule of thumb :data:`aurex.score.coverage.MIN_EXPECTED_BREACHES` already uses for
+#: breach counts — taken from the neighbouring test rather than tuned to what any
+#: particular event happens to produce.
+MIN_POSITIVE_EVENTS = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +85,12 @@ class ReliabilityCurve:
     resolution: float
     uncertainty: float
     bins: tuple[ReliabilityBin, ...]
+    #: How many times the event actually happened. Published beside every score,
+    #: because a Brier score of 0.02 on a rare event looks excellent next to one of
+    #: 0.25 on a coin flip and is measuring something else entirely.
+    positives: int = 0
+    #: Why the diagram is not here, when it is not. ``None`` when the curve is drawn.
+    withheld_reason: str | None = None
 
     @property
     def brier_from_decomposition(self) -> float:
@@ -75,9 +101,14 @@ class ReliabilityCurve:
         """How much the binned decomposition fails to reconstruct the exact score."""
         return self.brier_from_decomposition - self.brier
 
+    @property
+    def withheld(self) -> bool:
+        return self.withheld_reason is not None
+
     def describe(self) -> dict[str, Any]:
         return {
             "observations": self.n,
+            "positive_events": self.positives,
             "base_rate": round(self.base_rate, 4),
             "brier": round(self.brier, 5),
             "decomposition": {
@@ -88,12 +119,17 @@ class ReliabilityCurve:
                 "binning_error": round(self.binning_error, 6),
             },
             "bins": [b.describe() for b in self.bins],
+            "curve_withheld": self.withheld_reason,
             "reading": (
                 "Reliability is the calibration term and lower is better; resolution "
                 "is how far the forecasts move from the base rate and higher is "
                 "better. A model can be perfectly reliable and useless. The "
                 "decomposition is binned, so it reconstructs the exact Brier score "
-                "only up to the binning error reported beside it."
+                "only up to the binning error reported beside it. Read the Brier score "
+                "against the uncertainty term rather than against another event's "
+                "score: a rare event has a low uncertainty and therefore a low "
+                "achievable Brier, and comparing across base rates measures the base "
+                "rates."
             ),
         }
 
@@ -112,14 +148,24 @@ def brier_score(probabilities: np.ndarray, outcomes: np.ndarray) -> float:
 
 
 def reliability_curve(
-    probabilities: np.ndarray, outcomes: np.ndarray, *, bins: int = DEFAULT_BINS
+    probabilities: np.ndarray,
+    outcomes: np.ndarray,
+    *,
+    bins: int = DEFAULT_BINS,
+    min_positives: int = MIN_POSITIVE_EVENTS,
 ) -> ReliabilityCurve:
-    """Bin the forecasts, compare each bin against what happened, decompose the score."""
+    """Bin the forecasts, compare each bin against what happened, decompose the score.
+
+    Below ``min_positives`` the diagram is withheld and the reason travels with the
+    result. Everything that does not need the bins — the score, the base rate, the
+    count, the decomposition — is still computed and returned.
+    """
     forecast = np.asarray(probabilities, dtype=float)
     observed = np.asarray(outcomes, dtype=float)
     score = brier_score(forecast, observed)
 
     n = int(forecast.size)
+    positives = int(np.count_nonzero(observed > 0.0))
     base_rate = float(np.mean(observed))
     edges = np.linspace(0.0, 1.0, bins + 1)
     # Right-closed at the top so a forecast of exactly 1.0 lands in the last bin
@@ -159,6 +205,16 @@ def reliability_curve(
             )
         )
 
+    withheld = None
+    if positives < min_positives:
+        withheld = (
+            f"{positives} positive events in {n} forecasts is too few to draw a "
+            f"{bins}-bin reliability diagram: each bin's observed rate would rest on "
+            f"one or two events. The threshold is {min_positives}. The Brier score, "
+            f"base rate and count above are unaffected and are the numbers to read."
+        )
+        entries = []
+
     return ReliabilityCurve(
         n=n,
         base_rate=base_rate,
@@ -167,4 +223,6 @@ def reliability_curve(
         resolution=resolution / n,
         uncertainty=base_rate * (1.0 - base_rate),
         bins=tuple(entries),
+        positives=positives,
+        withheld_reason=withheld,
     )

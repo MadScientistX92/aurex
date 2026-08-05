@@ -56,6 +56,7 @@ from aurex.score.distribution import (
 from aurex.score.drift import DriftDisplacement, HorizonDisplacement, displacement
 from aurex.score.events import (
     BinaryEvent,
+    ClearsHurdle,
     Monitoring,
     RealisedPath,
     TerminalAbove,
@@ -64,7 +65,13 @@ from aurex.score.events import (
     default_events,
 )
 from aurex.score.forecasters import AsOfForecaster, ModelForecaster, RandomWalkForecaster
-from aurex.score.reliability import ReliabilityBin, ReliabilityCurve, brier_score, reliability_curve
+from aurex.score.reliability import (
+    MIN_POSITIVE_EVENTS,
+    ReliabilityBin,
+    ReliabilityCurve,
+    brier_score,
+    reliability_curve,
+)
 from aurex.score.sampling import OverlappingWindowsError, Sampling, require_independent
 from aurex.score.significance import (
     DieboldMariano,
@@ -86,9 +93,11 @@ from aurex.score.walkforward import (
 )
 
 __all__ = [
+    "MIN_POSITIVE_EVENTS",
     "AsOfForecaster",
     "BinaryEvent",
     "CalibrationReport",
+    "ClearsHurdle",
     "DieboldMariano",
     "DriftDisplacement",
     "GoodnessOfFit",

@@ -167,6 +167,10 @@ class GjrGarch:
     #: Below this the likelihood surface is too flat for the parameters to mean much.
     min_observations: int = 250
     id: str = "gjr_garch"
+    #: Each path runs its own variance recursion over its own shocks, so two paths
+    #: that diverge see different volatility from then on. The only model here that
+    #: does, and therefore the only one usable where the path is the question.
+    per_path_variance: bool = True
 
     def fit(
         self,

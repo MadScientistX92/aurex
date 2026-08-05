@@ -104,7 +104,9 @@ def score(
     from aurex.config import PUBLIC_DATA_DIR
     from aurex.data.schedules import load_policy_breaks
     from aurex.pipeline import DEFAULT_LOOKBACK_DAYS, _price_column, resolve_series
-    from aurex.score import WalkForwardRequest
+    from aurex.routes import load_routes
+    from aurex.score import ClearsHurdle, WalkForwardRequest
+    from aurex.trade import hurdle_for
 
     asset = get(asset_id)
     start_date = date.fromisoformat(since)
@@ -136,6 +138,37 @@ def score(
         step=step,
         start=pd.Timestamp(start_date),
     )
+
+    # The composition §20 asks for, and the only place in the engine that holds an
+    # asset, a route and a jurisdiction at the same time. Each cell becomes one binary
+    # event carrying a number; the scorer never learns where the number came from.
+    #
+    # Horizon-dependent friction gets one event per horizon because its hurdle moves
+    # with the holding period; a single event would score a quarterly hold against a
+    # weekly cost. Horizon-invariant friction gets one event, because a second would be
+    # the same event scored twice under different names.
+    book = load_routes()
+    hurdles: list[ClearsHurdle] = []
+    for terms in book.terms:
+        route = book.route(terms.route_id)
+        if route.asset_id != asset.id:
+            continue
+        label = f"{route.instrument}_{terms.jurisdiction}"
+        for held_for in request.horizons:
+            quote = hurdle_for(terms.friction, horizon_days=held_for, label=label)
+            hurdles.append(
+                ClearsHurdle(
+                    multiple=quote.multiple,
+                    label=label,
+                    # Horizon-invariant friction gets one event scored at every
+                    # horizon; accruing friction gets one per horizon, each scored only
+                    # at the horizon it was priced for.
+                    horizon=held_for if quote.horizon_dependent else None,
+                )
+            )
+            if not quote.horizon_dependent:
+                break
+
     result = backtest_asset(
         asset,
         prices=_price_column(price.frame),
@@ -144,6 +177,7 @@ def score(
         request=request,
         model_id=model or None,
         n_paths=paths,
+        extra_events=tuple(hurdles),
     )
 
     block = describe_backtest(asset, result) | {
@@ -182,6 +216,43 @@ def score(
             f"  skill vs log-horizon: slope {decay.slope:+.5f} "
             f"(bootstrap p={decay.p_value:.3f}, R²={decay.r_squared:.2f})"
         )
+
+
+@app.command()
+def routes(
+    asset_id: str = typer.Option("", "--asset", help="Restrict to one registered asset."),
+    markdown: bool = typer.Option(
+        False, "--markdown", help="Emit the generated breakeven table for the README."
+    ),
+) -> None:
+    """Print the route x jurisdiction table, or the breakeven markdown it generates."""
+    from aurex.routes import load_routes
+    from aurex.trade import breakeven_table
+
+    book = load_routes()
+    rows = book.table_rows(asset_id or None)
+    if not rows:
+        typer.echo(f"no routes recorded for asset {asset_id!r}", err=True)
+        raise typer.Exit(code=1)
+
+    if markdown:
+        typer.echo(breakeven_table(rows))
+        return
+
+    for terms in book.terms:
+        route = book.route(terms.route_id)
+        if asset_id and route.asset_id != asset_id:
+            continue
+        cap = "none" if terms.max_leverage is None else f"{terms.max_leverage:g}:1"
+        typer.echo(
+            f"{route.id:<16} {terms.jurisdiction}  "
+            f"breakeven {terms.friction.quote(21).breakeven_pct:>6.2f}%  "
+            f"leverage {cap:<6}  [{terms.source_confidence}]  {terms.source_url}"
+        )
+    typer.echo(
+        "\nNo jurisdiction is the default. Availability is informational: Aurex states "
+        "what a regulator publishes and links it, and never advises."
+    )
 
 
 @app.command()

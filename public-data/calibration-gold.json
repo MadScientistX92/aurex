@@ -334,6 +334,7 @@
               }
             ],
             "brier": 0.24916,
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -2.2e-05,
               "implied_brier": 0.24914,
@@ -345,7 +346,8 @@
             "id": "direction_up",
             "monitoring": "terminal",
             "observations": 580,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 309,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.019,
@@ -423,6 +425,7 @@
             ],
             "brier": 0.01829,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -7.6e-05,
               "implied_brier": 0.01822,
@@ -434,7 +437,8 @@
             "id": "touch_below_5pct",
             "monitoring": "session_close",
             "observations": 580,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 11,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.019,
@@ -512,6 +516,7 @@
             ],
             "brier": 0.01903,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -8.3e-05,
               "implied_brier": 0.01895,
@@ -523,84 +528,15 @@
             "id": "touch_above_5pct",
             "monitoring": "session_close",
             "observations": 580,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 11,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0017,
-            "bins": [
-              {
-                "count": 580,
-                "forecast_mean": 0.0026,
-                "lower": 0.0,
-                "observed_rate": 0.0017,
-                "upper": 0.1
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.1,
-                "observed_rate": null,
-                "upper": 0.2
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.2,
-                "observed_rate": null,
-                "upper": 0.3
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.3,
-                "observed_rate": null,
-                "upper": 0.4
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.4,
-                "observed_rate": null,
-                "upper": 0.5
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.5,
-                "observed_rate": null,
-                "upper": 0.6
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.6,
-                "observed_rate": null,
-                "upper": 0.7
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.7,
-                "observed_rate": null,
-                "upper": 0.8
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.8,
-                "observed_rate": null,
-                "upper": 0.9
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.9,
-                "observed_rate": null,
-                "upper": 1.0
-              }
-            ],
+            "bins": [],
             "brier": 0.00169,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": "1 positive events in 580 forecasts is too few to draw a 10-bin reliability diagram: each bin's observed rate would rest on one or two events. The threshold is 10. The Brier score, base rate and count above are unaffected and are the numbers to read.",
             "decomposition": {
               "binning_error": 3.3e-05,
               "implied_brier": 0.00172,
@@ -612,16 +548,37 @@
             "id": "touch_below_10pct",
             "monitoring": "session_close",
             "observations": 580,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 1,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0,
+            "bins": [],
+            "brier": 3e-05,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": "0 positive events in 580 forecasts is too few to draw a 10-bin reliability diagram: each bin's observed rate would rest on one or two events. The threshold is 10. The Brier score, base rate and count above are unaffected and are the numbers to read.",
+            "decomposition": {
+              "binning_error": -3.2e-05,
+              "implied_brier": 0.0,
+              "reliability": 0.0,
+              "resolution": 0.0,
+              "uncertainty": 0.0
+            },
+            "definition": "any session closing at or above anchor x 1.1",
+            "id": "touch_above_10pct",
+            "monitoring": "session_close",
+            "observations": 580,
+            "positive_events": 0,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
+          },
+          {
+            "base_rate": 0.5052,
             "bins": [
               {
-                "count": 580,
-                "forecast_mean": 0.0015,
+                "count": 0,
+                "forecast_mean": null,
                 "lower": 0.0,
-                "observed_rate": 0.0,
+                "observed_rate": null,
                 "upper": 0.1
               },
               {
@@ -629,6 +586,101 @@
                 "forecast_mean": null,
                 "lower": 0.1,
                 "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 538,
+                "forecast_mean": 0.4822,
+                "lower": 0.4,
+                "observed_rate": 0.5074,
+                "upper": 0.5
+              },
+              {
+                "count": 42,
+                "forecast_mean": 0.5052,
+                "lower": 0.5,
+                "observed_rate": 0.4762,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.001412,
+            "brier": 0.25034,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": 0.000224,
+              "implied_brier": 0.25056,
+              "reliability": 0.00065,
+              "resolution": 7e-05,
+              "uncertainty": 0.24997
+            },
+            "definition": "terminal price at or above anchor x 1.00141, i.e. a gross move of at least 0.14%",
+            "id": "clears_hurdle_cfd_GBR_0.141187pct_h5",
+            "label": "cfd_GBR",
+            "monitoring": "terminal",
+            "observations": 580,
+            "positive_events": 293,
+            "priced_for_horizon": 5,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 0.1412
+          },
+          {
+            "base_rate": 0.019,
+            "bins": [
+              {
+                "count": 564,
+                "forecast_mean": 0.0143,
+                "lower": 0.0,
+                "observed_rate": 0.016,
+                "upper": 0.1
+              },
+              {
+                "count": 16,
+                "forecast_mean": 0.1265,
+                "lower": 0.1,
+                "observed_rate": 0.125,
                 "upper": 0.2
               },
               {
@@ -688,20 +740,240 @@
                 "upper": 1.0
               }
             ],
-            "brier": 3e-05,
-            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "breakeven_multiple": 1.05102,
+            "brier": 0.01864,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
             "decomposition": {
-              "binning_error": -3.2e-05,
+              "binning_error": -0.000346,
+              "implied_brier": 0.01829,
+              "reliability": 0.0,
+              "resolution": 0.00032,
+              "uncertainty": 0.01861
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_DEU_5.10204pct",
+            "label": "physical_DEU",
+            "monitoring": "terminal",
+            "observations": 580,
+            "positive_events": 11,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.019,
+            "bins": [
+              {
+                "count": 564,
+                "forecast_mean": 0.0143,
+                "lower": 0.0,
+                "observed_rate": 0.016,
+                "upper": 0.1
+              },
+              {
+                "count": 16,
+                "forecast_mean": 0.1265,
+                "lower": 0.1,
+                "observed_rate": 0.125,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.01864,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000346,
+              "implied_brier": 0.01829,
+              "reliability": 0.0,
+              "resolution": 0.00032,
+              "uncertainty": 0.01861
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_GBR_5.10204pct",
+            "label": "physical_GBR",
+            "monitoring": "terminal",
+            "observations": 580,
+            "positive_events": 11,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.0,
+            "bins": [],
+            "breakeven_multiple": 1.093711,
+            "brier": 4e-05,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": "0 positive events in 580 forecasts is too few to draw a 10-bin reliability diagram: each bin's observed rate would rest on one or two events. The threshold is 10. The Brier score, base rate and count above are unaffected and are the numbers to read.",
+            "decomposition": {
+              "binning_error": -3.4e-05,
               "implied_brier": 0.0,
               "reliability": 0.0,
               "resolution": 0.0,
               "uncertainty": 0.0
             },
-            "definition": "any session closing at or above anchor x 1.1",
-            "id": "touch_above_10pct",
-            "monitoring": "session_close",
+            "definition": "terminal price at or above anchor x 1.09371, i.e. a gross move of at least 9.37%",
+            "id": "clears_hurdle_physical_IND_9.37113pct",
+            "label": "physical_IND",
+            "monitoring": "terminal",
             "observations": 580,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 0,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 9.3711
+          },
+          {
+            "base_rate": 0.019,
+            "bins": [
+              {
+                "count": 564,
+                "forecast_mean": 0.0143,
+                "lower": 0.0,
+                "observed_rate": 0.016,
+                "upper": 0.1
+              },
+              {
+                "count": 16,
+                "forecast_mean": 0.1265,
+                "lower": 0.1,
+                "observed_rate": 0.125,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.01864,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000346,
+              "implied_brier": 0.01829,
+              "reliability": 0.0,
+              "resolution": 0.00032,
+              "uncertainty": 0.01861
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_USA_5.10204pct",
+            "label": "physical_USA",
+            "monitoring": "terminal",
+            "observations": 580,
+            "positive_events": 11,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
           }
         ],
         "first_as_of": "2015-01-02",
@@ -1033,6 +1305,7 @@
               }
             ],
             "brier": 0.24982,
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000572,
               "implied_brier": 0.24925,
@@ -1044,7 +1317,8 @@
             "id": "direction_up",
             "monitoring": "terminal",
             "observations": 579,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 316,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0553,
@@ -1122,6 +1396,7 @@
             ],
             "brier": 0.05137,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000448,
               "implied_brier": 0.05092,
@@ -1133,7 +1408,8 @@
             "id": "touch_below_5pct",
             "monitoring": "session_close",
             "observations": 579,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 32,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0915,
@@ -1211,6 +1487,7 @@
             ],
             "brier": 0.0859,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": 0.000539,
               "implied_brier": 0.08644,
@@ -1222,84 +1499,15 @@
             "id": "touch_above_5pct",
             "monitoring": "session_close",
             "observations": 579,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 53,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0052,
-            "bins": [
-              {
-                "count": 577,
-                "forecast_mean": 0.0089,
-                "lower": 0.0,
-                "observed_rate": 0.0052,
-                "upper": 0.1
-              },
-              {
-                "count": 2,
-                "forecast_mean": 0.1215,
-                "lower": 0.1,
-                "observed_rate": 0.0,
-                "upper": 0.2
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.2,
-                "observed_rate": null,
-                "upper": 0.3
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.3,
-                "observed_rate": null,
-                "upper": 0.4
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.4,
-                "observed_rate": null,
-                "upper": 0.5
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.5,
-                "observed_rate": null,
-                "upper": 0.6
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.6,
-                "observed_rate": null,
-                "upper": 0.7
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.7,
-                "observed_rate": null,
-                "upper": 0.8
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.8,
-                "observed_rate": null,
-                "upper": 0.9
-              },
-              {
-                "count": 0,
-                "forecast_mean": null,
-                "lower": 0.9,
-                "observed_rate": null,
-                "upper": 1.0
-              }
-            ],
+            "bins": [],
             "brier": 0.00503,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": "3 positive events in 579 forecasts is too few to draw a 10-bin reliability diagram: each bin's observed rate would rest on one or two events. The threshold is 10. The Brier score, base rate and count above are unaffected and are the numbers to read.",
             "decomposition": {
               "binning_error": 0.00019,
               "implied_brier": 0.00522,
@@ -1311,23 +1519,44 @@
             "id": "touch_below_10pct",
             "monitoring": "session_close",
             "observations": 579,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 3,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0086,
+            "bins": [],
+            "brier": 0.00884,
+            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": "5 positive events in 579 forecasts is too few to draw a 10-bin reliability diagram: each bin's observed rate would rest on one or two events. The threshold is 10. The Brier score, base rate and count above are unaffected and are the numbers to read.",
+            "decomposition": {
+              "binning_error": -8.5e-05,
+              "implied_brier": 0.00875,
+              "reliability": 0.00019,
+              "resolution": 0.0,
+              "uncertainty": 0.00856
+            },
+            "definition": "any session closing at or above anchor x 1.1",
+            "id": "touch_above_10pct",
+            "monitoring": "session_close",
+            "observations": 579,
+            "positive_events": 5,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
+          },
+          {
+            "base_rate": 0.5233,
             "bins": [
               {
-                "count": 572,
-                "forecast_mean": 0.0071,
+                "count": 0,
+                "forecast_mean": null,
                 "lower": 0.0,
-                "observed_rate": 0.0087,
+                "observed_rate": null,
                 "upper": 0.1
               },
               {
-                "count": 7,
-                "forecast_mean": 0.1251,
+                "count": 0,
+                "forecast_mean": null,
                 "lower": 0.1,
-                "observed_rate": 0.0,
+                "observed_rate": null,
                 "upper": 0.2
               },
               {
@@ -1335,6 +1564,101 @@
                 "forecast_mean": null,
                 "lower": 0.2,
                 "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 520,
+                "forecast_mean": 0.4858,
+                "lower": 0.4,
+                "observed_rate": 0.5327,
+                "upper": 0.5
+              },
+              {
+                "count": 59,
+                "forecast_mean": 0.505,
+                "lower": 0.5,
+                "observed_rate": 0.4407,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.001823,
+            "brier": 0.25173,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.00065,
+              "implied_brier": 0.25108,
+              "reliability": 0.0024,
+              "resolution": 0.00077,
+              "uncertainty": 0.24946
+            },
+            "definition": "terminal price at or above anchor x 1.00182, i.e. a gross move of at least 0.18%",
+            "id": "clears_hurdle_cfd_GBR_0.182324pct_h10",
+            "label": "cfd_GBR",
+            "monitoring": "terminal",
+            "observations": 579,
+            "positive_events": 303,
+            "priced_for_horizon": 10,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 0.1823
+          },
+          {
+            "base_rate": 0.0639,
+            "bins": [
+              {
+                "count": 512,
+                "forecast_mean": 0.0399,
+                "lower": 0.0,
+                "observed_rate": 0.0664,
+                "upper": 0.1
+              },
+              {
+                "count": 57,
+                "forecast_mean": 0.1384,
+                "lower": 0.1,
+                "observed_rate": 0.0526,
+                "upper": 0.2
+              },
+              {
+                "count": 10,
+                "forecast_mean": 0.2234,
+                "lower": 0.2,
+                "observed_rate": 0.0,
                 "upper": 0.3
               },
               {
@@ -1387,20 +1711,240 @@
                 "upper": 1.0
               }
             ],
-            "brier": 0.00884,
-            "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "breakeven_multiple": 1.05102,
+            "brier": 0.06159,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
             "decomposition": {
-              "binning_error": -8.5e-05,
-              "implied_brier": 0.00875,
-              "reliability": 0.00019,
+              "binning_error": 0.000351,
+              "implied_brier": 0.06194,
+              "reliability": 0.00221,
+              "resolution": 9e-05,
+              "uncertainty": 0.05982
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_DEU_5.10204pct",
+            "label": "physical_DEU",
+            "monitoring": "terminal",
+            "observations": 579,
+            "positive_events": 37,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.0639,
+            "bins": [
+              {
+                "count": 512,
+                "forecast_mean": 0.0399,
+                "lower": 0.0,
+                "observed_rate": 0.0664,
+                "upper": 0.1
+              },
+              {
+                "count": 57,
+                "forecast_mean": 0.1384,
+                "lower": 0.1,
+                "observed_rate": 0.0526,
+                "upper": 0.2
+              },
+              {
+                "count": 10,
+                "forecast_mean": 0.2234,
+                "lower": 0.2,
+                "observed_rate": 0.0,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.06159,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": 0.000351,
+              "implied_brier": 0.06194,
+              "reliability": 0.00221,
+              "resolution": 9e-05,
+              "uncertainty": 0.05982
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_GBR_5.10204pct",
+            "label": "physical_GBR",
+            "monitoring": "terminal",
+            "observations": 579,
+            "positive_events": 37,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.0086,
+            "bins": [],
+            "breakeven_multiple": 1.093711,
+            "brier": 0.00879,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": "5 positive events in 579 forecasts is too few to draw a 10-bin reliability diagram: each bin's observed rate would rest on one or two events. The threshold is 10. The Brier score, base rate and count above are unaffected and are the numbers to read.",
+            "decomposition": {
+              "binning_error": -0.000157,
+              "implied_brier": 0.00863,
+              "reliability": 7e-05,
               "resolution": 0.0,
               "uncertainty": 0.00856
             },
-            "definition": "any session closing at or above anchor x 1.1",
-            "id": "touch_above_10pct",
-            "monitoring": "session_close",
+            "definition": "terminal price at or above anchor x 1.09371, i.e. a gross move of at least 9.37%",
+            "id": "clears_hurdle_physical_IND_9.37113pct",
+            "label": "physical_IND",
+            "monitoring": "terminal",
             "observations": 579,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 5,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 9.3711
+          },
+          {
+            "base_rate": 0.0639,
+            "bins": [
+              {
+                "count": 512,
+                "forecast_mean": 0.0399,
+                "lower": 0.0,
+                "observed_rate": 0.0664,
+                "upper": 0.1
+              },
+              {
+                "count": 57,
+                "forecast_mean": 0.1384,
+                "lower": 0.1,
+                "observed_rate": 0.0526,
+                "upper": 0.2
+              },
+              {
+                "count": 10,
+                "forecast_mean": 0.2234,
+                "lower": 0.2,
+                "observed_rate": 0.0,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.06159,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": 0.000351,
+              "implied_brier": 0.06194,
+              "reliability": 0.00221,
+              "resolution": 9e-05,
+              "uncertainty": 0.05982
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_USA_5.10204pct",
+            "label": "physical_USA",
+            "monitoring": "terminal",
+            "observations": 579,
+            "positive_events": 37,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
           }
         ],
         "first_as_of": "2015-01-02",
@@ -1725,6 +2269,7 @@
               }
             ],
             "brier": 0.24946,
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000161,
               "implied_brier": 0.2493,
@@ -1736,7 +2281,8 @@
             "id": "direction_up",
             "monitoring": "terminal",
             "observations": 577,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 321,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.1369,
@@ -1814,6 +2360,7 @@
             ],
             "brier": 0.11708,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000921,
               "implied_brier": 0.11616,
@@ -1825,7 +2372,8 @@
             "id": "touch_below_5pct",
             "monitoring": "session_close",
             "observations": 577,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 79,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.2426,
@@ -1903,6 +2451,7 @@
             ],
             "brier": 0.19346,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": 0.000552,
               "implied_brier": 0.19401,
@@ -1914,7 +2463,8 @@
             "id": "touch_above_5pct",
             "monitoring": "session_close",
             "observations": 577,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 140,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0191,
@@ -1992,6 +2542,7 @@
             ],
             "brier": 0.01728,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": 0.000181,
               "implied_brier": 0.01746,
@@ -2003,7 +2554,8 @@
             "id": "touch_below_10pct",
             "monitoring": "session_close",
             "observations": 577,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 11,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0555,
@@ -2081,6 +2633,7 @@
             ],
             "brier": 0.05468,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": 0.000652,
               "implied_brier": 0.05533,
@@ -2092,7 +2645,483 @@
             "id": "touch_above_10pct",
             "monitoring": "session_close",
             "observations": 577,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 32,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
+          },
+          {
+            "base_rate": 0.5321,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 566,
+                "forecast_mean": 0.4804,
+                "lower": 0.4,
+                "observed_rate": 0.5318,
+                "upper": 0.5
+              },
+              {
+                "count": 11,
+                "forecast_mean": 0.5057,
+                "lower": 0.5,
+                "observed_rate": 0.5455,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.002728,
+            "brier": 0.25234,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000752,
+              "implied_brier": 0.25159,
+              "reliability": 0.00262,
+              "resolution": 0.0,
+              "uncertainty": 0.24897
+            },
+            "definition": "terminal price at or above anchor x 1.00273, i.e. a gross move of at least 0.27%",
+            "id": "clears_hurdle_cfd_GBR_0.272825pct_h21",
+            "label": "cfd_GBR",
+            "monitoring": "terminal",
+            "observations": 577,
+            "positive_events": 307,
+            "priced_for_horizon": 21,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 0.2728
+          },
+          {
+            "base_rate": 0.1681,
+            "bins": [
+              {
+                "count": 196,
+                "forecast_mean": 0.0688,
+                "lower": 0.0,
+                "observed_rate": 0.1633,
+                "upper": 0.1
+              },
+              {
+                "count": 329,
+                "forecast_mean": 0.1327,
+                "lower": 0.1,
+                "observed_rate": 0.1884,
+                "upper": 0.2
+              },
+              {
+                "count": 50,
+                "forecast_mean": 0.2426,
+                "lower": 0.2,
+                "observed_rate": 0.06,
+                "upper": 0.3
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.324,
+                "lower": 0.3,
+                "observed_rate": 0.0,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.14671,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000163,
+              "implied_brier": 0.14655,
+              "reliability": 0.00806,
+              "resolution": 0.00135,
+              "uncertainty": 0.13985
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_DEU_5.10204pct",
+            "label": "physical_DEU",
+            "monitoring": "terminal",
+            "observations": 577,
+            "positive_events": 97,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.1681,
+            "bins": [
+              {
+                "count": 196,
+                "forecast_mean": 0.0688,
+                "lower": 0.0,
+                "observed_rate": 0.1633,
+                "upper": 0.1
+              },
+              {
+                "count": 329,
+                "forecast_mean": 0.1327,
+                "lower": 0.1,
+                "observed_rate": 0.1884,
+                "upper": 0.2
+              },
+              {
+                "count": 50,
+                "forecast_mean": 0.2426,
+                "lower": 0.2,
+                "observed_rate": 0.06,
+                "upper": 0.3
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.324,
+                "lower": 0.3,
+                "observed_rate": 0.0,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.14671,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000163,
+              "implied_brier": 0.14655,
+              "reliability": 0.00806,
+              "resolution": 0.00135,
+              "uncertainty": 0.13985
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_GBR_5.10204pct",
+            "label": "physical_GBR",
+            "monitoring": "terminal",
+            "observations": 577,
+            "positive_events": 97,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.0381,
+            "bins": [
+              {
+                "count": 549,
+                "forecast_mean": 0.0233,
+                "lower": 0.0,
+                "observed_rate": 0.0383,
+                "upper": 0.1
+              },
+              {
+                "count": 26,
+                "forecast_mean": 0.1366,
+                "lower": 0.1,
+                "observed_rate": 0.0385,
+                "upper": 0.2
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.206,
+                "lower": 0.2,
+                "observed_rate": 0.0,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.093711,
+            "brier": 0.03766,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000193,
+              "implied_brier": 0.03746,
+              "reliability": 0.00079,
+              "resolution": 1e-05,
+              "uncertainty": 0.03667
+            },
+            "definition": "terminal price at or above anchor x 1.09371, i.e. a gross move of at least 9.37%",
+            "id": "clears_hurdle_physical_IND_9.37113pct",
+            "label": "physical_IND",
+            "monitoring": "terminal",
+            "observations": 577,
+            "positive_events": 22,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 9.3711
+          },
+          {
+            "base_rate": 0.1681,
+            "bins": [
+              {
+                "count": 196,
+                "forecast_mean": 0.0688,
+                "lower": 0.0,
+                "observed_rate": 0.1633,
+                "upper": 0.1
+              },
+              {
+                "count": 329,
+                "forecast_mean": 0.1327,
+                "lower": 0.1,
+                "observed_rate": 0.1884,
+                "upper": 0.2
+              },
+              {
+                "count": 50,
+                "forecast_mean": 0.2426,
+                "lower": 0.2,
+                "observed_rate": 0.06,
+                "upper": 0.3
+              },
+              {
+                "count": 2,
+                "forecast_mean": 0.324,
+                "lower": 0.3,
+                "observed_rate": 0.0,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.14671,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000163,
+              "implied_brier": 0.14655,
+              "reliability": 0.00806,
+              "resolution": 0.00135,
+              "uncertainty": 0.13985
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_USA_5.10204pct",
+            "label": "physical_USA",
+            "monitoring": "terminal",
+            "observations": 577,
+            "positive_events": 97,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
           }
         ],
         "first_as_of": "2015-01-02",
@@ -2410,6 +3439,7 @@
               }
             ],
             "brier": 0.24942,
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000305,
               "implied_brier": 0.24911,
@@ -2421,7 +3451,8 @@
             "id": "direction_up",
             "monitoring": "terminal",
             "observations": 572,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 336,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.2413,
@@ -2499,6 +3530,7 @@
             ],
             "brier": 0.186,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": 0.000618,
               "implied_brier": 0.18662,
@@ -2510,7 +3542,8 @@
             "id": "touch_below_5pct",
             "monitoring": "session_close",
             "observations": 572,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 138,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.4213,
@@ -2588,6 +3621,7 @@
             ],
             "brier": 0.25635,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.001176,
               "implied_brier": 0.25518,
@@ -2599,7 +3633,8 @@
             "id": "touch_above_5pct",
             "monitoring": "session_close",
             "observations": 572,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 241,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.042,
@@ -2677,6 +3712,7 @@
             ],
             "brier": 0.03645,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000709,
               "implied_brier": 0.03574,
@@ -2688,7 +3724,8 @@
             "id": "touch_below_10pct",
             "monitoring": "session_close",
             "observations": 572,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 24,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.1731,
@@ -2766,6 +3803,7 @@
             ],
             "brier": 0.15402,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -2.5e-05,
               "implied_brier": 0.154,
@@ -2777,7 +3815,483 @@
             "id": "touch_above_10pct",
             "monitoring": "session_close",
             "observations": 572,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 99,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
+          },
+          {
+            "base_rate": 0.5455,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 566,
+                "forecast_mean": 0.4768,
+                "lower": 0.4,
+                "observed_rate": 0.5442,
+                "upper": 0.5
+              },
+              {
+                "count": 6,
+                "forecast_mean": 0.5054,
+                "lower": 0.5,
+                "observed_rate": 0.6667,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.004456,
+            "brier": 0.25391,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.001372,
+              "implied_brier": 0.25254,
+              "reliability": 0.00476,
+              "resolution": 0.00016,
+              "uncertainty": 0.24793
+            },
+            "definition": "terminal price at or above anchor x 1.00446, i.e. a gross move of at least 0.45%",
+            "id": "clears_hurdle_cfd_GBR_0.445601pct_h42",
+            "label": "cfd_GBR",
+            "monitoring": "terminal",
+            "observations": 572,
+            "positive_events": 312,
+            "priced_for_horizon": 42,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 0.4456
+          },
+          {
+            "base_rate": 0.3094,
+            "bins": [
+              {
+                "count": 2,
+                "forecast_mean": 0.093,
+                "lower": 0.0,
+                "observed_rate": 0.5,
+                "upper": 0.1
+              },
+              {
+                "count": 270,
+                "forecast_mean": 0.1634,
+                "lower": 0.1,
+                "observed_rate": 0.3296,
+                "upper": 0.2
+              },
+              {
+                "count": 273,
+                "forecast_mean": 0.2294,
+                "lower": 0.2,
+                "observed_rate": 0.3077,
+                "upper": 0.3
+              },
+              {
+                "count": 27,
+                "forecast_mean": 0.328,
+                "lower": 0.3,
+                "observed_rate": 0.1111,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.23052,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000242,
+              "implied_brier": 0.23028,
+              "reliability": 0.01877,
+              "resolution": 0.00218,
+              "uncertainty": 0.21369
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_DEU_5.10204pct",
+            "label": "physical_DEU",
+            "monitoring": "terminal",
+            "observations": 572,
+            "positive_events": 177,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.3094,
+            "bins": [
+              {
+                "count": 2,
+                "forecast_mean": 0.093,
+                "lower": 0.0,
+                "observed_rate": 0.5,
+                "upper": 0.1
+              },
+              {
+                "count": 270,
+                "forecast_mean": 0.1634,
+                "lower": 0.1,
+                "observed_rate": 0.3296,
+                "upper": 0.2
+              },
+              {
+                "count": 273,
+                "forecast_mean": 0.2294,
+                "lower": 0.2,
+                "observed_rate": 0.3077,
+                "upper": 0.3
+              },
+              {
+                "count": 27,
+                "forecast_mean": 0.328,
+                "lower": 0.3,
+                "observed_rate": 0.1111,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.23052,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000242,
+              "implied_brier": 0.23028,
+              "reliability": 0.01877,
+              "resolution": 0.00218,
+              "uncertainty": 0.21369
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_GBR_5.10204pct",
+            "label": "physical_GBR",
+            "monitoring": "terminal",
+            "observations": 572,
+            "positive_events": 177,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.1224,
+            "bins": [
+              {
+                "count": 469,
+                "forecast_mean": 0.0601,
+                "lower": 0.0,
+                "observed_rate": 0.1173,
+                "upper": 0.1
+              },
+              {
+                "count": 86,
+                "forecast_mean": 0.1347,
+                "lower": 0.1,
+                "observed_rate": 0.1628,
+                "upper": 0.2
+              },
+              {
+                "count": 17,
+                "forecast_mean": 0.2294,
+                "lower": 0.2,
+                "observed_rate": 0.0588,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.093711,
+            "brier": 0.1113,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000621,
+              "implied_brier": 0.11068,
+              "reliability": 0.00366,
+              "resolution": 0.00039,
+              "uncertainty": 0.1074
+            },
+            "definition": "terminal price at or above anchor x 1.09371, i.e. a gross move of at least 9.37%",
+            "id": "clears_hurdle_physical_IND_9.37113pct",
+            "label": "physical_IND",
+            "monitoring": "terminal",
+            "observations": 572,
+            "positive_events": 70,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 9.3711
+          },
+          {
+            "base_rate": 0.3094,
+            "bins": [
+              {
+                "count": 2,
+                "forecast_mean": 0.093,
+                "lower": 0.0,
+                "observed_rate": 0.5,
+                "upper": 0.1
+              },
+              {
+                "count": 270,
+                "forecast_mean": 0.1634,
+                "lower": 0.1,
+                "observed_rate": 0.3296,
+                "upper": 0.2
+              },
+              {
+                "count": 273,
+                "forecast_mean": 0.2294,
+                "lower": 0.2,
+                "observed_rate": 0.3077,
+                "upper": 0.3
+              },
+              {
+                "count": 27,
+                "forecast_mean": 0.328,
+                "lower": 0.3,
+                "observed_rate": 0.1111,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.23052,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.000242,
+              "implied_brier": 0.23028,
+              "reliability": 0.01877,
+              "resolution": 0.00218,
+              "uncertainty": 0.21369
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_USA_5.10204pct",
+            "label": "physical_USA",
+            "monitoring": "terminal",
+            "observations": 572,
+            "positive_events": 177,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
           }
         ],
         "first_as_of": "2015-01-02",
@@ -3095,6 +4609,7 @@
               }
             ],
             "brier": 0.24851,
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000419,
               "implied_brier": 0.24809,
@@ -3106,7 +4621,8 @@
             "id": "direction_up",
             "monitoring": "terminal",
             "observations": 568,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 366,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.3116,
@@ -3184,6 +4700,7 @@
             ],
             "brier": 0.22166,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": 0.000547,
               "implied_brier": 0.2222,
@@ -3195,7 +4712,8 @@
             "id": "touch_below_5pct",
             "monitoring": "session_close",
             "observations": 568,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 177,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.5405,
@@ -3273,6 +4791,7 @@
             ],
             "brier": 0.26152,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.002506,
               "implied_brier": 0.25902,
@@ -3284,7 +4803,8 @@
             "id": "touch_above_5pct",
             "monitoring": "session_close",
             "observations": 568,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 307,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.0704,
@@ -3362,6 +4882,7 @@
             ],
             "brier": 0.06511,
             "caveat": "Monitored at session close on both sides. A level breached and recovered inside one session counts for neither the forecast nor the outcome, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": -0.000613,
               "implied_brier": 0.06449,
@@ -3373,7 +4894,8 @@
             "id": "touch_below_10pct",
             "monitoring": "session_close",
             "observations": 568,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 40,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
           },
           {
             "base_rate": 0.2799,
@@ -3451,6 +4973,7 @@
             ],
             "brier": 0.21852,
             "caveat": "Monitored at session close on both sides, so this probability is a floor.",
+            "curve_withheld": null,
             "decomposition": {
               "binning_error": 0.000266,
               "implied_brier": 0.21878,
@@ -3462,7 +4985,483 @@
             "id": "touch_above_10pct",
             "monitoring": "session_close",
             "observations": 568,
-            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it."
+            "positive_events": 159,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates."
+          },
+          {
+            "base_rate": 0.6215,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.1,
+                "observed_rate": null,
+                "upper": 0.2
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.2,
+                "observed_rate": null,
+                "upper": 0.3
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.3,
+                "observed_rate": null,
+                "upper": 0.4
+              },
+              {
+                "count": 563,
+                "forecast_mean": 0.4737,
+                "lower": 0.4,
+                "observed_rate": 0.6217,
+                "upper": 0.5
+              },
+              {
+                "count": 5,
+                "forecast_mean": 0.5019,
+                "lower": 0.5,
+                "observed_rate": 0.6,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.006184,
+            "brier": 0.25877,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.001757,
+              "implied_brier": 0.25701,
+              "reliability": 0.02178,
+              "resolution": 0.0,
+              "uncertainty": 0.23524
+            },
+            "definition": "terminal price at or above anchor x 1.00618, i.e. a gross move of at least 0.62%",
+            "id": "clears_hurdle_cfd_GBR_0.618376pct_h63",
+            "label": "cfd_GBR",
+            "monitoring": "terminal",
+            "observations": 568,
+            "positive_events": 353,
+            "priced_for_horizon": 63,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 0.6184
+          },
+          {
+            "base_rate": 0.375,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 77,
+                "forecast_mean": 0.1832,
+                "lower": 0.1,
+                "observed_rate": 0.3766,
+                "upper": 0.2
+              },
+              {
+                "count": 431,
+                "forecast_mean": 0.2505,
+                "lower": 0.2,
+                "observed_rate": 0.3782,
+                "upper": 0.3
+              },
+              {
+                "count": 60,
+                "forecast_mean": 0.3321,
+                "lower": 0.3,
+                "observed_rate": 0.35,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.25376,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.001985,
+              "implied_brier": 0.25177,
+              "reliability": 0.01747,
+              "resolution": 7e-05,
+              "uncertainty": 0.23438
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_DEU_5.10204pct",
+            "label": "physical_DEU",
+            "monitoring": "terminal",
+            "observations": 568,
+            "positive_events": 213,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.375,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 77,
+                "forecast_mean": 0.1832,
+                "lower": 0.1,
+                "observed_rate": 0.3766,
+                "upper": 0.2
+              },
+              {
+                "count": 431,
+                "forecast_mean": 0.2505,
+                "lower": 0.2,
+                "observed_rate": 0.3782,
+                "upper": 0.3
+              },
+              {
+                "count": 60,
+                "forecast_mean": 0.3321,
+                "lower": 0.3,
+                "observed_rate": 0.35,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.25376,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.001985,
+              "implied_brier": 0.25177,
+              "reliability": 0.01747,
+              "resolution": 7e-05,
+              "uncertainty": 0.23438
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_GBR_5.10204pct",
+            "label": "physical_GBR",
+            "monitoring": "terminal",
+            "observations": 568,
+            "positive_events": 213,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
+          },
+          {
+            "base_rate": 0.1989,
+            "bins": [
+              {
+                "count": 195,
+                "forecast_mean": 0.0742,
+                "lower": 0.0,
+                "observed_rate": 0.159,
+                "upper": 0.1
+              },
+              {
+                "count": 342,
+                "forecast_mean": 0.1308,
+                "lower": 0.1,
+                "observed_rate": 0.2222,
+                "upper": 0.2
+              },
+              {
+                "count": 30,
+                "forecast_mean": 0.2452,
+                "lower": 0.2,
+                "observed_rate": 0.2,
+                "upper": 0.3
+              },
+              {
+                "count": 1,
+                "forecast_mean": 0.3043,
+                "lower": 0.3,
+                "observed_rate": 0.0,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.093711,
+            "brier": 0.16601,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": 0.000182,
+              "implied_brier": 0.16619,
+              "reliability": 0.00777,
+              "resolution": 0.00094,
+              "uncertainty": 0.15937
+            },
+            "definition": "terminal price at or above anchor x 1.09371, i.e. a gross move of at least 9.37%",
+            "id": "clears_hurdle_physical_IND_9.37113pct",
+            "label": "physical_IND",
+            "monitoring": "terminal",
+            "observations": 568,
+            "positive_events": 113,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 9.3711
+          },
+          {
+            "base_rate": 0.375,
+            "bins": [
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.0,
+                "observed_rate": null,
+                "upper": 0.1
+              },
+              {
+                "count": 77,
+                "forecast_mean": 0.1832,
+                "lower": 0.1,
+                "observed_rate": 0.3766,
+                "upper": 0.2
+              },
+              {
+                "count": 431,
+                "forecast_mean": 0.2505,
+                "lower": 0.2,
+                "observed_rate": 0.3782,
+                "upper": 0.3
+              },
+              {
+                "count": 60,
+                "forecast_mean": 0.3321,
+                "lower": 0.3,
+                "observed_rate": 0.35,
+                "upper": 0.4
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.4,
+                "observed_rate": null,
+                "upper": 0.5
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.5,
+                "observed_rate": null,
+                "upper": 0.6
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.6,
+                "observed_rate": null,
+                "upper": 0.7
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.7,
+                "observed_rate": null,
+                "upper": 0.8
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.8,
+                "observed_rate": null,
+                "upper": 0.9
+              },
+              {
+                "count": 0,
+                "forecast_mean": null,
+                "lower": 0.9,
+                "observed_rate": null,
+                "upper": 1.0
+              }
+            ],
+            "breakeven_multiple": 1.05102,
+            "brier": 0.25376,
+            "caveat": "A rare event. Its Brier score is bounded below by a small uncertainty term, so it is not comparable with the score of a near-even event; read it against the base rate and positive count reported beside it.",
+            "curve_withheld": null,
+            "decomposition": {
+              "binning_error": -0.001985,
+              "implied_brier": 0.25177,
+              "reliability": 0.01747,
+              "resolution": 7e-05,
+              "uncertainty": 0.23438
+            },
+            "definition": "terminal price at or above anchor x 1.05102, i.e. a gross move of at least 5.10%",
+            "id": "clears_hurdle_physical_USA_5.10204pct",
+            "label": "physical_USA",
+            "monitoring": "terminal",
+            "observations": 568,
+            "positive_events": 213,
+            "priced_for_horizon": null,
+            "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates.",
+            "required_move_pct": 5.102
           }
         ],
         "first_as_of": "2015-01-02",
@@ -3611,7 +5610,7 @@
     }
   },
   "engine_version": "0.1.0",
-  "generated_at": "2026-08-04T19:52:43.434945+00:00",
+  "generated_at": "2026-08-04T21:05:43.275252+00:00",
   "like_for_like_null": {
     "null": "random_walk",
     "why": "The subject and this null share a drift policy, so the difference between their scores is conditional variance and nothing else. The other null differs in drift as well, and its skill score should be read as the size of that difference rather than as a verdict."
