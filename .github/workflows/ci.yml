@@ -150,6 +150,32 @@ jobs:
           AUREX_CACHE_DIR: tests/fixtures/seed-cache
         run: uv run aurex pipeline --dry-run > /dev/null
 
+  web:
+    name: dashboard build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # `ci` rather than `install`, for the same reason the engine uses --frozen: the
+      # deployed dashboard should be built from the dependency set the lockfile names.
+      - run: npm --prefix web ci
+      - name: eslint, zero warnings
+        run: npm --prefix web run lint
+      - name: tsc --noEmit
+        run: npm --prefix web run typecheck
+      # The build reads the committed artifacts from public-data/ and statically
+      # prerenders every page, so a broken artifact shape fails here rather than
+      # after deploy. It is also the only check that the data contract still holds.
+      - name: next build
+        run: npm --prefix web run build
+
   guards:
     name: §0 guards
     runs-on: ubuntu-latest

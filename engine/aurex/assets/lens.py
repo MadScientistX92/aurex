@@ -153,6 +153,10 @@ class NativeLens:
     unit_label: str = "troy_ounce"
     #: Lens units per unit of the asset's base quote (1.0 when they match).
     units_per_base: float = 1.0
+    #: Grams in one lens unit, where the asset is sold by mass. ``None`` where it is
+    #: not — a barrel and a contract have no mass basis, and inventing one so a
+    #: consumer can offer a grams field would be worse than the field not working.
+    grams_per_unit: float | None = None
     requires_fx: bool = False
     fx_series_id: str | None = None
     produces_local_premium: bool = False
@@ -187,6 +191,7 @@ class NativeLens:
             "code": self.code,
             "unit": self.unit_label,
             "units_per_base": self.units_per_base,
+            "grams_per_unit": self.grams_per_unit,
             "requires_fx": self.requires_fx,
             "produces_local_premium": self.produces_local_premium,
             "price_linkage": self.price_linkage,
@@ -225,6 +230,8 @@ class TaxedImportLens:
     #: rate must be traceable to its source and confidence level, so this travels
     #: with the price rather than being reconstructed downstream.
     provenance_resolver: Callable[[date], dict[str, Any]] | None = None
+    #: Grams in one lens unit; see :class:`NativeLens`.
+    grams_per_unit: float | None = None
     requires_fx: bool = True
     produces_local_premium: bool = True
     #: FX times a unit conversion times statutory rates — every term is published.
@@ -282,6 +289,7 @@ class TaxedImportLens:
             "code": self.code,
             "unit": self.unit_label,
             "units_per_base": self.units_per_base,
+            "grams_per_unit": self.grams_per_unit,
             "requires_fx": self.requires_fx,
             "fx_series_id": self.fx_series_id,
             "produces_local_premium": self.produces_local_premium,

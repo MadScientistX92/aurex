@@ -15,8 +15,11 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Anchored to the repository root. These are Python build directories, and an
+# unanchored `lib/` also swallows web/lib/, which is application source — a rule
+# that would have shipped a repository the dashboard could not be built from.
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -225,3 +228,6 @@ node_modules/
 .venv/
 engine/.cache/
 .env*
+
+# macOS
+.DS_Store
