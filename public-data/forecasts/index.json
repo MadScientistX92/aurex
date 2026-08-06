@@ -1,13 +1,13 @@
 {
-  "as_of_date": "2026-08-05",
+  "as_of_date": "2026-08-06",
   "conventions": {
     "expected": "Weekdays between the first record and today. Weekends carry no fix and are refused by the freshness guard by design, so they are not gaps.",
     "explained": "A gap is explained when a skip record says why no forecast was published. An unexplained gap is one nothing survives from \u2014 the job died, never ran, or was never scheduled \u2014 and is the weaker case.",
     "frozen": "A forecast freezes once its shortest horizon could have elapsed. Frozen forecasts may not be rewritten; live ones may, and git carries every version of both."
   },
   "counts": {
-    "gaps": 0,
-    "gaps_explained": 0,
+    "gaps": 1,
+    "gaps_explained": 1,
     "gaps_unexplained": 0,
     "published": 1
   },
@@ -26,6 +26,12 @@
       "readable": true
     }
   ],
-  "gaps": [],
-  "generated_at": "2026-08-05T22:06:47.847929+00:00"
+  "gaps": [
+    {
+      "date": "2026-08-06",
+      "explained": true,
+      "reason": "price series did not reach the run date within its declared tolerance"
+    }
+  ],
+  "generated_at": "2026-08-06T05:12:22.361965+00:00"
 }
