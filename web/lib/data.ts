@@ -43,8 +43,11 @@ function dataRoot(): string {
   }
   throw new Error(
     `Could not find public-data/. Tried:\n  ${tried.join("\n  ")}\n` +
-      `This site reads the engine's committed artifacts and has no other data source; ` +
-      `check the Vercel root directory is the repository root rather than web/.`,
+      `This site reads the engine's committed artifacts and has no other data source. ` +
+      `On Vercel this is what a correct Root Directory of web/ looks like with ` +
+      `"Include source files outside of the Root Directory in the Build Step" left off: ` +
+      `the build never received the repository root, so there is nothing one level up ` +
+      `to read. Turn the toggle on. See DEPLOY.md.`,
   );
 }
 
