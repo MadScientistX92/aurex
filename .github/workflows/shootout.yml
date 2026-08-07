@@ -1,0 +1,170 @@
+name: Shootout
+
+# Step 6, run by hand and never on a push.
+#
+# This installs the `bench` extra — torch, Chronos, neuralforecast, about 2.5GB — and
+# refits every model at every as-of date. It takes hours where the default suite takes
+# minutes, and nothing in that suite imports any of it. Putting it on `push` would make
+# every commit in the repository pay for a benchmark nobody asked for on that commit.
+#
+# What *is* on every push is the statistics: Hansen's SPA, the Model Confidence Set and
+# the minimum detectable effect live in aurex/score/shootout.py, depend on nothing
+# heavier than SciPy, and are tested in tests/test_shootout.py. A multiple-comparisons
+# correction that is only exercised when somebody manually runs a two-hour job is a
+# correction nobody is checking.
+#
+# The result is committed to public-data/benchmarks.json, on the same terms as the
+# nightly: this job writes public-data/ and nothing else, and it fails if it staged
+# anything outside it. A benchmark job that could edit prose is a job that can rewrite
+# the claim it was meant to test.
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: "Registered asset id to grade"
+        type: string
+        default: gold
+      to:
+        description: "Last observation the run may see (YYYY-MM-DD). Empty uses the series' own end."
+        type: string
+        default: ""
+      step:
+        description: "Sessions between forecasts. Larger is faster and less powerful."
+        type: string
+        default: "5"
+      models:
+        description: "Comma-separated subset. Empty runs the whole set."
+        type: string
+        default: ""
+      commit:
+        description: "Commit the artifact to public-data/"
+        type: boolean
+        default: true
+
+concurrency:
+  group: shootout
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: engine
+
+jobs:
+  shootout:
+    name: six models against the driftless random walk
+    runs-on: ubuntu-latest
+    # Every model is refitted at every as-of date. NHITS trains a network several
+    # hundred times and Chronos samples autoregressively; six hours is the ceiling
+    # rather than the expectation.
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+
+      # --frozen for the same reason every other job uses it: a recorded seed
+      # reproduces nothing if an optimiser moved underneath it, and the shootout has
+      # four more stochastic fitting procedures than the rest of the repository.
+      - name: install the bench extra
+        run: uv sync --frozen --extra bench
+
+      - name: record what was actually installed
+        run: |
+          uv run python - <<'PY'
+          import importlib.metadata as md
+          for name in ("torch", "statsforecast", "neuralforecast", "chronos-forecasting"):
+              try:
+                  print(f"{name}=={md.version(name)}")
+              except md.PackageNotFoundError:
+                  print(f"{name}: NOT INSTALLED")
+          PY
+
+      - name: run the shootout
+        run: |
+          set -euo pipefail
+          args=(--asset "${{ inputs.asset }}" --step "${{ inputs.step }}")
+          if [ -n "${{ inputs.to }}" ]; then
+            args+=(--to "${{ inputs.to }}")
+          fi
+          if [ -n "${{ inputs.models }}" ]; then
+            args+=(--models "${{ inputs.models }}")
+          fi
+          uv run aurex bench "${args[@]}"
+
+      # The artifact has to carry the command that reproduces it and the window it was
+      # bounded to. Without --to a rerun ends wherever wall-clock left it, and every
+      # number published from this run becomes unreproducible by the person reading it.
+      - name: the artifact bounds its own sample and says how to reproduce it
+        working-directory: .
+        run: |
+          uv run --project engine python - <<'PY'
+          import json, sys
+          block = json.load(open("public-data/benchmarks.json"))
+          sample = block["sample"]
+          assert sample["resolved"]["to"], "the run recorded no resolved end date"
+          assert "--to" in block["reproduce"], block["reproduce"]
+          horizons = block["horizons"]
+          assert horizons, "the shootout scored no horizon at all"
+          for entry in horizons:
+              assert entry["models"], f"no models at horizon {entry['horizon_sessions']}"
+              for model in entry["models"]:
+                  mde = model["minimum_detectable_effect"]
+                  assert "detectable_skill" in mde, model["model"]
+          print(
+              f"shootout OK: {len(horizons)} horizons, "
+              f"{len(horizons[0]['models'])} models, bounded to {sample['resolved']['to']}"
+          )
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmarks
+          path: public-data/benchmarks.json
+          if-no-files-found: error
+
+      # Same discipline as the nightly: stage public-data/ explicitly and fail if
+      # anything else came with it.
+      - name: commit public-data, and only public-data
+        if: inputs.commit
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git config user.name "aurex-shootout[bot]"
+          git config user.email "aurex-shootout@users.noreply.github.com"
+
+          git add public-data/
+
+          outside=$(git diff --cached --name-only | grep -v '^public-data/' || true)
+          if [ -n "$outside" ]; then
+            echo "the shootout job staged files outside public-data/:"
+            echo "$outside"
+            exit 1
+          fi
+
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+
+          git commit \
+            -m "chore(bench): step 6 shootout for ${{ inputs.asset }}" \
+            -m "Run from ${GITHUB_SHA} by workflow_dispatch. The reproducing command and the resolved sample window are in the artifact."
+
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}); rebasing onto the remote"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          done
+          echo "could not push the shootout result after three attempts"
+          exit 1

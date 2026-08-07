@@ -46,8 +46,24 @@ from aurex.vol.base import (
 WEEKLY_LAG = 5
 MONTHLY_LAG = 22
 
-#: Variance floor, so a zero-range session cannot put -inf into a log regression.
-_FLOOR = 1e-12
+
+def _unmeasurable_is_absent(variance: pd.Series) -> pd.Series:
+    """A session with no range is missing, not a measurement of near-zero volatility.
+
+    This used to clip to a floor of ``1e-12`` so a zero range could not put ``-inf``
+    into a log regression, and the floor is what made the model unusable. Roughly 7% of
+    the futures sessions in this repository's own cache print ``high == low`` — a stale
+    or synthetic quote, not a session the asset did not move in. Flooring them recorded
+    each one as a log-variance of -27.6 against a series whose real mean is -10.5, which
+    tripled the residual spread of the HAR regression, and the retransformation term is
+    half that spread inside an exponential: the fitted smearing came out at 9.87, a
+    multiplier of about 19,000, and the variance recursion diverged within two steps.
+
+    Absence is a first-class state everywhere else in this engine, and it is the correct
+    reading here too. A session that cannot be measured is dropped, and the count of what
+    was dropped is reported by the fit rather than absorbed.
+    """
+    return variance.where(variance > 0.0).rename("realised_variance")
 
 
 def parkinson_variance(frame: pd.DataFrame) -> pd.Series:
@@ -55,8 +71,7 @@ def parkinson_variance(frame: pd.DataFrame) -> pd.Series:
     _require_columns(frame, ("high", "low"))
     log_range = np.log(frame["high"].astype(float) / frame["low"].astype(float))
     variance: pd.Series = log_range**2 / (4.0 * np.log(2.0))
-    floored: pd.Series = variance.clip(lower=_FLOOR).rename("realised_variance")
-    return floored
+    return _unmeasurable_is_absent(variance)
 
 
 def garman_klass_variance(frame: pd.DataFrame) -> pd.Series:
@@ -65,8 +80,7 @@ def garman_klass_variance(frame: pd.DataFrame) -> pd.Series:
     high_low = np.log(frame["high"].astype(float) / frame["low"].astype(float))
     close_open = np.log(frame["close"].astype(float) / frame["open"].astype(float))
     variance: pd.Series = 0.5 * high_low**2 - (2.0 * np.log(2.0) - 1.0) * close_open**2
-    floored: pd.Series = variance.clip(lower=_FLOOR).rename("realised_variance")
-    return floored
+    return _unmeasurable_is_absent(variance)
 
 
 def _require_columns(frame: pd.DataFrame, columns: tuple[str, ...]) -> None:
@@ -98,25 +112,46 @@ class HarRvFit:
     mean_spec: MeanSpec
 
     def forward_sigma(self, horizon: int) -> np.ndarray:
+        """Iterate the cascade, applying the retransformation once per *report*.
+
+        The smearing term converts a forecast of ``log RV`` into a forecast of ``RV``,
+        and it belongs on the number that leaves this method rather than on the state
+        that feeds the next step. Adding it to the state compounds it: the recursion's
+        fixed point moves up by ``smearing / (1 - sum of the lag coefficients)``, which
+        on this repository's own cached sample is about ten log units. Measured against
+        the realised standard deviation of h-session returns, compounding it overshot by
+        51% at a week and 250% at a quarter; applying it once lands within 25% at a week
+        and within a percent at a month.
+
+        What remains is a real and declared bias in the other direction. A deterministic
+        path has no dispersion, so the weekly and monthly regressors — which are logs of
+        *arithmetic* means in the fitted data — lose the Jensen gap that the estimated
+        constant absorbed, and the forecast drifts low as the horizon grows: about 20%
+        short at forty-two sessions and 32% at sixty-three. That is a property of
+        iterating a log cascade deterministically rather than simulating it, which is the
+        limitation this model already declares, and it is recorded here so the number is
+        read with the bias in front of it.
+        """
         if horizon < 1:
             raise ValueError(f"horizon must be positive, got {horizon}")
 
         history = list(self.recent_variance)
         out = []
         for _ in range(horizon):
-            out.append(np.sqrt(self._next_variance(history)))
-            history.append(self._next_variance(history))
+            log_next = self._next_log_variance(history)
+            out.append(np.sqrt(np.exp(log_next + self.smearing)))
+            history.append(float(np.exp(log_next)))
         return np.array(out, dtype=float)
 
-    def _next_variance(self, history: list[float]) -> float:
+    def _next_log_variance(self, history: list[float]) -> float:
+        """One step of the cascade, on the log scale it was estimated on."""
         recent = np.asarray(history, dtype=float)
-        log_forecast = (
+        return float(
             self.coefficients["const"]
             + self.coefficients["daily"] * np.log(recent[-1])
             + self.coefficients["weekly"] * np.log(recent[-WEEKLY_LAG:].mean())
             + self.coefficients["monthly"] * np.log(recent[-MONTHLY_LAG:].mean())
         )
-        return float(np.exp(log_forecast + self.smearing))
 
     def propagate(self, shocks: np.ndarray) -> np.ndarray:
         """Every path shares one variance trajectory. See the module docstring."""
@@ -169,8 +204,18 @@ class HarRv:
                 "squared close-to-close returns are not a substitute for it"
             )
 
-        variance = realised_variance.dropna().astype(float).clip(lower=_FLOOR)
-        design, target, index = _har_design(variance)
+        # Dropped rather than floored, and dropped *before* the lags are built, so the
+        # cascade averages five and twenty-two sessions it could actually measure. A
+        # non-positive value surviving here came from a caller's own series rather than
+        # from the estimators above, and it gets the same treatment.
+        variance = realised_variance.dropna().astype(float)
+        measurable = variance[variance > 0.0]
+        if measurable.empty:
+            raise InsufficientDataError(
+                f"{self.id}: no session in the realised-variance series has a "
+                "measurable range, so there is nothing to regress"
+            )
+        design, target, index = _har_design(measurable)
         usable = excluded_mask(index, exclude)
         require_observations(int(usable.sum()), self.min_observations, self.id)
 
@@ -201,7 +246,9 @@ class HarRv:
             smearing=smearing,
             conditional_sigma=sigma,
             standardized_residuals=standardized[excluded_mask(standardized.index, exclude)],
-            recent_variance=variance.to_numpy()[-MONTHLY_LAG:],
+            # From the measurable series, so the recursion cannot start from a session
+            # that was dropped for having no range.
+            recent_variance=measurable.to_numpy()[-MONTHLY_LAG:],
             r_squared=r_squared,
             n_observations=int(usable.sum()),
             n_excluded=int((~usable).sum()),

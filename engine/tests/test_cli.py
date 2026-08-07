@@ -152,3 +152,26 @@ def test_version_command() -> None:
 
 def test_verbose_flag_is_accepted() -> None:
     assert runner.invoke(app, ["-v", "version"]).exit_code == 0
+
+
+class TestBenchCommand:
+    """The shootout must be *visible* without the 2.5GB extra installed.
+
+    Its dependencies are imported inside the command body, so `--help` works on a
+    default install and the failure a user gets from actually running it is an
+    ImportError naming the missing package rather than a command that does not exist.
+    CI runs without the extra, so this is the configuration the test runs in.
+    """
+
+    def test_help_works_without_the_bench_extra(self) -> None:
+        result = runner.invoke(app, ["bench", "--help"])
+
+        assert result.exit_code == 0, result.output
+        assert "--to" in result.output
+        assert "--chronos-paths" in result.output
+
+    def test_the_command_is_registered_on_the_app(self) -> None:
+        result = runner.invoke(app, ["--help"])
+
+        assert result.exit_code == 0, result.output
+        assert "bench" in result.output

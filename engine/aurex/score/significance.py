@@ -215,7 +215,7 @@ def _autocovariance(centred: np.ndarray, lag: int) -> float:
     return float(np.dot(centred[lag:], centred[:-lag]) / centred.size)
 
 
-def _hln_factor(n: int, overlap: int) -> float:
+def hln_factor(n: int, overlap: int) -> float:
     """``(n + 1 - 2k + k(k-1)/n) / n``, the square of the HLN scaling.
 
     Non-negative for ``overlap <= n`` and exactly zero at ``overlap == n``, which is the
@@ -288,7 +288,7 @@ def diebold_mariano(
         )
 
     statistic = mean_differential / float(np.sqrt(variance / n))
-    corrected = statistic * float(np.sqrt(_hln_factor(n, overlap)))
+    corrected = statistic * float(np.sqrt(hln_factor(n, overlap)))
 
     return DieboldMariano(
         null=null,
@@ -309,7 +309,7 @@ def _undefined(n: int, overlap: int, lag: int) -> str | None:
             f"the windows overlap {overlap} records deep in a series of {n}, so there "
             f"is no lag at which the autocovariance is estimable"
         )
-    if _hln_factor(n, overlap) <= 0.0:
+    if hln_factor(n, overlap) <= 0.0:
         return (
             f"{n} records overlapping {overlap} deep carry no independent window; the "
             f"small-sample correction is zero or negative, which is the arithmetic "

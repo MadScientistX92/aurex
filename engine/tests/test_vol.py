@@ -349,3 +349,79 @@ class TestSessionLimitSpec:
     def test_an_impossible_limit_is_rejected(self, fraction: float) -> None:
         with pytest.raises(ValueError, match="fraction must be"):
             SessionLimit(fraction=fraction)
+
+
+class TestAnUnmeasurableSessionIsAbsent:
+    """A session printing ``high == low`` did not trade; it did not have zero variance.
+
+    The range estimators used to clip such a session to a floor of ``1e-12``. About 7% of
+    the cached futures sessions in this repository print that way, and each one entered
+    the log regression at roughly -27.6 against a series whose real mean is near -10.5.
+    That tripled the residual spread, and the retransformation term is half that spread
+    inside an exponential — the fitted smearing reached 9.87, a multiplier near 19,000,
+    and the variance recursion diverged within two steps. The model was unusable and
+    nothing said so, because no registered asset had ever selected it.
+    """
+
+    def _frame(self, n: int, stale: int) -> pd.DataFrame:
+        rng = np.random.default_rng(4)
+        close = 100.0 * np.exp(np.cumsum(rng.normal(0.0, 0.01, n)))
+        spread = np.abs(rng.normal(0.0, 0.01, n)) + 0.005
+        high, low = close * (1.0 + spread), close * (1.0 - spread)
+        # Stale prints: the vendor repeated a single quote for the whole session.
+        high[:stale] = close[:stale]
+        low[:stale] = close[:stale]
+        return pd.DataFrame(
+            {"open": close, "high": high, "low": low, "close": close},
+            index=pd.date_range("2010-01-01", periods=n, freq="B"),
+        )
+
+    def test_a_zero_range_session_is_nan_not_a_floor(self) -> None:
+        variance = parkinson_variance(self._frame(50, stale=5))
+
+        assert int(variance.isna().sum()) == 5
+        assert float(variance.dropna().min()) > 0.0
+
+    def test_garman_klass_agrees(self) -> None:
+        variance = garman_klass_variance(self._frame(50, stale=5))
+
+        assert int(variance.isna().sum()) == 5
+
+    def test_stale_prints_do_not_inflate_the_smearing_term(self) -> None:
+        frame = self._frame(900, stale=90)
+        returns = pd.Series(
+            np.diff(np.log(frame["close"].to_numpy()), prepend=np.log(frame["close"].iloc[0])),
+            index=frame.index,
+        ).iloc[1:]
+
+        fit = HarRv(min_observations=200).fit(returns, realised_variance=parkinson_variance(frame))
+
+        # Half the residual variance of a log-variance regression. Single digits at the
+        # very worst; 9.87 is what the floored version produced.
+        assert fit.smearing < 3.0
+
+    def test_the_variance_recursion_stays_bounded(self) -> None:
+        """The failure the floor caused, stated as the property that must hold."""
+        frame = self._frame(900, stale=90)
+        returns = pd.Series(
+            np.diff(np.log(frame["close"].to_numpy()), prepend=np.log(frame["close"].iloc[0])),
+            index=frame.index,
+        ).iloc[1:]
+
+        fit = HarRv(min_observations=200).fit(returns, realised_variance=parkinson_variance(frame))
+        sigma = fit.forward_sigma(63)
+
+        assert np.all(np.isfinite(sigma))
+        # A daily sigma above 100% at any horizon is a diverging recursion, not a
+        # forecast. The floored version reached 26% by the fifth step and 8.5e15 by the
+        # tenth.
+        assert float(sigma.max()) < 1.0
+        assert float(sigma.max()) / float(sigma.min()) < 20.0
+
+    def test_a_series_with_no_measurable_session_is_refused(self) -> None:
+        frame = self._frame(400, stale=400)
+
+        with pytest.raises(InsufficientDataError, match="measurable range"):
+            HarRv(min_observations=50).fit(
+                pd.Series(0.0, index=frame.index), realised_variance=parkinson_variance(frame)
+            )
