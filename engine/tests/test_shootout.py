@@ -777,6 +777,11 @@ class TestTheDirectionArtifact:
         assert overlapping["equal_count_bins_robustness"]["binning"] == "equal_count"
         assert isinstance(overlapping["distinguishable_from_zero"], bool)
 
+        # The robustness binning is held to the same two-run standard as the primary one,
+        # or the table's only rejection could not be adjudicated by it.
+        assert overlapping["equal_count_non_overlapping_subsample"]["binning"] == "equal_count"
+        assert isinstance(overlapping["distinguishable_from_zero_equal_count"], bool)
+
         # The key does not assert a scheme, because 5 sessions at a step of 5 does not
         # overlap and is permuted rather than shifted. The resampling field says which.
         assert by_horizon[5]["discrimination"]["full_sample"]["resampling"] == "permutation"

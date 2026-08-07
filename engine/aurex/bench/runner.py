@@ -476,6 +476,21 @@ def describe_direction(
             binning="equal_count",
             seed=seed,
         )
+        # The equal-count run gets a thinned partner for the same reason the equal-width
+        # one does. This was an omission in the first build of this block, found when the
+        # equal-count screen produced the only rejection in the table and there was no
+        # second run to adjudicate it against — so the table's single interesting number
+        # could not be held to the standard every other number here is held to. The fix
+        # makes a finding harder to claim rather than easier, which is the safe direction
+        # for an omission discovered after seeing a result.
+        thinned_by_rank = resolution_screen(
+            {label: sampling.thin(values) for label, values in forecasts.items()},
+            sampling.thin(outcomes),
+            event=event.id,
+            sampling=sampling.independent(),
+            binning="equal_count",
+            seed=seed,
+        )
 
         horizons.append(
             {
@@ -492,11 +507,20 @@ def describe_direction(
                     "equal_count_bins_robustness": (
                         None if by_rank is None else by_rank.describe()
                     ),
+                    "equal_count_non_overlapping_subsample": (
+                        None if thinned_by_rank is None else thinned_by_rank.describe()
+                    ),
                     "distinguishable_from_zero": bool(
                         full is not None
                         and thinned is not None
                         and full.rejects
                         and thinned.rejects
+                    ),
+                    "distinguishable_from_zero_equal_count": bool(
+                        by_rank is not None
+                        and thinned_by_rank is not None
+                        and by_rank.rejects
+                        and thinned_by_rank.rejects
                     ),
                     "measurable_at_equal_width": bool(
                         full is not None and any(count > 1 for count in full.occupied_bins)
@@ -510,7 +534,8 @@ def describe_direction(
                         "subsample assumes nothing and has far fewer windows to say it "
                         "with — and where the horizon does not overlap the step at all, "
                         "the full sample simply permutes, which the resampling field on "
-                        "each run states. The equal-count run is neither: it is the check that a "
+                        "each run states. The equal-count pair is the same standard "
+                        "applied to a different partition: it is the check that a "
                         "resolution of zero is a fact about the model rather than about "
                         "the axis, because a direction forecast near one half can spend "
                         "its whole range inside a single equal-width bin. Where the two "

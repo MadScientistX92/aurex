@@ -130,7 +130,12 @@ jobs:
               for model in entry["models"]:
                   assert "resolution" in model["decomposition"], model["model"]
               screens = entry["discrimination"]
-              for name in ("full_sample", "non_overlapping_subsample", "equal_count_bins_robustness"):
+              for name in (
+                  "full_sample",
+                  "non_overlapping_subsample",
+                  "equal_count_bins_robustness",
+                  "equal_count_non_overlapping_subsample",
+              ):
                   assert screens[name] is not None, f"{name} missing at horizon {where}"
                   for label, row in screens[name]["models"].items():
                       assert "occupied_bins" in row, f"{label} at {where} has no bin count"
