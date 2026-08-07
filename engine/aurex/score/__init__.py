@@ -80,6 +80,14 @@ from aurex.score.significance import (
     diebold_mariano,
     skill_decay,
 )
+from aurex.score.tail import (
+    TailCalibration,
+    TailTest,
+    driftless_gaussian_probability,
+    poisson_binomial_pmf,
+    tail_calibration,
+    tail_test,
+)
 from aurex.score.walkforward import (
     CalibrationReport,
     HorizonCalibration,
@@ -119,6 +127,8 @@ __all__ = [
     "SkillDecay",
     "SkillTest",
     "Skipped",
+    "TailCalibration",
+    "TailTest",
     "TerminalAbove",
     "TestResult",
     "TouchAbove",
@@ -135,12 +145,16 @@ __all__ = [
     "default_events",
     "diebold_mariano",
     "displacement",
+    "driftless_gaussian_probability",
     "kupiec",
     "pit_histogram",
     "pit_value",
+    "poisson_binomial_pmf",
     "reliability_curve",
     "require_independent",
     "skill_decay",
+    "tail_calibration",
+    "tail_test",
     "uniformity",
     "walk_forward",
 ]

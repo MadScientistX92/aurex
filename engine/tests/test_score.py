@@ -599,7 +599,7 @@ class TestTheHurdleEvent:
             events=(TerminalAbove(), weekly, quarterly),
         )
         by_horizon = {
-            h.horizon: {e["id"] for e, _ in h.events} for h in result.calibration().horizons
+            h.horizon: {e["id"] for e, _, _ in h.events} for h in result.calibration().horizons
         }
 
         assert weekly.id in by_horizon[5] and weekly.id not in by_horizon[21]

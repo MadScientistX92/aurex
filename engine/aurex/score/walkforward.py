@@ -64,6 +64,11 @@ from aurex.score.significance import (
     diebold_mariano,
     skill_decay,
 )
+from aurex.score.tail import (
+    TailCalibration,
+    driftless_gaussian_probability,
+    tail_calibration,
+)
 from aurex.vol.base import InsufficientDataError
 
 #: Seed spacing. Each as-of date gets a thousand-wide band so a forecaster can add its
@@ -156,6 +161,20 @@ class ScoreRecord:
     breaches: dict[float, bool] = field(default_factory=dict)
     #: Event id -> (forecast probability, what happened).
     events: dict[str, tuple[float, bool]] = field(default_factory=dict)
+    #: Standard deviation of the model's own simulated terminal log return.
+    #:
+    #: The engine's forecast *level* of volatility for this window, separated from the
+    #: shape of the distribution carrying it. A Gaussian reference given this number
+    #: differs from the model in kurtosis and skew alone, which is the only way to ask
+    #: whether the tail is the right shape without the answer being contaminated by the
+    #: two forecasters disagreeing about how volatile the week was.
+    terminal_log_sd: float = 0.0
+    #: Standard deviation of daily log returns over the history available at ``as_of``.
+    #:
+    #: What a Gaussian forecaster with no lookahead would have had to work with. Recorded
+    #: per window rather than once per run because it is an expanding-window quantity and
+    #: collapsing it to a scalar would import the end of the sample into its start.
+    sigma_expanding: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,7 +280,9 @@ class HorizonCalibration:
     #: null, so there is always at least one tested skill score here.
     skill_tests: tuple[SkillTest, ...]
     coverage: tuple[LevelCoverage, ...]
-    events: tuple[tuple[dict[str, Any], ReliabilityCurve], ...]
+    #: Per event: its description, its reliability curve, and the count test that says
+    #: whether the gap between the two is a finding or a coincidence.
+    events: tuple[tuple[dict[str, Any], ReliabilityCurve, TailCalibration], ...]
     #: What the model said "ends higher" was worth, against what happened. Kept beside
     #: the PIT because the two read the same displacement from different reference
     #: points — see :mod:`aurex.score.drift`.
@@ -328,7 +349,10 @@ class HorizonCalibration:
                 ),
             },
             "coverage": [entry.describe() for entry in self.coverage],
-            "events": [{**description, **curve.describe()} for description, curve in self.events],
+            "events": [
+                {**description, **curve.describe(), **tail.describe()}
+                for description, curve, tail in self.events
+            ],
         }
 
 
@@ -347,6 +371,10 @@ class CalibrationReport:
     #: variance predicts. A cross-horizon question, so it lives here rather than on any
     #: one horizon.
     skill_decay: SkillDecay | None
+    #: Realised daily log-return volatility of the scored window, published because one
+    #: tail reference is built from it and a reader cannot audit that reference without
+    #: the number behind it.
+    sample_sigma: float = 0.0
 
     def describe(self) -> dict[str, Any]:
         return {
@@ -358,6 +386,15 @@ class CalibrationReport:
                 None if self.drift_displacement is None else self.drift_displacement.describe()
             ),
             "skill_decay": (None if self.skill_decay is None else self.skill_decay.describe()),
+            "scored_window_sigma": {
+                "daily_log_return_sd": round(self.sample_sigma, 6),
+                "note": (
+                    "Realised over the scored window, so it was not available on the "
+                    "first as-of date. The gaussian_sample_sigma tail reference is built "
+                    "from it and is labelled as using lookahead for that reason; "
+                    "gaussian_expanding_sigma is the same reference without it."
+                ),
+            },
             "horizons": [entry.describe() for entry in self.horizons],
             "skipped": [
                 {
@@ -444,6 +481,14 @@ class WalkForwardResult:
     events: tuple[BinaryEvent, ...]
     #: The price history this run actually saw, after any requested truncation.
     sample: SampleWindow | None = None
+    #: Realised daily log-return volatility over the scored window itself.
+    #:
+    #: The input to the one tail reference that carries lookahead, and the reason that
+    #: reference is labelled as carrying it: this number is the answer to a question
+    #: nobody could have asked on the first as-of date. It is computed and published
+    #: because it is what the README's tail comparison was built on, and testing a
+    #: published claim means testing the benchmark it actually used.
+    sample_sigma: float = 0.0
 
     def for_horizon(self, horizon: int) -> tuple[ScoreRecord, ...]:
         return tuple(record for record in self.records if record.horizon == horizon)
@@ -455,7 +500,9 @@ class WalkForwardResult:
             records = self.for_horizon(horizon)
             if not records:
                 continue
-            horizons.append(_calibrate(horizon, records, self.request, self.events))
+            horizons.append(
+                _calibrate(horizon, records, self.request, self.events, self.sample_sigma)
+            )
 
         return CalibrationReport(
             subject=self.subject,
@@ -473,6 +520,7 @@ class WalkForwardResult:
                 )
             ),
             skill_decay=self._skill_decay(),
+            sample_sigma=self.sample_sigma,
         )
 
     def _skill_decay(self) -> SkillDecay | None:
@@ -556,6 +604,11 @@ def walk_forward(
     skipped: list[Skipped] = []
     values = clean.to_numpy(dtype=float)
 
+    # Log returns once, then sliced per as-of date. The expanding standard deviation is
+    # what a no-lookahead Gaussian reference gets; recomputing it inside the loop from
+    # the price series would be the same arithmetic done 580 times over.
+    log_returns = np.diff(np.log(values)) if values.size > 1 else np.zeros(0, dtype=float)
+
     for position in range(first, total, ask.step):
         as_of = clean.index[position]
         usable = tuple(h for h in ask.horizons if position + h < total)
@@ -581,6 +634,13 @@ def walk_forward(
             continue
 
         anchor = float(values[position])
+        # Returns strictly before the as-of date's own close are all a forecaster made
+        # on that date could have seen.
+        history_returns = log_returns[:position]
+        sigma_expanding = (
+            float(np.std(history_returns, ddof=1)) if history_returns.size > 1 else 0.0
+        )
+
         for horizon in usable:
             realised = RealisedPath(values[position + 1 : position + 1 + horizon])
             records.append(
@@ -597,8 +657,15 @@ def walk_forward(
                     request=ask,
                     events=graded,
                     position=position,
+                    sigma_expanding=sigma_expanding,
                 )
             )
+
+    # Over the scored window rather than the whole history: this is the benchmark the
+    # published tail comparison used, and it is the volatility of the sample the events
+    # were counted in.
+    scored_returns = log_returns[first:] if first < log_returns.size else np.zeros(0, dtype=float)
+    sample_sigma = float(np.std(scored_returns, ddof=1)) if scored_returns.size > 1 else 0.0
 
     return WalkForwardResult(
         records=tuple(records),
@@ -607,6 +674,7 @@ def walk_forward(
         subject=subject.describe(),
         baseline=baseline.describe(),
         events=graded,
+        sample_sigma=sample_sigma,
         sample=SampleWindow(
             series_id=str(prices.name or "prices"),
             requested_start=ask.start,
@@ -631,6 +699,7 @@ def _grade(
     request: WalkForwardRequest,
     events: tuple[BinaryEvent, ...],
     position: int,
+    sigma_expanding: float = 0.0,
 ) -> ScoreRecord:
     terminal = forecast.terminal()
     observed = realised.terminal
@@ -639,11 +708,24 @@ def _grade(
     # dates were scored before it and a re-run of one date reproduces its own number.
     rng = np.random.default_rng([request.seed, position, horizon])
 
+    # The model's forecast volatility for this window, in the log space it simulates in.
+    # Read off the ensemble rather than off the fit, so it is the spread of what was
+    # actually simulated — session limits and the bootstrap included — rather than the
+    # spread the model intended before those touched it.
+    positive = terminal[terminal > 0.0]
+    terminal_log_sd = (
+        float(np.std(np.log(positive / anchor), ddof=1))
+        if anchor > 0.0 and positive.size > 1
+        else 0.0
+    )
+
     return ScoreRecord(
         as_of=as_of,
         horizon=horizon,
         anchor=anchor,
         realised=observed,
+        terminal_log_sd=terminal_log_sd,
+        sigma_expanding=sigma_expanding,
         pit=pit_value(terminal, observed, rng=rng),
         crps=crps(terminal, observed),
         crps_baseline=crps(null.terminal(), observed),
@@ -664,11 +746,51 @@ def _grade(
     )
 
 
+def _gaussian_references(
+    event: BinaryEvent,
+    records: tuple[ScoreRecord, ...],
+    *,
+    horizon: int,
+    sample_sigma: float,
+) -> dict[str, np.ndarray]:
+    """Closed-form driftless-Gaussian probabilities for the same event, three ways.
+
+    Empty for a path-monitored event. The reflection principle prices a barrier watched
+    continuously, and this engine watches at session close on both sides, so a
+    continuous-monitoring reference would be answering a question neither the forecast
+    nor the outcome was measured on — see :mod:`aurex.score.tail`.
+    """
+    if event.monitoring != "terminal":
+        return {}
+
+    multiples = np.array(
+        [
+            event.level(record.anchor) / record.anchor if record.anchor > 0.0 else np.nan
+            for record in records
+        ],
+        dtype=float,
+    )
+    matched = np.array([record.terminal_log_sd for record in records], dtype=float)
+    expanding = np.array([record.sigma_expanding for record in records], dtype=float)
+    fixed = np.full(len(records), sample_sigma, dtype=float)
+
+    return {
+        "gaussian_matched_sigma": driftless_gaussian_probability(
+            multiples, matched / np.sqrt(horizon), horizon=horizon
+        ),
+        "gaussian_expanding_sigma": driftless_gaussian_probability(
+            multiples, expanding, horizon=horizon
+        ),
+        "gaussian_sample_sigma": driftless_gaussian_probability(multiples, fixed, horizon=horizon),
+    }
+
+
 def _calibrate(
     horizon: int,
     records: tuple[ScoreRecord, ...],
     request: WalkForwardRequest,
     events: tuple[BinaryEvent, ...],
+    sample_sigma: float,
 ) -> HorizonCalibration:
     sampling = request.sampling_for(horizon)
     independent = sampling.independent()
@@ -727,7 +849,7 @@ def _calibrate(
         for label in sorted(records[0].crps_alternatives)
     )
 
-    scored_events: list[tuple[dict[str, Any], ReliabilityCurve]] = []
+    scored_events: list[tuple[dict[str, Any], ReliabilityCurve, TailCalibration]] = []
     for event in events:
         if not event.applies_at(horizon):
             continue
@@ -737,6 +859,15 @@ def _calibrate(
             (
                 event.describe(),
                 reliability_curve(probabilities, outcomes, bins=request.reliability_bins),
+                tail_calibration(
+                    event_id=event.id,
+                    probabilities=probabilities,
+                    outcomes=outcomes,
+                    sampling=sampling,
+                    gaussian_references=_gaussian_references(
+                        event, records, horizon=horizon, sample_sigma=sample_sigma
+                    ),
+                ),
             )
         )
 

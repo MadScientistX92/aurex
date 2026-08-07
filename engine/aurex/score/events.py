@@ -97,6 +97,17 @@ class BinaryEvent(Protocol):
         """
         ...
 
+    def level(self, anchor: float) -> float:
+        """The price this event is defined against, given the anchor.
+
+        A protocol member rather than something a caller reaches for with ``getattr``,
+        because :mod:`aurex.score.tail` needs it to price a closed-form reference for
+        the same event the ensemble was asked about. An event that could not state its
+        own level would silently drop out of that comparison, and a reference computed
+        on a different level from the forecast is worse than no reference at all.
+        """
+        ...
+
     def probability(self, ensemble: PathEnsemble) -> float:
         """The forecast probability, read off the simulated paths."""
         ...
