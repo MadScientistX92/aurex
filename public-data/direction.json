@@ -20,7 +20,7 @@
     }
   },
   "code": {
-    "commit": "fd27dc9fad40aa04151be0ac6a53d035b125e0cd",
+    "commit": "f20ef6baa8e5a710e109586a88f8c978d8662f63",
     "dirty": null,
     "engine_version": "0.1.0",
     "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
@@ -40,12 +40,70 @@
     "id": "direction_up",
     "monitoring": "terminal"
   },
-  "generated_at": "2026-08-07T18:03:40.565591+00:00",
+  "generated_at": "2026-08-07T20:25:06.060228+00:00",
   "horizons": [
     {
       "discrimination": {
         "distinguishable_from_zero": false,
+        "distinguishable_from_zero_equal_count": false,
         "equal_count_bins_robustness": {
+          "best_model": "nhits",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.5785,
+              "resolution": 0.003237,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003867
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.3447,
+              "resolution": 0.004367,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003916
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.3263,
+              "resolution": 0.004426,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003849
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.1,
+              "resolution": 0.006269,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003847
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.0624,
+              "resolution": 0.007042,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003852
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.1832,
+              "resolution": 0.005378,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003854
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 580,
+          "p_value": 0.3133,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.7282,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
           "best_model": "nhits",
           "binning": "equal_count",
           "models": {
@@ -217,7 +275,7 @@
           "statistic": 0.753,
           "test": "max_studentised_resolution"
         },
-        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count run is neither: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
       },
       "horizon_sessions": 5,
       "independent_observations": 580,
@@ -776,6 +834,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
+        "distinguishable_from_zero_equal_count": true,
         "equal_count_bins_robustness": {
           "best_model": "har_rv",
           "binning": "equal_count",
@@ -831,6 +890,63 @@
           "rejects_at_5pct": true,
           "resampling": "cyclic_shift",
           "statistic": 3.4931,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "auto_arima",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.0046,
+              "resolution": 0.020499,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007759
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.899,
+              "resolution": 0.003615,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007691
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.1856,
+              "resolution": 0.010987,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007823
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.007,
+              "resolution": 0.019073,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007715
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.0706,
+              "resolution": 0.013603,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007777
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.6847,
+              "resolution": 0.005755,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007819
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 290,
+          "p_value": 0.0252,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": true,
+          "resampling": "permutation",
+          "statistic": 3.494,
           "test": "max_studentised_resolution"
         },
         "full_sample": {
@@ -948,7 +1064,7 @@
           "statistic": 0.7795,
           "test": "max_studentised_resolution"
         },
-        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count run is neither: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
       },
       "horizon_sessions": 10,
       "independent_observations": 290,
@@ -1507,6 +1623,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
+        "distinguishable_from_zero_equal_count": false,
         "equal_count_bins_robustness": {
           "best_model": "nhits",
           "binning": "equal_count",
@@ -1562,6 +1679,63 @@
           "rejects_at_5pct": false,
           "resampling": "cyclic_shift",
           "statistic": 0.1284,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "random_walk_drift_matched",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.798,
+              "resolution": 0.011821,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019469
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.3651,
+              "resolution": 0.021421,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019512
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.9326,
+              "resolution": 0.008359,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019711
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.6185,
+              "resolution": 0.015805,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.01959
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.3259,
+              "resolution": 0.022531,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019478
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.2713,
+              "resolution": 0.023903,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019474
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 116,
+          "p_value": 0.8488,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 0.5022,
           "test": "max_studentised_resolution"
         },
         "full_sample": {
@@ -1679,7 +1853,7 @@
           "statistic": 1.0,
           "test": "max_studentised_resolution"
         },
-        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count run is neither: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
       },
       "horizon_sessions": 21,
       "independent_observations": 116,
@@ -2238,6 +2412,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
+        "distinguishable_from_zero_equal_count": false,
         "equal_count_bins_robustness": {
           "best_model": "har_rv",
           "binning": "equal_count",
@@ -2293,6 +2468,63 @@
           "rejects_at_5pct": false,
           "resampling": "cyclic_shift",
           "statistic": 0.2315,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "random_walk_drift_matched",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.2827,
+              "resolution": 0.042178,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034928
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.839,
+              "resolution": 0.019485,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034121
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.3473,
+              "resolution": 0.039202,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034655
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.4491,
+              "resolution": 0.034738,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034648
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.9958,
+              "resolution": 0.006464,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034118
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.1564,
+              "resolution": 0.049619,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034538
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 64,
+          "p_value": 0.6271,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.0027,
           "test": "max_studentised_resolution"
         },
         "full_sample": {
@@ -2410,7 +2642,7 @@
           "statistic": 0.6035,
           "test": "max_studentised_resolution"
         },
-        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count run is neither: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
       },
       "horizon_sessions": 42,
       "independent_observations": 64,
@@ -2969,6 +3201,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
+        "distinguishable_from_zero_equal_count": false,
         "equal_count_bins_robustness": {
           "best_model": "gjr_garch",
           "binning": "equal_count",
@@ -3024,6 +3257,63 @@
           "rejects_at_5pct": false,
           "resampling": "cyclic_shift",
           "statistic": 0.294,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "gjr_garch",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.9874,
+              "resolution": 0.014463,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.046615
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.216,
+              "resolution": 0.061054,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.047235
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.1328,
+              "resolution": 0.069008,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.046678
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.798,
+              "resolution": 0.031508,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.047248
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.879,
+              "resolution": 0.025826,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.0472
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.1708,
+              "resolution": 0.065599,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.047162
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 44,
+          "p_value": 0.5693,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.1375,
           "test": "max_studentised_resolution"
         },
         "full_sample": {
@@ -3141,7 +3431,7 @@
           "statistic": 1.3207,
           "test": "max_studentised_resolution"
         },
-        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count run is neither: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
       },
       "horizon_sessions": 63,
       "independent_observations": 44,
@@ -3821,7 +4111,7 @@
   "source": {
     "end": "2026-08-06",
     "fallbacks": [],
-    "fetched_at": "2026-08-07T16:17:39.624120+00:00",
+    "fetched_at": "2026-08-07T18:39:18.146687+00:00",
     "has_ohlc": false,
     "rows": 5414,
     "series_id": "xauusd",
