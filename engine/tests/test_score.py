@@ -863,6 +863,102 @@ class TestBothSidesShareOneDriftPolicy:
         assert "random_walk_drift_matched" in described["alternative_nulls"]
 
 
+class TestEveryForecasterIsGradedOnEveryEvent:
+    """The blocker that made per-model directional accuracy unmeasurable through step 6.
+
+    Extra baselines used to be asked for a distribution and scored on it, and never asked
+    what they thought "ends higher" was worth. That was a limit of this harness rather
+    than a fact about the models, and the shootout's own README said so.
+    """
+
+    def _run(self, **kwargs: object) -> object:
+        prices = price_series(periods=1_000)
+        matched = RandomWalkForecaster(
+            transform=LogReturn(), n_paths=400, min_observations=100, demean=False
+        )
+        return walk_forward(
+            prices,
+            subject=ModelForecaster(
+                model=model_for("gjr_garch"), transform=LogReturn(), n_paths=400
+            ),
+            baseline=RandomWalkForecaster(transform=LogReturn(), n_paths=400, min_observations=100),
+            request=WalkForwardRequest(horizons=(5,), step=5, min_observations=750),
+            events=(TerminalAbove(), TouchBelow(0.05)),
+            extra_baselines=(matched,),
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_an_extra_baseline_gets_a_probability_for_every_event(self) -> None:
+        record = self._run().records[0]  # type: ignore[attr-defined]
+
+        assert set(record.event_alternatives) == {"random_walk_drift_matched"}
+        assert set(record.event_alternatives["random_walk_drift_matched"]) == set(record.events)
+        for probability in record.event_alternatives["random_walk_drift_matched"].values():
+            assert 0.0 <= probability <= 1.0
+
+    def test_the_required_null_is_graded_too_without_being_asked(self) -> None:
+        """``events_baseline`` mirrors ``crps_baseline``: passing no extras cannot drop it."""
+        record = self._run().records[0]  # type: ignore[attr-defined]
+
+        assert set(record.events_baseline) == set(record.events)
+
+    def test_the_outcome_is_stored_once_and_belongs_to_the_price(self) -> None:
+        """Six models, one truth. A per-model copy is six places for one fact to differ."""
+        record = self._run().records[0]  # type: ignore[attr-defined]
+
+        # The alternatives carry probabilities and nothing else — there is no second
+        # outcome anywhere for a model to be graded against.
+        for row in record.event_alternatives.values():
+            assert all(isinstance(value, float) for value in row.values())
+
+    def test_the_models_disagree_about_direction_when_their_drift_policies_differ(
+        self,
+    ) -> None:
+        """The whole point: a drift-carrying null must say something different from a
+        driftless one, or there is nothing for a direction score to discriminate on."""
+        result = self._run()
+        direction = TerminalAbove().id
+
+        driftless = np.array(
+            [record.events_baseline[direction] for record in result.records]  # type: ignore[attr-defined]
+        )
+        drifted = np.array(
+            [
+                record.event_alternatives["random_walk_drift_matched"][direction]
+                for record in result.records  # type: ignore[attr-defined]
+            ]
+        )
+
+        assert not np.allclose(driftless, drifted)
+
+    def test_an_event_that_does_not_apply_at_a_horizon_is_absent_for_every_model(
+        self,
+    ) -> None:
+        """``applies_at`` is asked once per event and governs all of them alike, so a
+        hurdle priced for one horizon cannot appear under a challenger at another."""
+        prices = price_series(periods=1_000)
+        result = walk_forward(
+            prices,
+            subject=ModelForecaster(
+                model=model_for("gjr_garch"), transform=LogReturn(), n_paths=400
+            ),
+            baseline=RandomWalkForecaster(transform=LogReturn(), n_paths=400, min_observations=100),
+            request=WalkForwardRequest(horizons=(5, 21), step=5, min_observations=750),
+            events=(ClearsHurdle(multiple=1.05, label="probe", horizon=21),),
+            extra_baselines=(
+                RandomWalkForecaster(
+                    transform=LogReturn(), n_paths=400, min_observations=100, demean=False
+                ),
+            ),
+        )
+
+        for record in result.records:
+            expected = {"clears_hurdle_probe_5pct_h21"} if record.horizon == 21 else set()
+            assert set(record.events) == expected
+            assert set(record.events_baseline) == expected
+            assert set(record.event_alternatives["random_walk_drift_matched"]) == expected
+
+
 class TestDieboldMariano:
     """The test that decides whether a skill score is a finding or a rounding error."""
 

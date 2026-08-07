@@ -11,6 +11,15 @@ way to produce a CRPS from this module without also producing the random walk's 
 for the same date and the same horizon. §0 says the null hypothesis is the random walk;
 this is where that stops being a promise.
 
+**Every forecaster is graded on every event, not just the subject.** This used to be a
+CRPS-only courtesy: extra baselines were asked for a distribution, scored on it, and
+never asked what they thought "ends higher" was worth. That made per-model directional
+accuracy unmeasurable, which is the one part of §0's benchmark promise that went
+ungraded through step 6 — and it was a limit of the harness rather than a finding. Each
+ensemble is now asked the same events on the same date and the outcome is stored once,
+because what happened after an as-of date is a property of the price and not of who
+forecast it.
+
 **Overlap is recorded, not assumed away.** Forecasting every ``step`` sessions over a
 longer horizon produces records that share most of their path. Means and histograms are
 computed over all of them; every p-value is computed over the thinned, non-overlapping
@@ -161,6 +170,21 @@ class ScoreRecord:
     breaches: dict[float, bool] = field(default_factory=dict)
     #: Event id -> (forecast probability, what happened).
     events: dict[str, tuple[float, bool]] = field(default_factory=dict)
+    #: Event id -> §0's null's own probability for it.
+    #:
+    #: A field of its own rather than one entry in ``event_alternatives``, mirroring
+    #: ``crps_baseline`` beside ``crps_alternatives``: the required null cannot be
+    #: dropped by passing no extras, so a run that grades an event grades the benchmark
+    #: on it too.
+    events_baseline: dict[str, float] = field(default_factory=dict)
+    #: Label -> event id -> that null's forecast probability for the same event.
+    #:
+    #: The outcome is not repeated here because it cannot differ: what happened after a
+    #: given as-of date is a property of the price, not of who forecast it. Storing it
+    #: per model would create six places for one fact to disagree with itself, and a
+    #: model graded against its own copy of the outcome is not being compared with
+    #: anything. Read the truth from ``events`` and the probability from here.
+    event_alternatives: dict[str, dict[str, float]] = field(default_factory=dict)
     #: Standard deviation of the model's own simulated terminal log return.
     #:
     #: The engine's forecast *level* of volatility for this window, separated from the
@@ -742,6 +766,21 @@ def _grade(
             event.id: (event.probability(forecast), event.occurred(anchor, realised))
             for event in events
             if event.applies_at(horizon)
+        },
+        events_baseline={
+            event.id: event.probability(null) for event in events if event.applies_at(horizon)
+        },
+        # Every extra null is asked the same events as the subject, on the same ensemble
+        # it was already asked for CRPS. Nothing else here changes: the outcome, the
+        # anchor and the horizon filter are shared, so a probability recorded under one
+        # label is comparable with a probability recorded under another by construction.
+        event_alternatives={
+            label: {
+                event.id: event.probability(ensemble)
+                for event in events
+                if event.applies_at(horizon)
+            }
+            for label, ensemble in alternatives.items()
         },
     )
 

@@ -148,6 +148,25 @@ class ReliabilityCurve:
         }
 
 
+def bin_assignment(probabilities: np.ndarray, *, bins: int = DEFAULT_BINS) -> np.ndarray:
+    """Which bin each forecast falls in. The decomposition's only free choice, in one place.
+
+    Exposed rather than inlined because the resolution term is now read twice: once here,
+    to publish it, and once by :func:`~aurex.score.shootout.discrimination` to build its
+    null distribution. Two implementations of "which bin" would let a published
+    resolution and the p-value that grades it come from different binnings, and the gap
+    would be invisible — both numbers would look reasonable and they would not be about
+    the same quantity.
+    """
+    edges = np.linspace(0.0, 1.0, bins + 1)
+    # Right-closed at the top so a forecast of exactly 1.0 lands in the last bin
+    # rather than in a bin of its own beyond the axis.
+    assigned: np.ndarray = np.clip(
+        np.digitize(np.asarray(probabilities, dtype=float), edges[1:-1], right=False), 0, bins - 1
+    )
+    return assigned
+
+
 def brier_score(probabilities: np.ndarray, outcomes: np.ndarray) -> float:
     """Mean squared error of a probability forecast against a binary outcome."""
     forecast = np.asarray(probabilities, dtype=float)
@@ -182,9 +201,7 @@ def reliability_curve(
     positives = int(np.count_nonzero(observed > 0.0))
     base_rate = float(np.mean(observed))
     edges = np.linspace(0.0, 1.0, bins + 1)
-    # Right-closed at the top so a forecast of exactly 1.0 lands in the last bin
-    # rather than in a bin of its own beyond the axis.
-    assignment = np.clip(np.digitize(forecast, edges[1:-1], right=False), 0, bins - 1)
+    assignment = bin_assignment(forecast, bins=bins)
 
     entries: list[ReliabilityBin] = []
     reliability = 0.0

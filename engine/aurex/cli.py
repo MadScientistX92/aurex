@@ -509,13 +509,203 @@ def bench(
         for entry in horizon["models"]:
             mde = entry["minimum_detectable_effect"]["detectable_skill_pct"]
             typer.echo(
-                f"      {entry['model']:<18} skill {entry['skill_vs_random_walk']:+.4f}  "
+                f"      {entry['model']:<18} skill {entry['skill_vs_benchmark']:+.4f}  "
                 f"MDE {'n/a' if mde is None else f'{mde:.2f}%'}"
             )
         if spa is not None:
             typer.echo(
                 f"      SPA p={spa['p_value']:.3f} (best: {spa['best_model']})  "
                 f"MCS keeps {len(horizon['model_confidence_set']['included'])}"
+            )
+
+
+def _direction_command(
+    *,
+    asset_id: str,
+    since: str,
+    until: str,
+    step: int,
+    horizons: str,
+    paths: int,
+    chronos_paths: int,
+    nhits_steps: int,
+    models: str,
+) -> str:
+    """The command that reproduces the direction run, every option spelled out."""
+    return " ".join(
+        [
+            "uv run aurex direction",
+            f"--asset {asset_id}",
+            f"--from {since}",
+            f"--to {until}",
+            f"--step {step}",
+            f"--horizons {horizons}",
+            f"--paths {paths}",
+            f"--chronos-paths {chronos_paths}",
+            f"--nhits-steps {nhits_steps}",
+            f"--models {models}",
+        ]
+    )
+
+
+@app.command()
+def direction(
+    asset_id: str = typer.Option("gold", "--asset", help="Which registered asset to grade."),
+    since: str = typer.Option("2015-01-01", "--from", help="First forecast date, YYYY-MM-DD."),
+    until: str = typer.Option(
+        "",
+        "--to",
+        help=(
+            "Last observation the run may see, YYYY-MM-DD. Defaults to the series' own "
+            "last observation, never to today. Pass the resolved value back to reproduce."
+        ),
+    ),
+    step: int = typer.Option(5, "--step", help="Sessions between forecasts."),
+    horizons: str = typer.Option("5,10,21,42,63", "--horizons", help="Comma-separated."),
+    paths: int = typer.Option(4_000, "--paths", help="Simulated paths per simulation model."),
+    chronos_paths: int = typer.Option(
+        200, "--chronos-paths", help="Sample paths drawn from Chronos per window."
+    ),
+    nhits_steps: int = typer.Option(200, "--nhits-steps", help="NHITS training steps per fit."),
+    models: str = typer.Option(
+        "",
+        "--models",
+        help="Comma-separated subset of the challenger set. Empty runs all of them.",
+    ),
+    offline: bool = typer.Option(False, "--offline", help="Never touch the network."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print without writing."),
+) -> None:
+    """Grade every model on direction, uncentred, against the drift-matched random walk.
+
+    A separate run from ``aurex bench`` and not a flag on it, because the two need
+    opposite drift policies. The CRPS shootout centres every model, which puts P(up) at
+    about one half for all of them by construction — so direction measured there grades
+    the drift policy rather than the models. Here every competitor including the
+    benchmark carries whatever drift it infers, which is the like-for-like comparison.
+
+    Needs the ``bench`` extra (``uv sync --extra bench``). Long job: every model is
+    refitted at every as-of date. Writes ``public-data/direction.json``.
+    """
+    import json as _json
+    from datetime import UTC, date, datetime, timedelta
+
+    import pandas as pd
+
+    from aurex import config
+    from aurex.assets import get
+    from aurex.bench import CHALLENGERS, describe_direction, run_shootout
+    from aurex.data.schedules import load_policy_breaks
+    from aurex.pipeline import DEFAULT_LOOKBACK_DAYS, _price_column, resolve_series
+    from aurex.score import TerminalAbove, WalkForwardRequest
+
+    asset = get(asset_id)
+    start_date = date.fromisoformat(since)
+
+    series, unavailable = resolve_series(
+        [asset],
+        start=min(start_date - timedelta(days=DEFAULT_LOOKBACK_DAYS // 2), start_date),
+        end=datetime.now(UTC).date(),
+        offline=offline,
+    )
+    price = series.get(asset.price_series_id)
+    if price is None:
+        typer.echo(
+            f"cannot grade {asset.id}: {asset.price_series_id} is unavailable "
+            f"({unavailable.get(asset.price_series_id, 'no reason recorded')})",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    ohlc = None
+    if asset.ohlc_series_id is not None and asset.ohlc_series_id in series:
+        ohlc = series[asset.ohlc_series_id].frame
+
+    prices = _price_column(price.frame).rename(asset.price_series_id)
+    if until.strip():
+        end_stamp = pd.Timestamp(date.fromisoformat(until.strip()))
+    else:
+        end_stamp = pd.Timestamp(prices.dropna().index[-1])
+
+    request = WalkForwardRequest(
+        horizons=tuple(int(h) for h in horizons.split(",") if h.strip()),
+        step=step,
+        start=pd.Timestamp(start_date),
+        end=end_stamp,
+    )
+    include = tuple(m.strip() for m in models.split(",") if m.strip()) or CHALLENGERS
+    event = TerminalAbove()
+
+    run = run_shootout(
+        asset,
+        prices=prices,
+        ohlc=ohlc,
+        breaks=tuple(pd.Timestamp(b.date) for b in load_policy_breaks()),
+        request=request,
+        n_paths=paths,
+        chronos_paths=chronos_paths,
+        nhits_steps=nhits_steps,
+        include=include,
+        # The two belong together and are passed together: uncentred forecasts are what
+        # make the event worth grading, and the event is why the run is uncentred.
+        demean=False,
+        events=(event,),
+    )
+
+    block = describe_direction(asset, run.result, event=event, competitors=run.competitors) | {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "engine_version": __version__,
+        "code": code_provenance().describe(),
+        "source": price.meta.to_dict(),
+        "reproduce": _direction_command(
+            asset_id=asset.id,
+            since=start_date.isoformat(),
+            until=(
+                run.result.sample.resolved_end.date().isoformat()
+                if run.result.sample is not None
+                else end_stamp.date().isoformat()
+            ),
+            step=step,
+            horizons=horizons,
+            paths=paths,
+            chronos_paths=chronos_paths,
+            nhits_steps=nhits_steps,
+            models=",".join(include),
+        ),
+        "pre_registration": (
+            "Stated before this ran, and kept as written whatever the result: resolution "
+            "at or near zero for every model at every horizon, including Chronos. The "
+            "foundation model has the most room to surprise here — it infers a trend "
+            "from its context window rather than fitting a mean, so it is the one "
+            "entrant that could in principle discriminate. If it does, that is a finding "
+            "and it gets published as one."
+        ),
+    }
+
+    if dry_run:
+        typer.echo(_json.dumps(block, indent=2, sort_keys=True))
+        return
+
+    config.PUBLIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out = config.PUBLIC_DATA_DIR / "direction.json"
+    out.write_text(_json.dumps(block, indent=2, sort_keys=True) + "\n")
+    typer.echo(f"wrote {out}")
+
+    for horizon in block["horizons"]:
+        screen = horizon["discrimination"]["full_sample_cyclic_shift"]
+        typer.echo(
+            f"  {horizon['horizon_sessions']:>3} sessions (n={horizon['observations']}, "
+            f"realised {horizon['realised_rate']:.3f}):"
+        )
+        for entry in horizon["models"]:
+            typer.echo(
+                f"      {entry['model']:<26} resolution {entry['decomposition']['resolution']:.5f}"
+                f"  mean p {entry['mean_forecast']:.3f}  brier {entry['brier']:.4f}"
+            )
+        if screen is not None:
+            typer.echo(
+                f"      max-resolution p={screen['p_value']:.3f} "
+                f"(best: {screen['best_model']}), both runs reject: "
+                f"{horizon['discrimination']['distinguishable_from_zero']}"
             )
 
 

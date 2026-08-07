@@ -40,6 +40,21 @@ one this repository tends to be in. The MDE is computed from the same HAC varian
 the same small-sample correction the Diebold-Mariano test uses, so it describes the test
 that was actually run rather than an idealised one.
 
+**The same discipline reaches direction, where the metric is resolution rather than
+CRPS.** :func:`resolution_screen` asks "can any model in this set tell one window from
+another", which is one test over six models for the same reason SPA is. Its statistic is
+the largest studentised resolution and its null comes from resampling the *outcomes*
+against fixed forecasts, so what is destroyed is the alignment and nothing else.
+
+Two details there are load-bearing. Resolution is a sum of squares, so it is positive
+under the null and "close to zero" is not a reading — the reference distribution says
+what zero is worth on this sample and the artifact publishes it beside every figure. And
+on overlapping windows the resampling is a circular *shift* rather than a permutation: a
+shift preserves the outcome series' autocorrelation exactly, where a permutation would
+destroy it and turn ordinary persistence into a rejection. That is the same choice
+Diebold-Mariano makes when it handles dependence in its variance estimator instead of
+thinning it away, and as there, both the full sample and the thinned subsample are run.
+
 **Sign convention, which is the opposite of Diebold-Mariano's here.** Throughout this
 module a loss differential is ``benchmark - model``, so *positive* means the model lost
 less and is therefore better. :mod:`aurex.score.significance` uses ``model - benchmark``
@@ -57,6 +72,7 @@ from typing import Any
 import numpy as np
 from scipy import stats
 
+from aurex.score.reliability import DEFAULT_BINS, bin_assignment
 from aurex.score.sampling import Sampling
 from aurex.score.significance import hln_factor
 
@@ -474,4 +490,279 @@ def minimum_detectable_effect(
         effect_in_loss=effect,
         effect_in_skill=effect / benchmark_crps if benchmark_crps > 0.0 else None,
         benchmark_crps=benchmark_crps,
+    )
+
+
+#: Cyclic shifts nearer than this to perfect alignment are dropped from the reference
+#: set, in units of the overlap stride. At one stride the shifted outcome window still
+#: shares sessions with the forecast that is being scored against it, so those shifts are
+#: not draws from "this model knows nothing" — they are draws from a weakened version of
+#: the alternative, and including them would make the test conservative in a way that
+#: hides exactly the small effect it exists to find.
+SHIFT_GUARD_STRIDES = 1
+
+#: Reference draws required before a permutation p-value is reported at all. Twenty gives
+#: a smallest attainable p of 1/21, which can reject at 5% and only just; below that the
+#: test cannot produce the answer it is being asked for and says so instead.
+MIN_REFERENCE_DRAWS = 20
+
+
+def _resolutions(assignment: np.ndarray, outcomes: np.ndarray, *, bins: int) -> np.ndarray:
+    """Murphy resolution of one model's forecasts against many outcome vectors at once.
+
+    ``outcomes`` is ``(draws, n)``. The bin assignment is fixed across draws because the
+    forecasts never move — only what they are lined up against does, which is the whole
+    construction of the null.
+    """
+    n = int(assignment.size)
+    indicator = np.zeros((n, bins), dtype=float)
+    indicator[np.arange(n), assignment] = 1.0
+
+    counts = indicator.sum(axis=0)
+    occupied = counts > 0
+    # Empty bins contribute nothing to resolution; the divide is guarded rather than
+    # masked so the shapes stay rectangular for the vectorised path.
+    safe = np.where(occupied, counts, 1.0)
+
+    observed_rate = np.asarray(outcomes, dtype=float).mean(axis=1, keepdims=True)
+    bin_rates = (np.asarray(outcomes, dtype=float) @ indicator) / safe
+    contribution = np.where(occupied, (bin_rates - observed_rate) ** 2 * counts, 0.0)
+    return np.asarray(contribution.sum(axis=1) / n, dtype=float)
+
+
+def _equal_count_assignment(probabilities: np.ndarray, *, bins: int) -> np.ndarray:
+    """Bin by rank instead of by value: each bin holds a tenth of this model's forecasts.
+
+    The equal-width decomposition has a blind spot that matters more here than anywhere
+    else the reliability machinery is used. A direction forecast lives near one half —
+    an uncentred model's P(up) might range over 0.47 to 0.58 across every window it ever
+    saw — and that entire range falls inside one or two of ten equal-width bins. Its
+    resolution is then zero or nearly zero *by construction*, whatever the model knew,
+    because resolution measures how far bin rates move from the base rate and there is
+    only one bin for them to move in.
+
+    Publishing that zero as a finding would be assuming the answer. So the same test is
+    run a second time on bins of equal count, which adapt to whatever range the model
+    actually used and therefore ask whether its *ordering* of windows carries
+    information. A model that scores zero at equal width and non-zero here has
+    discrimination the reliability diagram's binning cannot see, and that difference is
+    published rather than resolved silently in either direction.
+    """
+    values = np.asarray(probabilities, dtype=float)
+    # Rank first so ties spread deterministically rather than piling into one bin: a
+    # forecaster that repeats the same probability often would otherwise leave most bins
+    # empty and score an artificially low resolution here too.
+    order = np.argsort(np.argsort(values, kind="stable"), kind="stable")
+    assigned = (order * bins) // max(values.size, 1)
+    return np.clip(assigned, 0, bins - 1).astype(int)
+
+
+def _cyclic_shift_index(n: int, *, guard: int) -> np.ndarray:
+    """``(k, n)`` of circularly shifted positions, alignment and its neighbourhood removed.
+
+    A circular shift is the right null for an overlapping sample because it preserves the
+    entire autocorrelation function of the outcome series exactly and destroys only its
+    alignment with the forecasts. An iid permutation would break the serial dependence
+    too, which makes the null's bin means less variable than they really are and turns
+    ordinary persistence into a rejection.
+    """
+    shifts = np.arange(guard, max(n - guard, guard) + 1, dtype=int)
+    shifts = shifts[(shifts > 0) & (shifts < n)]
+    if shifts.size == 0:
+        return np.zeros((0, n), dtype=int)
+    return (np.arange(n)[None, :] + shifts[:, None]) % n
+
+
+@dataclass(frozen=True, slots=True)
+class ResolutionScreen:
+    """Can any model here tell one window from another? One test over the whole set.
+
+    The statistic is the largest *studentised* resolution across models, which is the
+    same shape as :class:`SuperiorPredictiveAbility`'s and is there for the same reason.
+    Raw resolutions are not comparable across models: a forecaster whose probabilities
+    spread over eight bins can post a larger resolution than one confined to two purely
+    from having more bins to be noisy in. Each model is therefore referred to its own
+    null, and the maximum is taken after that.
+    """
+
+    event: str
+    scheme: str
+    #: Which partition of the forecast axis the decomposition used. ``equal_width``
+    #: matches the published reliability diagram; ``equal_count`` is the robustness run.
+    binning: str
+    models: tuple[str, ...]
+    #: Observed resolution per model, in the order of ``models``. What the README quotes.
+    resolutions: tuple[float, ...]
+    #: Mean resolution the reference set produces for that model with no skill at all.
+    #: The number that says what "resolution at or near zero" is worth on this sample:
+    #: binned resolution is a sum of squares and is positive under the null.
+    null_means: tuple[float, ...]
+    #: Marginal p per model. Description, not decision — see ``p_value``.
+    model_p_values: tuple[float, ...]
+    #: How many bins each model's forecasts actually reached. A model confined to one bin
+    #: has a resolution of zero whatever it knew, so this is what separates "measured no
+    #: discrimination" from "this partition could not have measured any".
+    occupied_bins: tuple[int, ...]
+    statistic: float
+    best: str | None
+    #: The one to read: the largest studentised resolution against its own null.
+    p_value: float
+    n: int
+    draws: int
+
+    @property
+    def rejects(self) -> bool:
+        return self.p_value < DEFAULT_ALPHA
+
+    def describe(self) -> dict[str, Any]:
+        return {
+            "test": "max_studentised_resolution",
+            "resampling": self.scheme,
+            "binning": self.binning,
+            "null": (
+                f"no model in this set has any resolution on {self.event}: every "
+                f"forecast is unrelated to which window it was made in"
+            ),
+            "statistic": round(self.statistic, 4),
+            "p_value": round(self.p_value, 4),
+            "rejects_at_5pct": self.rejects,
+            "best_model": self.best,
+            "models": {
+                name: {
+                    "resolution": round(value, 6),
+                    "resolution_under_null": round(null, 6),
+                    "p_value": round(p, 4),
+                    "occupied_bins": occupied,
+                    "resolution_measurable": occupied > 1,
+                }
+                for name, value, null, p, occupied in zip(
+                    self.models,
+                    self.resolutions,
+                    self.null_means,
+                    self.model_p_values,
+                    self.occupied_bins,
+                    strict=True,
+                )
+            },
+            "observations": self.n,
+            "reference_draws": self.draws,
+            "reading": (
+                "One test over the whole set, so the multiplicity is inside the null "
+                "distribution rather than corrected for afterwards — six resolution "
+                "figures eyeballed against zero is the leaderboard problem again. "
+                "Resolution is level-invariant: it asks whether a model can tell one "
+                "window from another, which is what calling direction means, where the "
+                "Brier score confounds that with getting the base rate right. It is a "
+                "sum of squares and so is positive even with no skill, which is what "
+                "resolution_under_null is for: a resolution is only a finding if it "
+                "exceeds what this model's own binning produces by chance. The per-model "
+                "p-values are description; the single p_value above is the decision."
+            ),
+        }
+
+
+def resolution_screen(
+    probabilities: dict[str, np.ndarray],
+    outcomes: np.ndarray,
+    *,
+    event: str,
+    sampling: Sampling,
+    bins: int = DEFAULT_BINS,
+    binning: str = "equal_width",
+    draws: int = DEFAULT_DRAWS,
+    seed: int = 20260807,
+) -> ResolutionScreen | None:
+    """Test every model's resolution at once, against a null built by resampling outcomes.
+
+    ``binning`` chooses the partition the decomposition is computed over: ``equal_width``
+    matches the reliability diagram this repository publishes everywhere else, and
+    ``equal_count`` is the robustness run that :func:`_equal_count_assignment` explains —
+    on a direction forecast, which lives near one half, the two can differ for reasons
+    that have nothing to do with the model.
+
+    On an overlapping sample the reference set is every admissible circular shift of the
+    outcome series, enumerated rather than sampled — there are only ``n`` of them and
+    enumerating makes the test exact. On a non-overlapping one it is ``draws`` random
+    permutations, which is valid precisely because thinning has already removed the
+    dependence a shift exists to preserve.
+
+    ``None`` where the sample cannot support the test: no models, or too few reference
+    draws to produce a p-value that could reject.
+    """
+    names = tuple(sorted(probabilities))
+    if not names:
+        return None
+
+    observed = np.asarray(outcomes, dtype=float)
+    n = int(observed.size)
+    if n < 3:
+        return None
+    _require_finite(probabilities, observed)
+
+    if sampling.overlapping:
+        scheme = "cyclic_shift"
+        index = _cyclic_shift_index(n, guard=SHIFT_GUARD_STRIDES * sampling.stride)
+    else:
+        scheme = "permutation"
+        rng = np.random.default_rng(seed)
+        index = np.argsort(rng.random((draws, n)), axis=1)
+
+    if index.shape[0] < MIN_REFERENCE_DRAWS:
+        return None
+
+    reference = observed[index]
+    if binning == "equal_width":
+        assignments = {name: bin_assignment(probabilities[name], bins=bins) for name in names}
+    elif binning == "equal_count":
+        assignments = {
+            name: _equal_count_assignment(probabilities[name], bins=bins) for name in names
+        }
+    else:
+        raise ValueError(f"binning must be equal_width or equal_count, got {binning!r}")
+
+    actual = np.array(
+        [_resolutions(assignments[name], observed[None, :], bins=bins)[0] for name in names]
+    )
+    null = np.column_stack(
+        [_resolutions(assignments[name], reference, bins=bins) for name in names]
+    )
+
+    # Studentise each model by its own reference distribution before taking the maximum,
+    # so the max is over comparable quantities. A model whose forecasts all land in one
+    # bin has no resolution under any alignment; its column is identically zero and
+    # standardising it would be a division by nothing, so it contributes a flat zero and
+    # cannot win the maximum by accident.
+    centre = null.mean(axis=0)
+    spread = null.std(axis=0)
+    live = spread > 0.0
+    scale = np.where(live, spread, 1.0)
+    studentised_actual = np.where(live, (actual - centre) / scale, 0.0)
+    studentised_null = np.where(live, (null - centre) / scale, 0.0)
+
+    statistic = float(np.max(studentised_actual))
+    k = int(index.shape[0])
+    # The observed configuration is itself a member of the reference set, which is what
+    # the +1 on both sides is: it keeps the p-value valid rather than letting it reach
+    # zero, and a permutation test that can report p = 0 is reporting its draw count.
+    maxima = studentised_null.max(axis=1)
+    p_value = float((1.0 + np.count_nonzero(maxima >= statistic)) / (1.0 + k))
+    marginal = tuple(
+        float((1.0 + np.count_nonzero(null[:, i] >= actual[i])) / (1.0 + k))
+        for i in range(len(names))
+    )
+
+    return ResolutionScreen(
+        event=event,
+        scheme=scheme,
+        binning=binning,
+        models=names,
+        resolutions=tuple(float(value) for value in actual),
+        null_means=tuple(float(value) for value in centre),
+        model_p_values=marginal,
+        occupied_bins=tuple(int(np.unique(assignments[name]).size) for name in names),
+        statistic=statistic,
+        best=names[int(np.argmax(studentised_actual))] if statistic > 0.0 else None,
+        p_value=p_value,
+        n=n,
+        draws=k,
     )
