@@ -1,0 +1,1822 @@
+{
+  "asset": {
+    "id": "gold",
+    "label": "Gold",
+    "price_series_id": "xauusd",
+    "quote_currency": "USD"
+  },
+  "benchmark": {
+    "block_length": 1,
+    "label": "random_walk",
+    "model": {
+      "drift": "zero by construction, not by sample average",
+      "id": "random_walk",
+      "increments": "iid draws from the demeaned empirical return distribution"
+    },
+    "n_paths": 4000,
+    "transform": {
+      "formula": "log(P_t) - log(P_{t-1})",
+      "id": "log"
+    }
+  },
+  "code": {
+    "commit": "c702c79e0deb7b5e6ff1cac159d3ca36065aeb37",
+    "dirty": null,
+    "engine_version": "0.1.0",
+    "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
+    "ref": "main",
+    "source": "git"
+  },
+  "conventions": {
+    "drift": "Every model in this set is driftless: the engine's models and the null centre the pool they resample, and each challenger's simulated returns are centred before they are walked to prices. A model carrying drift scored against one denied it was worth up to +4.6% of spurious CRPS skill on this asset and that result was withdrawn; this is the guard against it reappearing six times over.",
+    "lookahead": "none: each fit sees prices up to and including its as-of date",
+    "multiple_comparisons": "Six models against one null at 5% finds a winner whether or not one exists. Hansen's SPA is the decision; the per-model Diebold-Mariano statistics are description. The Model Confidence Set answers the different question of which models cannot be excluded.",
+    "windows": "One walk-forward, so every model was scored on the same as-of dates against the same realised outcomes. A date any model could not fit is a date none of them is scored on."
+  },
+  "engine_version": "0.1.0",
+  "generated_at": "2026-08-07T03:32:20.855412+00:00",
+  "horizons": [
+    {
+      "benchmark": {
+        "crps": 24.9677,
+        "model": "random_walk"
+      },
+      "hansen_spa": {
+        "best_model": "auto_arima",
+        "bootstrap": {
+          "block_records": 1,
+          "draws": 5000,
+          "method": "moving_block"
+        },
+        "mean_loss_differential": {
+          "auto_arima": 0.032822,
+          "chronos_t5_small": -6.497872,
+          "gjr_garch": 0.151083,
+          "har_rv": -0.280751,
+          "nhits": -1.256189
+        },
+        "models": [
+          "auto_arima",
+          "chronos_t5_small",
+          "gjr_garch",
+          "har_rv",
+          "nhits"
+        ],
+        "null": "no model in this set has a smaller expected CRPS than random_walk",
+        "observations": 580,
+        "p_value": 0.1916,
+        "p_value_conservative": 0.312,
+        "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards. A loss differential here is benchmark minus model, so positive means the model lost less \u2014 the opposite of the Diebold-Mariano sign convention reported per model. best_model names the largest studentised differential and is a description of this sample, not a winner: where the p-value does not reject, no model in the set has been shown to beat the benchmark and the name should be read as noise.",
+        "rejects_at_5pct": false,
+        "statistic": 1.4507,
+        "test": "hansen_spa"
+      },
+      "horizon_sessions": 5,
+      "independent_observations": 580,
+      "model_confidence_set": {
+        "bootstrap": {
+          "block_records": 1,
+          "draws": 5000,
+          "method": "moving_block",
+          "statistic": "t_max"
+        },
+        "confidence": 0.9,
+        "eliminated": [
+          {
+            "model": "chronos_t5_small",
+            "p_value": 0.0
+          },
+          {
+            "model": "nhits",
+            "p_value": 0.0002
+          },
+          {
+            "model": "har_rv",
+            "p_value": 0.0658
+          }
+        ],
+        "included": [
+          "auto_arima",
+          "gjr_garch",
+          "random_walk"
+        ],
+        "observations": 580,
+        "reading": "A set, not a ranking. It contains the best model with the stated probability, and on a sample this size it is usually large \u2014 which is the measurement rather than a failure of it. Models are listed in the order they were eliminated, each with the p-value of the test that removed it. A set containing every model means the sample cannot tell them apart.",
+        "test": "model_confidence_set"
+      },
+      "models": [
+        {
+          "crps": 24.9348,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.032822,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.1478,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -1.4495,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.032822,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.1478,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -1.4495,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 24.9677,
+            "detectable_loss_differential": 0.063548,
+            "detectable_skill": 0.00255,
+            "detectable_skill_pct": 0.255,
+            "independent_observations": 580,
+            "observations": 580,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "auto_arima",
+          "skill_vs_random_walk": 0.00131
+        },
+        {
+          "crps": 31.4655,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 6.497872,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 12.5987,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 6.497872,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 12.5987,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 24.9677,
+            "detectable_loss_differential": 1.447374,
+            "detectable_skill": 0.05797,
+            "detectable_skill_pct": 5.797,
+            "independent_observations": 580,
+            "observations": 580,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "chronos_t5_small",
+          "skill_vs_random_walk": -0.26025
+        },
+        {
+          "crps": 24.8166,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.151083,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.4186,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.8094,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.151083,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.4186,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.8094,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 24.9677,
+            "detectable_loss_differential": 0.523803,
+            "detectable_skill": 0.02098,
+            "detectable_skill_pct": 2.098,
+            "independent_observations": 580,
+            "observations": 580,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "gjr_garch",
+          "skill_vs_random_walk": 0.00605
+        },
+        {
+          "crps": 25.2484,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.280751,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.1663,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 1.386,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.280751,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.1663,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 1.386,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 24.9677,
+            "detectable_loss_differential": 0.568469,
+            "detectable_skill": 0.02277,
+            "detectable_skill_pct": 2.277,
+            "independent_observations": 580,
+            "observations": 580,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "har_rv",
+          "skill_vs_random_walk": -0.01124
+        },
+        {
+          "crps": 26.2239,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 1.256189,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 4.2082,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 1.256189,
+              "null_compared": "random_walk",
+              "observations": 580,
+              "overlapping_records": 1,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(579)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 4.2082,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 24.9677,
+            "detectable_loss_differential": 0.837709,
+            "detectable_skill": 0.03355,
+            "detectable_skill_pct": 3.355,
+            "independent_observations": 580,
+            "observations": 580,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "nhits",
+          "skill_vs_random_walk": -0.05031
+        }
+      ],
+      "observations": 580,
+      "sampling": {
+        "horizon_sessions": 5,
+        "independent_stride": 1,
+        "overlapping": false,
+        "step_sessions": 5
+      }
+    },
+    {
+      "benchmark": {
+        "crps": 35.4209,
+        "model": "random_walk"
+      },
+      "hansen_spa": {
+        "best_model": null,
+        "bootstrap": {
+          "block_records": 2,
+          "draws": 5000,
+          "method": "moving_block"
+        },
+        "mean_loss_differential": {
+          "auto_arima": -0.008502,
+          "chronos_t5_small": -9.256388,
+          "gjr_garch": -0.15472,
+          "har_rv": -0.707818,
+          "nhits": -2.592995
+        },
+        "models": [
+          "auto_arima",
+          "chronos_t5_small",
+          "gjr_garch",
+          "har_rv",
+          "nhits"
+        ],
+        "null": "no model in this set has a smaller expected CRPS than random_walk",
+        "observations": 579,
+        "p_value": 0.7182,
+        "p_value_conservative": 0.9558,
+        "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards. A loss differential here is benchmark minus model, so positive means the model lost less \u2014 the opposite of the Diebold-Mariano sign convention reported per model. best_model names the largest studentised differential and is a description of this sample, not a winner: where the p-value does not reject, no model in the set has been shown to beat the benchmark and the name should be read as noise.",
+        "rejects_at_5pct": false,
+        "statistic": 0.0,
+        "test": "hansen_spa"
+      },
+      "horizon_sessions": 10,
+      "independent_observations": 290,
+      "model_confidence_set": {
+        "bootstrap": {
+          "block_records": 2,
+          "draws": 5000,
+          "method": "moving_block",
+          "statistic": "t_max"
+        },
+        "confidence": 0.9,
+        "eliminated": [
+          {
+            "model": "chronos_t5_small",
+            "p_value": 0.0
+          },
+          {
+            "model": "nhits",
+            "p_value": 0.0002
+          },
+          {
+            "model": "har_rv",
+            "p_value": 0.022
+          }
+        ],
+        "included": [
+          "auto_arima",
+          "gjr_garch",
+          "random_walk"
+        ],
+        "observations": 579,
+        "reading": "A set, not a ranking. It contains the best model with the stated probability, and on a sample this size it is usually large \u2014 which is the measurement rather than a failure of it. Models are listed in the order they were eliminated, each with the p-value of the test that removed it. A set containing every model means the sample cannot tell them apart.",
+        "test": "model_confidence_set"
+      },
+      "models": [
+        {
+          "crps": 35.4294,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.01883,
+              "null_compared": "random_walk",
+              "observations": 290,
+              "overlapping_records": 1,
+              "p_value": 0.6603,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(289)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.44,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 1,
+              "mean_loss_differential": 0.008502,
+              "null_compared": "random_walk",
+              "observations": 579,
+              "overlapping_records": 2,
+              "p_value": 0.7729,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(578)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.2887,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 35.4209,
+            "detectable_loss_differential": 0.082653,
+            "detectable_skill": 0.00233,
+            "detectable_skill_pct": 0.233,
+            "independent_observations": 290,
+            "observations": 579,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "auto_arima",
+          "skill_vs_random_walk": -0.00024
+        },
+        {
+          "crps": 44.6773,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 9.235117,
+              "null_compared": "random_walk",
+              "observations": 290,
+              "overlapping_records": 1,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(289)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 9.5429,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 1,
+              "mean_loss_differential": 9.256388,
+              "null_compared": "random_walk",
+              "observations": 579,
+              "overlapping_records": 2,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(578)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 11.386,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 35.4209,
+            "detectable_loss_differential": 2.281438,
+            "detectable_skill": 0.06441,
+            "detectable_skill_pct": 6.441,
+            "independent_observations": 290,
+            "observations": 579,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "chronos_t5_small",
+          "skill_vs_random_walk": -0.26133
+        },
+        {
+          "crps": 35.5756,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.272653,
+              "null_compared": "random_walk",
+              "observations": 290,
+              "overlapping_records": 1,
+              "p_value": 0.4092,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(289)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.8266,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 1,
+              "mean_loss_differential": 0.15472,
+              "null_compared": "random_walk",
+              "observations": 579,
+              "overlapping_records": 2,
+              "p_value": 0.5952,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(578)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.5316,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 35.4209,
+            "detectable_loss_differential": 0.816755,
+            "detectable_skill": 0.02306,
+            "detectable_skill_pct": 2.306,
+            "independent_observations": 290,
+            "observations": 579,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "gjr_garch",
+          "skill_vs_random_walk": -0.00437
+        },
+        {
+          "crps": 36.1287,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.684964,
+              "null_compared": "random_walk",
+              "observations": 290,
+              "overlapping_records": 1,
+              "p_value": 0.114,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(289)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 1.5854,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 1,
+              "mean_loss_differential": 0.707818,
+              "null_compared": "random_walk",
+              "observations": 579,
+              "overlapping_records": 2,
+              "p_value": 0.0348,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(578)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 2.1151,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 35.4209,
+            "detectable_loss_differential": 0.93914,
+            "detectable_skill": 0.02651,
+            "detectable_skill_pct": 2.651,
+            "independent_observations": 290,
+            "observations": 579,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "har_rv",
+          "skill_vs_random_walk": -0.01998
+        },
+        {
+          "crps": 38.0139,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 2.649013,
+              "null_compared": "random_walk",
+              "observations": 290,
+              "overlapping_records": 1,
+              "p_value": 0.0001,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(289)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 3.9157,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 1,
+              "mean_loss_differential": 2.592995,
+              "null_compared": "random_walk",
+              "observations": 579,
+              "overlapping_records": 2,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(578)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 4.788,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 35.4209,
+            "detectable_loss_differential": 1.519792,
+            "detectable_skill": 0.04291,
+            "detectable_skill_pct": 4.291,
+            "independent_observations": 290,
+            "observations": 579,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "nhits",
+          "skill_vs_random_walk": -0.07321
+        }
+      ],
+      "observations": 579,
+      "sampling": {
+        "horizon_sessions": 10,
+        "independent_stride": 2,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    },
+    {
+      "benchmark": {
+        "crps": 52.6062,
+        "model": "random_walk"
+      },
+      "hansen_spa": {
+        "best_model": "auto_arima",
+        "bootstrap": {
+          "block_records": 5,
+          "draws": 5000,
+          "method": "moving_block"
+        },
+        "mean_loss_differential": {
+          "auto_arima": 0.045164,
+          "chronos_t5_small": -13.074943,
+          "gjr_garch": -0.061285,
+          "har_rv": -1.208885,
+          "nhits": -4.364252
+        },
+        "models": [
+          "auto_arima",
+          "chronos_t5_small",
+          "gjr_garch",
+          "har_rv",
+          "nhits"
+        ],
+        "null": "no model in this set has a smaller expected CRPS than random_walk",
+        "observations": 577,
+        "p_value": 0.3848,
+        "p_value_conservative": 0.5652,
+        "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards. A loss differential here is benchmark minus model, so positive means the model lost less \u2014 the opposite of the Diebold-Mariano sign convention reported per model. best_model names the largest studentised differential and is a description of this sample, not a winner: where the p-value does not reject, no model in the set has been shown to beat the benchmark and the name should be read as noise.",
+        "rejects_at_5pct": false,
+        "statistic": 0.961,
+        "test": "hansen_spa"
+      },
+      "horizon_sessions": 21,
+      "independent_observations": 116,
+      "model_confidence_set": {
+        "bootstrap": {
+          "block_records": 5,
+          "draws": 5000,
+          "method": "moving_block",
+          "statistic": "t_max"
+        },
+        "confidence": 0.9,
+        "eliminated": [
+          {
+            "model": "chronos_t5_small",
+            "p_value": 0.0
+          },
+          {
+            "model": "nhits",
+            "p_value": 0.0038
+          },
+          {
+            "model": "har_rv",
+            "p_value": 0.045
+          }
+        ],
+        "included": [
+          "auto_arima",
+          "gjr_garch",
+          "random_walk"
+        ],
+        "observations": 577,
+        "reading": "A set, not a ranking. It contains the best model with the stated probability, and on a sample this size it is usually large \u2014 which is the measurement rather than a failure of it. Models are listed in the order they were eliminated, each with the p-value of the test that removed it. A set containing every model means the sample cannot tell them apart.",
+        "test": "model_confidence_set"
+      },
+      "models": [
+        {
+          "crps": 52.5611,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.106261,
+              "null_compared": "random_walk",
+              "observations": 116,
+              "overlapping_records": 1,
+              "p_value": 0.2808,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(115)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -1.0835,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 4,
+              "mean_loss_differential": -0.045164,
+              "null_compared": "random_walk",
+              "observations": 577,
+              "overlapping_records": 5,
+              "p_value": 0.3407,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(576)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.9535,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 52.6062,
+            "detectable_loss_differential": 0.132929,
+            "detectable_skill": 0.00253,
+            "detectable_skill_pct": 0.253,
+            "independent_observations": 116,
+            "observations": 577,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "auto_arima",
+          "skill_vs_random_walk": 0.00086
+        },
+        {
+          "crps": 65.6812,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 13.974235,
+              "null_compared": "random_walk",
+              "observations": 116,
+              "overlapping_records": 1,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(115)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 6.2066,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 4,
+              "mean_loss_differential": 13.074943,
+              "null_compared": "random_walk",
+              "observations": 577,
+              "overlapping_records": 5,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(576)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 7.1434,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 52.6062,
+            "detectable_loss_differential": 5.136589,
+            "detectable_skill": 0.09764,
+            "detectable_skill_pct": 9.764,
+            "independent_observations": 116,
+            "observations": 577,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "chronos_t5_small",
+          "skill_vs_random_walk": -0.24854
+        },
+        {
+          "crps": 52.6675,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.433935,
+              "null_compared": "random_walk",
+              "observations": 116,
+              "overlapping_records": 1,
+              "p_value": 0.5866,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(115)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.5453,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 4,
+              "mean_loss_differential": 0.061285,
+              "null_compared": "random_walk",
+              "observations": 577,
+              "overlapping_records": 5,
+              "p_value": 0.8983,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(576)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.1279,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 52.6062,
+            "detectable_loss_differential": 1.344898,
+            "detectable_skill": 0.02557,
+            "detectable_skill_pct": 2.557,
+            "independent_observations": 116,
+            "observations": 577,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "gjr_garch",
+          "skill_vs_random_walk": -0.00116
+        },
+        {
+          "crps": 53.8151,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 1.013699,
+              "null_compared": "random_walk",
+              "observations": 116,
+              "overlapping_records": 1,
+              "p_value": 0.2182,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(115)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 1.2381,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 4,
+              "mean_loss_differential": 1.208885,
+              "null_compared": "random_walk",
+              "observations": 577,
+              "overlapping_records": 5,
+              "p_value": 0.0645,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(576)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 1.8521,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 52.6062,
+            "detectable_loss_differential": 1.831692,
+            "detectable_skill": 0.03482,
+            "detectable_skill_pct": 3.482,
+            "independent_observations": 116,
+            "observations": 577,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "har_rv",
+          "skill_vs_random_walk": -0.02298
+        },
+        {
+          "crps": 56.9705,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 6.003104,
+              "null_compared": "random_walk",
+              "observations": 116,
+              "overlapping_records": 1,
+              "p_value": 0.0014,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(115)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 3.2852,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 4,
+              "mean_loss_differential": 4.364252,
+              "null_compared": "random_walk",
+              "observations": 577,
+              "overlapping_records": 5,
+              "p_value": 0.0001,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(576)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 3.8331,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 52.6062,
+            "detectable_loss_differential": 3.19517,
+            "detectable_skill": 0.06074,
+            "detectable_skill_pct": 6.074,
+            "independent_observations": 116,
+            "observations": 577,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "nhits",
+          "skill_vs_random_walk": -0.08296
+        }
+      ],
+      "observations": 577,
+      "sampling": {
+        "horizon_sessions": 21,
+        "independent_stride": 5,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    },
+    {
+      "benchmark": {
+        "crps": 80.7373,
+        "model": "random_walk"
+      },
+      "hansen_spa": {
+        "best_model": "gjr_garch",
+        "bootstrap": {
+          "block_records": 9,
+          "draws": 5000,
+          "method": "moving_block"
+        },
+        "mean_loss_differential": {
+          "auto_arima": 0.003594,
+          "chronos_t5_small": -20.67972,
+          "gjr_garch": 0.248535,
+          "har_rv": -4.510308,
+          "nhits": -5.106819
+        },
+        "models": [
+          "auto_arima",
+          "chronos_t5_small",
+          "gjr_garch",
+          "har_rv",
+          "nhits"
+        ],
+        "null": "no model in this set has a smaller expected CRPS than random_walk",
+        "observations": 572,
+        "p_value": 0.6262,
+        "p_value_conservative": 0.886,
+        "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards. A loss differential here is benchmark minus model, so positive means the model lost less \u2014 the opposite of the Diebold-Mariano sign convention reported per model. best_model names the largest studentised differential and is a description of this sample, not a winner: where the p-value does not reject, no model in the set has been shown to beat the benchmark and the name should be read as noise.",
+        "rejects_at_5pct": false,
+        "statistic": 0.3206,
+        "test": "hansen_spa"
+      },
+      "horizon_sessions": 42,
+      "independent_observations": 64,
+      "model_confidence_set": {
+        "bootstrap": {
+          "block_records": 9,
+          "draws": 5000,
+          "method": "moving_block",
+          "statistic": "t_max"
+        },
+        "confidence": 0.9,
+        "eliminated": [
+          {
+            "model": "chronos_t5_small",
+            "p_value": 0.0
+          }
+        ],
+        "included": [
+          "auto_arima",
+          "gjr_garch",
+          "har_rv",
+          "nhits",
+          "random_walk"
+        ],
+        "observations": 572,
+        "reading": "A set, not a ranking. It contains the best model with the stated probability, and on a sample this size it is usually large \u2014 which is the measurement rather than a failure of it. Models are listed in the order they were eliminated, each with the p-value of the test that removed it. A set containing every model means the sample cannot tell them apart.",
+        "test": "model_confidence_set"
+      },
+      "models": [
+        {
+          "crps": 80.7337,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.157457,
+              "null_compared": "random_walk",
+              "observations": 64,
+              "overlapping_records": 1,
+              "p_value": 0.6028,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(63)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.523,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 8,
+              "mean_loss_differential": -0.003594,
+              "null_compared": "random_walk",
+              "observations": 572,
+              "overlapping_records": 9,
+              "p_value": 0.9613,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(571)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.0486,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 80.7373,
+            "detectable_loss_differential": 0.207614,
+            "detectable_skill": 0.00257,
+            "detectable_skill_pct": 0.257,
+            "independent_observations": 64,
+            "observations": 572,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "auto_arima",
+          "skill_vs_random_walk": 4e-05
+        },
+        {
+          "crps": 101.417,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 20.186746,
+              "null_compared": "random_walk",
+              "observations": 64,
+              "overlapping_records": 1,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(63)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 4.3653,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 8,
+              "mean_loss_differential": 20.67972,
+              "null_compared": "random_walk",
+              "observations": 572,
+              "overlapping_records": 9,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(571)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 5.2209,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 80.7373,
+            "detectable_loss_differential": 11.115917,
+            "detectable_skill": 0.13768,
+            "detectable_skill_pct": 13.768,
+            "independent_observations": 64,
+            "observations": 572,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "chronos_t5_small",
+          "skill_vs_random_walk": -0.25614
+        },
+        {
+          "crps": 80.4887,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 0.525083,
+              "null_compared": "random_walk",
+              "observations": 64,
+              "overlapping_records": 1,
+              "p_value": 0.6988,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(63)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 0.3888,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 8,
+              "mean_loss_differential": -0.248535,
+              "null_compared": "random_walk",
+              "observations": 572,
+              "overlapping_records": 9,
+              "p_value": 0.7522,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(571)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.3158,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 80.7373,
+            "detectable_loss_differential": 2.208413,
+            "detectable_skill": 0.02735,
+            "detectable_skill_pct": 2.735,
+            "independent_observations": 64,
+            "observations": 572,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "gjr_garch",
+          "skill_vs_random_walk": 0.00308
+        },
+        {
+          "crps": 85.2476,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 5.474531,
+              "null_compared": "random_walk",
+              "observations": 64,
+              "overlapping_records": 1,
+              "p_value": 0.0251,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(63)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 2.2947,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 8,
+              "mean_loss_differential": 4.510308,
+              "null_compared": "random_walk",
+              "observations": 572,
+              "overlapping_records": 9,
+              "p_value": 0.009,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(571)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 2.621,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 80.7373,
+            "detectable_loss_differential": 4.829299,
+            "detectable_skill": 0.05981,
+            "detectable_skill_pct": 5.981,
+            "independent_observations": 64,
+            "observations": 572,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "har_rv",
+          "skill_vs_random_walk": -0.05586
+        },
+        {
+          "crps": 85.8441,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 7.577064,
+              "null_compared": "random_walk",
+              "observations": 64,
+              "overlapping_records": 1,
+              "p_value": 0.0099,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(63)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 2.6589,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 8,
+              "mean_loss_differential": 5.106819,
+              "null_compared": "random_walk",
+              "observations": 572,
+              "overlapping_records": 9,
+              "p_value": 0.017,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(571)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 2.3927,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 80.7373,
+            "detectable_loss_differential": 5.989731,
+            "detectable_skill": 0.07419,
+            "detectable_skill_pct": 7.419,
+            "independent_observations": 64,
+            "observations": 572,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "nhits",
+          "skill_vs_random_walk": -0.06325
+        }
+      ],
+      "observations": 572,
+      "sampling": {
+        "horizon_sessions": 42,
+        "independent_stride": 9,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    },
+    {
+      "benchmark": {
+        "crps": 101.9158,
+        "model": "random_walk"
+      },
+      "hansen_spa": {
+        "best_model": "gjr_garch",
+        "bootstrap": {
+          "block_records": 13,
+          "draws": 5000,
+          "method": "moving_block"
+        },
+        "mean_loss_differential": {
+          "auto_arima": 0.046677,
+          "chronos_t5_small": -26.308541,
+          "gjr_garch": 0.956707,
+          "har_rv": -7.832134,
+          "nhits": -4.397876
+        },
+        "models": [
+          "auto_arima",
+          "chronos_t5_small",
+          "gjr_garch",
+          "har_rv",
+          "nhits"
+        ],
+        "null": "no model in this set has a smaller expected CRPS than random_walk",
+        "observations": 568,
+        "p_value": 0.4526,
+        "p_value_conservative": 0.5806,
+        "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards. A loss differential here is benchmark minus model, so positive means the model lost less \u2014 the opposite of the Diebold-Mariano sign convention reported per model. best_model names the largest studentised differential and is a description of this sample, not a winner: where the p-value does not reject, no model in the set has been shown to beat the benchmark and the name should be read as noise.",
+        "rejects_at_5pct": false,
+        "statistic": 0.892,
+        "test": "hansen_spa"
+      },
+      "horizon_sessions": 63,
+      "independent_observations": 44,
+      "model_confidence_set": {
+        "bootstrap": {
+          "block_records": 13,
+          "draws": 5000,
+          "method": "moving_block",
+          "statistic": "t_max"
+        },
+        "confidence": 0.9,
+        "eliminated": [
+          {
+            "model": "chronos_t5_small",
+            "p_value": 0.0002
+          },
+          {
+            "model": "har_rv",
+            "p_value": 0.085
+          }
+        ],
+        "included": [
+          "auto_arima",
+          "gjr_garch",
+          "nhits",
+          "random_walk"
+        ],
+        "observations": 568,
+        "reading": "A set, not a ranking. It contains the best model with the stated probability, and on a sample this size it is usually large \u2014 which is the measurement rather than a failure of it. Models are listed in the order they were eliminated, each with the p-value of the test that removed it. A set containing every model means the sample cannot tell them apart.",
+        "test": "model_confidence_set"
+      },
+      "models": [
+        {
+          "crps": 101.8692,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -0.769789,
+              "null_compared": "random_walk",
+              "observations": 44,
+              "overlapping_records": 1,
+              "p_value": 0.0286,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(43)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -2.2654,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 12,
+              "mean_loss_differential": -0.046677,
+              "null_compared": "random_walk",
+              "observations": 568,
+              "overlapping_records": 13,
+              "p_value": 0.5125,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(567)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.6554,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 101.9158,
+            "detectable_loss_differential": 0.199885,
+            "detectable_skill": 0.00196,
+            "detectable_skill_pct": 0.196,
+            "independent_observations": 44,
+            "observations": 568,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "auto_arima",
+          "skill_vs_random_walk": 0.00046
+        },
+        {
+          "crps": 128.2244,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 26.609493,
+              "null_compared": "random_walk",
+              "observations": 44,
+              "overlapping_records": 1,
+              "p_value": 0.0004,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(43)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 3.8302,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 12,
+              "mean_loss_differential": 26.308541,
+              "null_compared": "random_walk",
+              "observations": 568,
+              "overlapping_records": 13,
+              "p_value": 0.0,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(567)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 4.9156,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 101.9158,
+            "detectable_loss_differential": 15.019911,
+            "detectable_skill": 0.14738,
+            "detectable_skill_pct": 14.738,
+            "independent_observations": 44,
+            "observations": 568,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "chronos_t5_small",
+          "skill_vs_random_walk": -0.25814
+        },
+        {
+          "crps": 100.9591,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -2.41844,
+              "null_compared": "random_walk",
+              "observations": 44,
+              "overlapping_records": 1,
+              "p_value": 0.234,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(43)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -1.2072,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 12,
+              "mean_loss_differential": -0.956707,
+              "null_compared": "random_walk",
+              "observations": 568,
+              "overlapping_records": 13,
+              "p_value": 0.3834,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(567)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.8723,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 101.9158,
+            "detectable_loss_differential": 3.077874,
+            "detectable_skill": 0.0302,
+            "detectable_skill_pct": 3.02,
+            "independent_observations": 44,
+            "observations": 568,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "gjr_garch",
+          "skill_vs_random_walk": 0.00939
+        },
+        {
+          "crps": 109.748,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": 7.022423,
+              "null_compared": "random_walk",
+              "observations": 44,
+              "overlapping_records": 1,
+              "p_value": 0.0688,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(43)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 1.8668,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 12,
+              "mean_loss_differential": 7.832134,
+              "null_compared": "random_walk",
+              "observations": 568,
+              "overlapping_records": 13,
+              "p_value": 0.008,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(567)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 2.6622,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 101.9158,
+            "detectable_loss_differential": 8.256424,
+            "detectable_skill": 0.08101,
+            "detectable_skill_pct": 8.101,
+            "independent_observations": 44,
+            "observations": 568,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "har_rv",
+          "skill_vs_random_walk": -0.07685
+        },
+        {
+          "crps": 106.3137,
+          "diebold_mariano": {
+            "non_overlapping_subsample": {
+              "hac_truncation_lag": 0,
+              "mean_loss_differential": -5.926779,
+              "null_compared": "random_walk",
+              "observations": 44,
+              "overlapping_records": 1,
+              "p_value": 0.412,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(43)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": -0.8284,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "overlapping_windows_hac": {
+              "hac_truncation_lag": 12,
+              "mean_loss_differential": 4.397876,
+              "null_compared": "random_walk",
+              "observations": 568,
+              "overlapping_records": 13,
+              "p_value": 0.1702,
+              "reading": "The loss differential is crps_model - crps_null, so a negative statistic is the model losing less and a positive one is the model losing more. A large p-value means the skill score above is not distinguishable from zero on this sample, which is a statement about the evidence and not a demonstration that the two are equal.",
+              "reference_distribution": "t(567)",
+              "small_sample_correction": "harvey_leybourne_newbold",
+              "statistic": 1.3733,
+              "test": "diebold_mariano",
+              "undefined_reason": null,
+              "variance_estimator": "newey_west_bartlett"
+            },
+            "status": "description, not decision: read the SPA p-value for whether anything in this set beat the benchmark"
+          },
+          "minimum_detectable_effect": {
+            "alpha": 0.05,
+            "benchmark_crps": 101.9158,
+            "detectable_loss_differential": 8.987548,
+            "detectable_skill": 0.08819,
+            "detectable_skill_pct": 8.819,
+            "independent_observations": 44,
+            "observations": 568,
+            "power": 0.8,
+            "reading": "The smallest true CRPS skill a Diebold-Mariano test on this sample would reject at, four times in five. It uses the loss-differential variance actually observed, the HAC lag the overlap implies and the same small-sample correction the test carries, so it describes the test that ran rather than an idealised one. A negative result above this number is evidence of absence; one below it is an absence of evidence, and the two are not the same finding.",
+            "undefined_reason": null
+          },
+          "model": "nhits",
+          "skill_vs_random_walk": -0.04315
+        }
+      ],
+      "observations": 568,
+      "sampling": {
+        "horizon_sessions": 63,
+        "independent_stride": 13,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    }
+  ],
+  "models": [
+    {
+      "block_length": 10,
+      "breaks_excluded": 10,
+      "label": "gjr_garch",
+      "like_for_like_null": "random_walk",
+      "model": {
+        "equation": "sigma2_t = omega + (alpha + gamma*1[eps_{t-1}<0])*eps2_{t-1} + beta*sigma2_{t-1}",
+        "id": "gjr_garch",
+        "innovation": "t",
+        "mean": "zero",
+        "min_observations": 500
+      },
+      "n_paths": 4000,
+      "residual_pool": {
+        "demeaned": true,
+        "drift": "none: the resampled pool is centred, so the simulated median sits at spot and the distribution makes no directional claim"
+      },
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "block_length": 10,
+      "breaks_excluded": 10,
+      "label": "har_rv",
+      "like_for_like_null": "random_walk",
+      "model": {
+        "cascade_days": [
+          1,
+          5,
+          22
+        ],
+        "id": "har_rv",
+        "mean": "zero",
+        "min_observations": 500
+      },
+      "n_paths": 4000,
+      "residual_pool": {
+        "demeaned": true,
+        "drift": "none: the resampled pool is centred, so the simulated median sits at spot and the distribution makes no directional claim"
+      },
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "label": "auto_arima",
+      "model": {
+        "conditional_variance": false,
+        "distribution": "iid bootstrap of the fit's own in-sample residuals",
+        "family": "seasonal ARIMA, order selected per as-of date by AIC",
+        "id": "auto_arima"
+      },
+      "n_paths": 4000,
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "label": "nhits",
+      "model": {
+        "conditional_variance": false,
+        "distribution": "iid bootstrap of the fit's own in-sample residuals",
+        "family": "NHITS, neural hierarchical interpolation, refitted per as-of date",
+        "id": "nhits",
+        "input_size": 128,
+        "max_steps": 200
+      },
+      "n_paths": 4000,
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "caveat": "Zero-shot on this series, but the checkpoint's training corpus is not auditable from this repository. If it contained gold, this is not a clean out-of-sample test and nothing here can detect that.",
+      "label": "chronos_t5_small",
+      "model": {
+        "checkpoint": "amazon/chronos-t5-small",
+        "checkpoint_revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472",
+        "conditional_variance": false,
+        "context_sessions": 512,
+        "distribution": "the model's own sampled paths, centred",
+        "family": "Chronos-T5 time-series foundation model, zero-shot",
+        "fitted": false,
+        "id": "chronos_t5_small"
+      },
+      "n_paths": 200,
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    }
+  ],
+  "pre_registration": "Stated before this ran, and kept as written whatever the result: the GARCH family should win on volatility and distribution shape, and no model \u2014 including the time-series foundation models \u2014 is expected to beat the random walk on 10-day directional accuracy.",
+  "reproduce": "uv run aurex bench --asset gold --from 2015-01-01 --to 2026-07-29 --step 5 --horizons 5,10,21,42,63 --paths 4000 --chronos-paths 200 --nhits-steps 200 --models gjr_garch,har_rv,auto_arima,nhits,chronos_t5_small",
+  "sample": {
+    "note": "resolved.to is the last observation this run could see, for forecasting and for scoring alike. Pass it back as --to to reproduce these numbers: without it the run ends at whatever the data happened to reach on the day, and the sample is not the one these numbers came from.",
+    "observations": 5009,
+    "requested": {
+      "from": "2015-01-01",
+      "to": "2026-07-29"
+    },
+    "resolved": {
+      "from": "2006-08-04",
+      "to": "2026-07-29"
+    },
+    "series_available_to": "2026-08-04",
+    "series_id": "xauusd",
+    "truncated": true
+  },
+  "scored_forecasts": 2876,
+  "skipped": [],
+  "source": {
+    "end": "2026-08-04",
+    "fallbacks": [],
+    "fetched_at": "2026-08-05T22:06:41.524862+00:00",
+    "has_ohlc": false,
+    "rows": 5013,
+    "series_id": "xauusd",
+    "source_name": "LBMA:gold_pm:USD",
+    "source_url": "https://prices.lbma.org.uk/json/gold_pm.json",
+    "start": "2006-08-04"
+  },
+  "walk_forward": {
+    "end": "2026-07-29",
+    "horizons": [
+      5,
+      10,
+      21,
+      42,
+      63
+    ],
+    "min_observations": 750,
+    "reference_moves": [
+      0.05,
+      0.1
+    ],
+    "seed": 20260803,
+    "start": "2015-01-01",
+    "step_sessions": 5,
+    "var_levels": [
+      0.05,
+      0.01
+    ],
+    "window": "expanding"
+  }
+}
