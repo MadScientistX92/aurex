@@ -772,13 +772,14 @@ class TestTheDirectionArtifact:
         # 21 sessions sampled weekly overlaps, so the full-sample run must shift rather
         # than permute; 5 sessions at a step of 5 does not, and permuting is then exact.
         overlapping = by_horizon[21]["discrimination"]
-        assert overlapping["full_sample_cyclic_shift"]["resampling"] == "cyclic_shift"
-        assert overlapping["non_overlapping_permutation"] is not None
+        assert overlapping["full_sample"]["resampling"] == "cyclic_shift"
+        assert overlapping["non_overlapping_subsample"] is not None
+        assert overlapping["equal_count_bins_robustness"]["binning"] == "equal_count"
         assert isinstance(overlapping["distinguishable_from_zero"], bool)
 
-        assert by_horizon[5]["discrimination"]["full_sample_cyclic_shift"]["resampling"] == (
-            "permutation"
-        )
+        # The key does not assert a scheme, because 5 sessions at a step of 5 does not
+        # overlap and is permuted rather than shifted. The resampling field says which.
+        assert by_horizon[5]["discrimination"]["full_sample"]["resampling"] == "permutation"
 
     def test_the_artifact_states_why_the_run_is_uncentred(self) -> None:
         """A reader must not have to infer the drift policy from the benchmark's label."""

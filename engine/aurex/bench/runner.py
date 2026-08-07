@@ -487,10 +487,8 @@ def describe_direction(
                 "positive_events": int(np.count_nonzero(outcomes)),
                 "models": [{"model": label} | curves[label].describe() for label in sorted(curves)],
                 "discrimination": {
-                    "full_sample_cyclic_shift": None if full is None else full.describe(),
-                    "non_overlapping_permutation": (
-                        None if thinned is None else thinned.describe()
-                    ),
+                    "full_sample": None if full is None else full.describe(),
+                    "non_overlapping_subsample": (None if thinned is None else thinned.describe()),
                     "equal_count_bins_robustness": (
                         None if by_rank is None else by_rank.describe()
                     ),
@@ -510,7 +508,9 @@ def describe_direction(
                         "handles it by shifting the outcomes circularly, so the null "
                         "carries the same persistence the data does; the thinned "
                         "subsample assumes nothing and has far fewer windows to say it "
-                        "with. The equal-count run is neither: it is the check that a "
+                        "with — and where the horizon does not overlap the step at all, "
+                        "the full sample simply permutes, which the resampling field on "
+                        "each run states. The equal-count run is neither: it is the check that a "
                         "resolution of zero is a fact about the model rather than about "
                         "the axis, because a direction forecast near one half can spend "
                         "its whole range inside a single equal-width bin. Where the two "

@@ -1,0 +1,185 @@
+name: Direction
+
+# Step 6b, run by hand and never on a push. The sibling of shootout.yml, and separate
+# from it for one reason that is not organisational: the two runs need opposite drift
+# policies and cannot be the same job.
+#
+# The CRPS shootout centres every model, which is §0's position and the only way that
+# comparison is about conditional variance rather than about eleven years of
+# appreciation. But centring puts P(up) at about one half for every entrant by
+# construction, so direction measured on that run grades the drift policy and would
+# return "no model can call direction" whatever the models did. Here every competitor
+# carries the drift it infers and the benchmark is the drift-matched walk.
+#
+# What is on every push is the statistics: the resolution screen lives in
+# aurex/score/shootout.py beside SPA and the MCS, depends on nothing heavier than SciPy,
+# and is tested in tests/test_shootout.py — including the size checks that say it does
+# not find discrimination that is not there, and the one asserting that a permutation
+# over-rejects on dependent data where the circular shift does not.
+#
+# The result is committed to public-data/direction.json on the same terms as the
+# shootout: this job writes public-data/ and nothing else, and fails if it staged
+# anything outside it. A job that could edit prose is a job that can rewrite the
+# pre-registration it was meant to test.
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: "Registered asset id to grade"
+        type: string
+        default: gold
+      to:
+        description: "Last observation the run may see (YYYY-MM-DD). Empty uses the series' own end."
+        type: string
+        default: ""
+      step:
+        description: "Sessions between forecasts. Larger is faster and less powerful."
+        type: string
+        default: "5"
+      models:
+        description: "Comma-separated subset. Empty runs the whole set."
+        type: string
+        default: ""
+      commit:
+        description: "Commit the artifact to public-data/"
+        type: boolean
+        default: true
+
+concurrency:
+  group: shootout
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: engine
+
+jobs:
+  direction:
+    name: six models on direction, against the drift-matched random walk
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+
+      - name: install the bench extra
+        run: uv sync --frozen --extra bench
+
+      - name: record what was actually installed
+        run: |
+          uv run python - <<'PY'
+          import importlib.metadata as md
+          for name in ("torch", "statsforecast", "neuralforecast", "chronos-forecasting"):
+              try:
+                  print(f"{name}=={md.version(name)}")
+              except md.PackageNotFoundError:
+                  print(f"{name}: NOT INSTALLED")
+          PY
+
+      - name: grade direction
+        run: |
+          set -euo pipefail
+          args=(--asset "${{ inputs.asset }}" --step "${{ inputs.step }}")
+          if [ -n "${{ inputs.to }}" ]; then
+            args+=(--to "${{ inputs.to }}")
+          fi
+          if [ -n "${{ inputs.models }}" ]; then
+            args+=(--models "${{ inputs.models }}")
+          fi
+          uv run aurex direction "${args[@]}"
+
+      # Three properties, each of which has a way of going quietly wrong.
+      #
+      # The sample must be bounded and the artifact must say how to reproduce it, as
+      # everywhere else. The benchmark must be the *drift-matched* walk — if it ever
+      # comes back as `random_walk`, the run was centred and every resolution figure in
+      # it is about the drift policy rather than the models, which is precisely the
+      # failure this run exists to escape. And every model must carry a resolution and
+      # its bin occupancy, because a resolution of zero from a forecaster confined to one
+      # bin is not a measurement and must not be published as one.
+      - name: the artifact bounds its sample, names its null, and can measure what it claims
+        working-directory: .
+        run: |
+          uv run --project engine python - <<'PY'
+          import json
+          block = json.load(open("public-data/direction.json"))
+          sample = block["sample"]
+          assert sample["resolved"]["to"], "the run recorded no resolved end date"
+          assert "--to" in block["reproduce"], block["reproduce"]
+
+          null = block["benchmark"]["label"]
+          assert null == "random_walk_drift_matched", (
+              f"benchmark is {null!r}: this run was centred, so every resolution in it "
+              f"grades the drift policy rather than the models"
+          )
+
+          horizons = block["horizons"]
+          assert horizons, "no horizon was scored at all"
+          for entry in horizons:
+              where = entry["horizon_sessions"]
+              assert entry["models"], f"no models at horizon {where}"
+              for model in entry["models"]:
+                  assert "resolution" in model["decomposition"], model["model"]
+              screens = entry["discrimination"]
+              for name in ("full_sample", "non_overlapping_subsample", "equal_count_bins_robustness"):
+                  assert screens[name] is not None, f"{name} missing at horizon {where}"
+                  for label, row in screens[name]["models"].items():
+                      assert "occupied_bins" in row, f"{label} at {where} has no bin count"
+          print(
+              f"direction OK: {len(horizons)} horizons, "
+              f"{len(horizons[0]['models'])} models against {null}, "
+              f"bounded to {sample['resolved']['to']}"
+          )
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: direction
+          path: public-data/direction.json
+          if-no-files-found: error
+
+      - name: commit public-data, and only public-data
+        if: inputs.commit
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git config user.name "aurex-shootout[bot]"
+          git config user.email "aurex-shootout@users.noreply.github.com"
+
+          git add public-data/
+
+          outside=$(git diff --cached --name-only | grep -v '^public-data/' || true)
+          if [ -n "$outside" ]; then
+            echo "the direction job staged files outside public-data/:"
+            echo "$outside"
+            exit 1
+          fi
+
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+
+          git commit \
+            -m "chore(bench): step 6b direction for ${{ inputs.asset }}" \
+            -m "Run from ${GITHUB_SHA} by workflow_dispatch. The reproducing command and the resolved sample window are in the artifact."
+
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}); rebasing onto the remote"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          done
+          echo "could not push the direction result after three attempts"
+          exit 1

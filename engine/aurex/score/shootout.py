@@ -93,8 +93,14 @@ class NonFiniteLossError(ValueError):
     """A forecaster's loss series contains a NaN or an infinity."""
 
 
-def _require_finite(losses: dict[str, np.ndarray], benchmark: np.ndarray | None = None) -> None:
-    """Refuse a loss series that is not finite, loudly and by name.
+def _require_finite(
+    losses: dict[str, np.ndarray],
+    reference: np.ndarray | None = None,
+    *,
+    quantity: str = "CRPS",
+    reference_name: str = "benchmark",
+) -> None:
+    """Refuse a series that is not finite, loudly and by name.
 
     Not defensive tidying. NaN propagates through every comparison as ``False``, so a
     single broken forecaster makes ``mean(bootstrap > statistic)`` evaluate to zero and
@@ -102,15 +108,20 @@ def _require_finite(losses: dict[str, np.ndarray], benchmark: np.ndarray | None 
     produce, from a model that did not forecast anything. It is the exact shape of
     failure this repository refuses everywhere else: silent, and wrong in the direction
     that looks like a finding. A broken model must stop the run, not win it.
+
+    ``quantity`` and ``reference_name`` exist so the message names what actually went
+    wrong. The resolution screen feeds this probabilities and outcomes, and a message
+    reading "non-finite CRPS from ['benchmark']" would send whoever hit it to the wrong
+    module.
     """
     broken = sorted(name for name, values in losses.items() if not np.all(np.isfinite(values)))
-    if benchmark is not None and not np.all(np.isfinite(benchmark)):
-        broken.append("benchmark")
+    if reference is not None and not np.all(np.isfinite(reference)):
+        broken.append(reference_name)
     if broken:
         raise NonFiniteLossError(
-            f"non-finite CRPS from {broken}. A model that produced NaN did not forecast, "
-            f"and scoring it would report a perfect p-value for an empty result. Fix the "
-            f"forecaster or drop it from the set."
+            f"non-finite {quantity} from {broken}. A model that produced NaN did not "
+            f"forecast, and scoring it would report a perfect p-value for an empty "
+            f"result. Fix the forecaster or drop it from the set."
         )
 
 
@@ -697,7 +708,12 @@ def resolution_screen(
     n = int(observed.size)
     if n < 3:
         return None
-    _require_finite(probabilities, observed)
+    _require_finite(
+        probabilities,
+        observed,
+        quantity="forecast probability",
+        reference_name="realised outcomes",
+    )
 
     if sampling.overlapping:
         scheme = "cyclic_shift"

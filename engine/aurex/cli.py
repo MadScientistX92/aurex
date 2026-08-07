@@ -691,7 +691,7 @@ def direction(
     typer.echo(f"wrote {out}")
 
     for horizon in block["horizons"]:
-        screen = horizon["discrimination"]["full_sample_cyclic_shift"]
+        screen = horizon["discrimination"]["full_sample"]
         typer.echo(
             f"  {horizon['horizon_sessions']:>3} sessions (n={horizon['observations']}, "
             f"realised {horizon['realised_rate']:.3f}):"
