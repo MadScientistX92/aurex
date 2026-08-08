@@ -45,7 +45,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
-        "distinguishable_from_zero_equal_count": false,
+        "both_screens_reject_equal_count": false,
         "equal_count_bins_robustness": {
           "best_model": "nhits",
           "binning": "equal_count",
@@ -834,7 +834,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
-        "distinguishable_from_zero_equal_count": true,
+        "both_screens_reject_equal_count": true,
         "equal_count_bins_robustness": {
           "best_model": "har_rv",
           "binning": "equal_count",
@@ -1623,7 +1623,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
-        "distinguishable_from_zero_equal_count": false,
+        "both_screens_reject_equal_count": false,
         "equal_count_bins_robustness": {
           "best_model": "nhits",
           "binning": "equal_count",
@@ -2412,7 +2412,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
-        "distinguishable_from_zero_equal_count": false,
+        "both_screens_reject_equal_count": false,
         "equal_count_bins_robustness": {
           "best_model": "har_rv",
           "binning": "equal_count",
@@ -3201,7 +3201,7 @@
     {
       "discrimination": {
         "distinguishable_from_zero": false,
-        "distinguishable_from_zero_equal_count": false,
+        "both_screens_reject_equal_count": false,
         "equal_count_bins_robustness": {
           "best_model": "gjr_garch",
           "binning": "equal_count",

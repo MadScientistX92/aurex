@@ -516,7 +516,7 @@ def describe_direction(
                         and full.rejects
                         and thinned.rejects
                     ),
-                    "distinguishable_from_zero_equal_count": bool(
+                    "both_screens_reject_equal_count": bool(
                         by_rank is not None
                         and thinned_by_rank is not None
                         and by_rank.rejects
