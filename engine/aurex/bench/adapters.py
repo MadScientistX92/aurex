@@ -13,15 +13,26 @@ whole stack behind ``import aurex``, and the default test suite would start payi
 shootout it never runs.
 
 **The drift policy is one line, applied identically to all of them.** ``_centre``
-removes the mean simulated return from every ensemble, so no challenger carries a drift
-the null is denied. This is the same discipline
-:func:`~aurex.dist.fhs.residual_pool` applies to the engine's own models, moved to the
-only place these models expose something to centre — the simulated returns themselves.
-It is not a detail. A model carrying drift scored against one denied it was worth up to
-+4.6% of CRPS skill on the first asset this project measured, all of it eleven years of
-appreciation, and that result was withdrawn. A shootout is exactly where that error
-would reappear, six times over, because three of these models fit a conditional mean by
-construction and one infers a trend from context.
+removes the mean simulated return from an ensemble, so no challenger carries a drift the
+null is denied. This is the same discipline :func:`~aurex.dist.fhs.residual_pool`
+applies to the engine's own models, moved to the only place these models expose
+something to centre — the simulated returns themselves. It is not a detail. A model
+carrying drift scored against one denied it was worth up to +4.6% of CRPS skill on the
+first asset this project measured, all of it eleven years of appreciation, and that
+result was withdrawn. A shootout is exactly where that error would reappear, six times
+over, because three of these models fit a conditional mean by construction and one
+infers a trend from context.
+
+**Identically is the invariant; centred is only the default.** A run may instead ask
+every model to carry the drift it infers, which is what grading *direction* requires:
+centred forecasts put P(up) at about one half for everyone by construction, so a
+direction score computed on them measures the drift policy and not the models. What may
+never happen is a set that mixes the two, and that is not left to care — every
+forecaster declares :attr:`~aurex.score.forecasters.AsOfForecaster.carries_drift` and
+:func:`~aurex.bench.runner.build_forecasters` refuses to assemble a set that disagrees,
+null included. The null's own label changes with the policy, so an uncentred run is
+scored against ``random_walk_drift_matched`` and cannot silently report itself as having
+beaten §0's driftless one.
 
 **Two of the three are point forecasters, and CRPS needs a distribution.** AutoARIMA and
 NHITS produce a conditional mean path and nothing else. The distribution around it comes
@@ -120,11 +131,21 @@ def _ensemble(
     anchor: float,
     session_limit: SessionLimit | None,
     detail: dict[str, Any],
+    demean: bool = True,
 ) -> PathEnsemble:
-    """Centre, walk to prices, and record what produced it."""
-    centred = _centre(simulated)
+    """Apply the run's drift policy, walk to prices, and record what produced it.
+
+    ``demean`` is not a per-model option. It is the whole set's policy, and
+    :func:`~aurex.bench.runner.build_forecasters` refuses to assemble a set whose members
+    disagree about it — including the null, whose label changes with it. The flag exists
+    because grading *direction* on centred forecasts grades the policy rather than the
+    models: centring makes P(up) about one half for everyone by construction, so there is
+    nothing left for a resolution term to discriminate on. That run needs every
+    competitor, benchmark included, to carry whatever drift it infers.
+    """
+    returns = _centre(simulated) if demean else simulated
     prices, diagnostics = paths_from_returns(
-        transform, anchor, centred, session_limit=session_limit
+        transform, anchor, returns, session_limit=session_limit
     )
     return PathEnsemble(
         prices=prices,
@@ -134,10 +155,13 @@ def _ensemble(
         | {
             "transform": transform.describe(),
             "residual_pool": {
-                "demeaned": True,
+                "demeaned": demean,
                 "drift": (
                     "none: the simulated returns are centred before they are walked to "
                     "prices, so this forecaster carries the same drift policy as the null"
+                    if demean
+                    else "the model's own, carried into prices uncentred so direction is "
+                    "graded on what the model inferred rather than on the drift policy"
                 ),
             },
         },
@@ -179,11 +203,18 @@ class AutoArimaForecaster:
     session_limit: SessionLimit | None = None
     n_paths: int = 4_000
     min_observations: int = 750
+    #: Carry the model's own drift into prices. See :func:`_ensemble` — the run's policy,
+    #: not this model's, and the whole set is checked to agree on it.
+    demean: bool = True
     season_length: int = 1
 
     @property
     def label(self) -> str:
         return "auto_arima"
+
+    @property
+    def carries_drift(self) -> bool:
+        return not self.demean
 
     def forecast(
         self, history: pd.Series, *, horizons: tuple[int, ...], seed: int
@@ -213,6 +244,7 @@ class AutoArimaForecaster:
                 transform=self.transform,
                 anchor=anchor,
                 session_limit=self.session_limit,
+                demean=self.demean,
                 detail={
                     "vol_model": {
                         "model": self.label,
@@ -236,6 +268,7 @@ class AutoArimaForecaster:
             },
             "transform": self.transform.describe(),
             "n_paths": self.n_paths,
+            "carries_drift": self.carries_drift,
         }
 
 
@@ -253,12 +286,19 @@ class NhitsForecaster:
     session_limit: SessionLimit | None = None
     n_paths: int = 4_000
     min_observations: int = 750
+    #: Carry the model's own drift into prices. See :func:`_ensemble` — the run's policy,
+    #: not this model's, and the whole set is checked to agree on it.
+    demean: bool = True
     max_steps: int = 200
     input_size: int = 128
 
     @property
     def label(self) -> str:
         return "nhits"
+
+    @property
+    def carries_drift(self) -> bool:
+        return not self.demean
 
     def forecast(
         self, history: pd.Series, *, horizons: tuple[int, ...], seed: int
@@ -311,6 +351,7 @@ class NhitsForecaster:
                 transform=self.transform,
                 anchor=anchor,
                 session_limit=self.session_limit,
+                demean=self.demean,
                 detail={
                     "vol_model": {
                         "model": self.label,
@@ -337,6 +378,7 @@ class NhitsForecaster:
             },
             "transform": self.transform.describe(),
             "n_paths": self.n_paths,
+            "carries_drift": self.carries_drift,
         }
 
 
@@ -359,6 +401,9 @@ class ChronosForecaster:
     #: design; see the module docstring for which way that cuts.
     n_paths: int = 200
     min_observations: int = 750
+    #: Carry the model's own drift into prices. See :func:`_ensemble` — the run's policy,
+    #: not this model's, and the whole set is checked to agree on it.
+    demean: bool = True
     checkpoint: str = "amazon/chronos-t5-small"
     context: int = CHRONOS_CONTEXT
     #: Set once at first use, so a walk-forward does not reload the weights per date.
@@ -367,6 +412,10 @@ class ChronosForecaster:
     @property
     def label(self) -> str:
         return "chronos_t5_small"
+
+    @property
+    def carries_drift(self) -> bool:
+        return not self.demean
 
     def _pipeline(self) -> Any:
         import torch
@@ -404,6 +453,7 @@ class ChronosForecaster:
                 transform=self.transform,
                 anchor=anchor,
                 session_limit=self.session_limit,
+                demean=self.demean,
                 detail={
                     "vol_model": {
                         "model": self.label,
@@ -433,6 +483,7 @@ class ChronosForecaster:
             },
             "transform": self.transform.describe(),
             "n_paths": self.n_paths,
+            "carries_drift": self.carries_drift,
             "caveat": (
                 "Zero-shot on this series, but the checkpoint's training corpus is not "
                 "auditable from this repository. If it contained gold, this is not a "

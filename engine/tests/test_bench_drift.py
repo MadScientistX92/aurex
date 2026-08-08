@@ -16,15 +16,31 @@ there in the first place.
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
+from aurex.assets.synthetic import SYNTHETIC
 from aurex.assets.transforms import LogReturn
+from aurex.bench import CHALLENGERS, MixedDriftPolicyError, build_forecasters
 from aurex.bench.adapters import (
+    AutoArimaForecaster,
+    ChronosForecaster,
     InsufficientResidualsError,
+    NhitsForecaster,
     _bootstrap_residuals,
     _centre,
     _ensemble,
 )
+from aurex.bench.runner import _require_one_drift_policy
+from aurex.score import ModelForecaster, RandomWalkForecaster
+from aurex.vol import model_for
+
+
+def _prices(n: int = 400) -> pd.Series:
+    """A price series only long enough to assemble against; nothing here fits a model."""
+    rng = np.random.default_rng(99)
+    values = 100.0 * np.exp(np.cumsum(rng.normal(0.0003, 0.01, n)))
+    return pd.Series(values, index=pd.bdate_range("2020-01-01", periods=n), name="price")
 
 
 class TestTheSharedDriftPolicy:
@@ -114,3 +130,125 @@ class TestTheResidualBootstrap:
             _bootstrap_residuals(
                 np.array([np.nan, 0.01]), n_paths=10, horizon=3, rng=np.random.default_rng(6)
             )
+
+
+class TestTheUncentredRunIsPossibleAndCannotBeMixed:
+    """Direction needs the opposite policy, and mixing the two is the withdrawn error.
+
+    Grading direction on centred forecasts grades the drift policy: every model returns
+    P(up) of about one half by construction, so the answer is fixed before any model
+    forecasts anything. The fix is to let every competitor carry the drift it infers and
+    move the null to the drift-matched walk — not to abandon centring, which is still
+    right for the CRPS comparison. What must never happen is one run holding both.
+    """
+
+    def test_an_uncentred_ensemble_keeps_the_drift_it_was_given(self) -> None:
+        rng = np.random.default_rng(30)
+        simulated = rng.normal(0.004, 0.01, size=(4_000, 21))
+
+        ensemble = _ensemble(
+            simulated,
+            transform=LogReturn(),
+            anchor=100.0,
+            session_limit=None,
+            detail={},
+            demean=False,
+        )
+
+        mean_log_return = float(np.mean(np.log(ensemble.terminal() / 100.0)))
+        # 21 sessions at +0.004 a session, where the centred version sits at zero.
+        assert mean_log_return == pytest.approx(21 * 0.004, rel=0.05)
+
+    def test_an_uncentred_ensemble_says_so_in_its_diagnostics(self) -> None:
+        ensemble = _ensemble(
+            np.full((10, 5), 0.01),
+            transform=LogReturn(),
+            anchor=100.0,
+            session_limit=None,
+            detail={},
+            demean=False,
+        )
+
+        pool = ensemble.diagnostics["residual_pool"]
+        assert pool["demeaned"] is False
+        assert "graded on what the model inferred" in pool["drift"]
+
+    def test_the_null_becomes_the_drift_matched_walk(self) -> None:
+        """An uncentred run cannot report itself as having beaten §0's driftless null."""
+        _, centred_null, _ = build_forecasters(
+            SYNTHETIC,
+            prices=_prices(),
+            ohlc=None,
+            breaks=(),
+            n_paths=100,
+            chronos_paths=10,
+            nhits_steps=10,
+            include=("gjr_garch",),
+        )
+        _, drifted_null, _ = build_forecasters(
+            SYNTHETIC,
+            prices=_prices(),
+            ohlc=None,
+            breaks=(),
+            n_paths=100,
+            chronos_paths=10,
+            nhits_steps=10,
+            include=("gjr_garch",),
+            demean=False,
+        )
+
+        assert centred_null.label == "random_walk"
+        assert drifted_null.label == "random_walk_drift_matched"
+
+    def test_every_member_of_an_uncentred_set_carries_drift(self) -> None:
+        subject, baseline, extras = build_forecasters(
+            SYNTHETIC,
+            prices=_prices(),
+            ohlc=None,
+            breaks=(),
+            n_paths=100,
+            chronos_paths=10,
+            nhits_steps=10,
+            include=CHALLENGERS,
+            demean=False,
+        )
+
+        assert all(entry.carries_drift for entry in (subject, baseline, *extras))
+
+    def test_a_mixed_set_is_refused_at_assembly(self) -> None:
+        """The guard asks each forecaster what it does rather than trusting the keyword
+        reached it, so a challenger that grew its own default fails here rather than
+        posting skill that belongs to eleven years of appreciation."""
+        centred = ChronosForecaster(transform=LogReturn(), n_paths=10)
+        drifting = ChronosForecaster(transform=LogReturn(), n_paths=10, demean=False)
+
+        with pytest.raises(MixedDriftPolicyError, match="uncentred"):
+            _require_one_drift_policy((drifting, centred), demean=False)
+
+        with pytest.raises(MixedDriftPolicyError, match="centred"):
+            _require_one_drift_policy((centred, drifting), demean=True)
+
+    def test_a_consistent_set_passes(self) -> None:
+        centred = ChronosForecaster(transform=LogReturn(), n_paths=10)
+        _require_one_drift_policy((centred,), demean=True)
+
+    def test_carries_drift_is_derived_and_not_stored(self) -> None:
+        """Every implementation reads it off the flag that governs its simulation, so it
+        cannot be set inconsistently with the behaviour it describes."""
+        for forecaster in (
+            ChronosForecaster(transform=LogReturn()),
+            NhitsForecaster(transform=LogReturn()),
+            AutoArimaForecaster(transform=LogReturn()),
+            RandomWalkForecaster(transform=LogReturn()),
+            ModelForecaster(model=model_for("gjr_garch"), transform=LogReturn()),
+        ):
+            assert forecaster.carries_drift is False
+
+        assert ChronosForecaster(transform=LogReturn(), demean=False).carries_drift is True
+        assert RandomWalkForecaster(transform=LogReturn(), demean=False).carries_drift is True
+        assert (
+            ModelForecaster(
+                model=model_for("gjr_garch"), transform=LogReturn(), demean_residuals=False
+            ).carries_drift
+            is True
+        )

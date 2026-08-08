@@ -1,0 +1,4145 @@
+{
+  "asset": {
+    "id": "gold",
+    "label": "Gold",
+    "price_series_id": "xauusd",
+    "quote_currency": "USD"
+  },
+  "benchmark": {
+    "block_length": 1,
+    "label": "random_walk_drift_matched",
+    "model": {
+      "drift": "the sample's own, so the comparison isolates conditioning",
+      "id": "random_walk_drift_matched",
+      "increments": "iid draws from the raw empirical return distribution"
+    },
+    "n_paths": 4000,
+    "transform": {
+      "formula": "log(P_t) - log(P_{t-1})",
+      "id": "log"
+    }
+  },
+  "code": {
+    "commit": "f20ef6baa8e5a710e109586a88f8c978d8662f63",
+    "dirty": null,
+    "engine_version": "0.1.0",
+    "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
+    "ref": "step-6b-direction",
+    "source": "git"
+  },
+  "conventions": {
+    "drift": "Every model in this set carries the drift it infers, the benchmark included, and the benchmark is therefore the drift-matched random walk rather than \u00a70's driftless one. That is the whole reason this run is separate from the CRPS shootout. Centring makes P(up) about one half for every entrant by construction, so direction graded on centred forecasts grades the drift policy and not the models \u2014 it would return 'no model can call direction' whatever the models did, which is an answer that cannot be wrong and therefore is not a measurement.",
+    "lookahead": "none: each fit sees prices up to and including its as-of date",
+    "multiple_comparisons": "Six resolution figures read informally against zero is the leaderboard problem the CRPS shootout uses Hansen's SPA to avoid. The decision here is one test over the whole set \u2014 the largest studentised resolution against its own resampled null \u2014 and the per-model p-values are description.",
+    "primary_metric": "Resolution. It is level-invariant, so it measures whether a model can tell one window from another rather than whether it also got the base rate right. Brier and reliability are reported per model and are not summed into a single figure of merit.",
+    "windows": "One walk-forward, so every model was scored on the same as-of dates against the same realised outcomes. A date any model could not fit is a date none of them is scored on."
+  },
+  "engine_version": "0.1.0",
+  "event": {
+    "definition": "terminal price above anchor x 1",
+    "id": "direction_up",
+    "monitoring": "terminal"
+  },
+  "generated_at": "2026-08-07T20:25:06.060228+00:00",
+  "horizons": [
+    {
+      "discrimination": {
+        "distinguishable_from_zero": false,
+        "both_screens_reject_equal_count": false,
+        "equal_count_bins_robustness": {
+          "best_model": "nhits",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.5785,
+              "resolution": 0.003237,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003867
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.3447,
+              "resolution": 0.004367,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003916
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.3263,
+              "resolution": 0.004426,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003849
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.1,
+              "resolution": 0.006269,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003847
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.0624,
+              "resolution": 0.007042,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003852
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.1832,
+              "resolution": 0.005378,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003854
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 580,
+          "p_value": 0.3133,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.7282,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "nhits",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.5785,
+              "resolution": 0.003237,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003867
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.3447,
+              "resolution": 0.004367,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003916
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.3263,
+              "resolution": 0.004426,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003849
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.1,
+              "resolution": 0.006269,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003847
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.0624,
+              "resolution": 0.007042,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003852
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.1832,
+              "resolution": 0.005378,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003854
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 580,
+          "p_value": 0.3133,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.7282,
+          "test": "max_studentised_resolution"
+        },
+        "full_sample": {
+          "best_model": "har_rv",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 2,
+              "p_value": 0.3863,
+              "resolution": 0.000423,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.000428
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.6195,
+              "resolution": 0.003133,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003889
+            },
+            "gjr_garch": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 0.5021,
+              "resolution": 0.000755,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.00043
+            },
+            "nhits": {
+              "occupied_bins": 9,
+              "p_value": 0.8226,
+              "resolution": 0.001919,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.00341
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 580,
+          "p_value": 0.7425,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 0.753,
+          "test": "max_studentised_resolution"
+        },
+        "measurable_at_equal_width": true,
+        "non_overlapping_subsample": {
+          "best_model": "har_rv",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 2,
+              "p_value": 0.3863,
+              "resolution": 0.000423,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.000428
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.6195,
+              "resolution": 0.003133,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003889
+            },
+            "gjr_garch": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 0.5021,
+              "resolution": 0.000755,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.00043
+            },
+            "nhits": {
+              "occupied_bins": 9,
+              "p_value": 0.8226,
+              "resolution": 0.001919,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.00341
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 580,
+          "p_value": 0.7425,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 0.753,
+          "test": "max_studentised_resolution"
+        },
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+      },
+      "horizon_sessions": 5,
+      "independent_observations": 580,
+      "models": [
+        {
+          "base_rate": 0.5328,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 22,
+              "forecast_mean": 0.4821,
+              "lower": 0.4,
+              "observed_rate": 0.6364,
+              "upper": 0.5
+            },
+            {
+              "count": 558,
+              "forecast_mean": 0.5378,
+              "lower": 0.5,
+              "observed_rate": 0.5287,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24947,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": 1.4e-05,
+            "implied_brier": 0.24949,
+            "reliability": 0.00098,
+            "resolution": 0.00042,
+            "uncertainty": 0.24893
+          },
+          "forecast_bias": 0.003,
+          "mean_forecast": 0.5357,
+          "model": "auto_arima",
+          "observations": 580,
+          "positive_events": 309,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5328,
+          "bins": [
+            {
+              "count": 89,
+              "forecast_mean": 0.0378,
+              "lower": 0.0,
+              "observed_rate": 0.5056,
+              "upper": 0.1
+            },
+            {
+              "count": 59,
+              "forecast_mean": 0.1483,
+              "lower": 0.1,
+              "observed_rate": 0.4915,
+              "upper": 0.2
+            },
+            {
+              "count": 38,
+              "forecast_mean": 0.2549,
+              "lower": 0.2,
+              "observed_rate": 0.4474,
+              "upper": 0.3
+            },
+            {
+              "count": 42,
+              "forecast_mean": 0.3437,
+              "lower": 0.3,
+              "observed_rate": 0.5238,
+              "upper": 0.4
+            },
+            {
+              "count": 35,
+              "forecast_mean": 0.4484,
+              "lower": 0.4,
+              "observed_rate": 0.6286,
+              "upper": 0.5
+            },
+            {
+              "count": 43,
+              "forecast_mean": 0.5485,
+              "lower": 0.5,
+              "observed_rate": 0.5814,
+              "upper": 0.6
+            },
+            {
+              "count": 26,
+              "forecast_mean": 0.6623,
+              "lower": 0.6,
+              "observed_rate": 0.4615,
+              "upper": 0.7
+            },
+            {
+              "count": 36,
+              "forecast_mean": 0.7561,
+              "lower": 0.7,
+              "observed_rate": 0.6389,
+              "upper": 0.8
+            },
+            {
+              "count": 54,
+              "forecast_mean": 0.8453,
+              "lower": 0.8,
+              "observed_rate": 0.463,
+              "upper": 0.9
+            },
+            {
+              "count": 158,
+              "forecast_mean": 0.9706,
+              "lower": 0.9,
+              "observed_rate": 0.5633,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.36096,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.001329,
+            "implied_brier": 0.35963,
+            "reliability": 0.11384,
+            "resolution": 0.00313,
+            "uncertainty": 0.24893
+          },
+          "forecast_bias": 0.0172,
+          "mean_forecast": 0.5499,
+          "model": "chronos_t5_small",
+          "observations": 580,
+          "positive_events": 309,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5328,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 580,
+              "forecast_mean": 0.541,
+              "lower": 0.5,
+              "observed_rate": 0.5328,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24911,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000117,
+            "implied_brier": 0.249,
+            "reliability": 7e-05,
+            "resolution": 0.0,
+            "uncertainty": 0.24893
+          },
+          "forecast_bias": 0.0083,
+          "mean_forecast": 0.541,
+          "model": "gjr_garch",
+          "observations": 580,
+          "positive_events": 309,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5328,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 2,
+              "forecast_mean": 0.4988,
+              "lower": 0.4,
+              "observed_rate": 1.0,
+              "upper": 0.5
+            },
+            {
+              "count": 578,
+              "forecast_mean": 0.5326,
+              "lower": 0.5,
+              "observed_rate": 0.5311,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24928,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000239,
+            "implied_brier": 0.24904,
+            "reliability": 0.00087,
+            "resolution": 0.00076,
+            "uncertainty": 0.24893
+          },
+          "forecast_bias": -0.0002,
+          "mean_forecast": 0.5325,
+          "model": "har_rv",
+          "observations": 580,
+          "positive_events": 309,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5328,
+          "bins": [
+            {
+              "count": 2,
+              "forecast_mean": 0.0664,
+              "lower": 0.0,
+              "observed_rate": 0.5,
+              "upper": 0.1
+            },
+            {
+              "count": 6,
+              "forecast_mean": 0.1669,
+              "lower": 0.1,
+              "observed_rate": 0.3333,
+              "upper": 0.2
+            },
+            {
+              "count": 28,
+              "forecast_mean": 0.2581,
+              "lower": 0.2,
+              "observed_rate": 0.3929,
+              "upper": 0.3
+            },
+            {
+              "count": 100,
+              "forecast_mean": 0.3517,
+              "lower": 0.3,
+              "observed_rate": 0.57,
+              "upper": 0.4
+            },
+            {
+              "count": 145,
+              "forecast_mean": 0.4501,
+              "lower": 0.4,
+              "observed_rate": 0.531,
+              "upper": 0.5
+            },
+            {
+              "count": 158,
+              "forecast_mean": 0.5479,
+              "lower": 0.5,
+              "observed_rate": 0.538,
+              "upper": 0.6
+            },
+            {
+              "count": 100,
+              "forecast_mean": 0.6363,
+              "lower": 0.6,
+              "observed_rate": 0.53,
+              "upper": 0.7
+            },
+            {
+              "count": 36,
+              "forecast_mean": 0.7315,
+              "lower": 0.7,
+              "observed_rate": 0.5833,
+              "upper": 0.8
+            },
+            {
+              "count": 5,
+              "forecast_mean": 0.8261,
+              "lower": 0.8,
+              "observed_rate": 0.4,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.26412,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000548,
+            "implied_brier": 0.26357,
+            "reliability": 0.01657,
+            "resolution": 0.00192,
+            "uncertainty": 0.24893
+          },
+          "forecast_bias": -0.0337,
+          "mean_forecast": 0.4991,
+          "model": "nhits",
+          "observations": 580,
+          "positive_events": 309,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5328,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 580,
+              "forecast_mean": 0.5384,
+              "lower": 0.5,
+              "observed_rate": 0.5328,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24933,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000373,
+            "implied_brier": 0.24896,
+            "reliability": 3e-05,
+            "resolution": 0.0,
+            "uncertainty": 0.24893
+          },
+          "forecast_bias": 0.0056,
+          "mean_forecast": 0.5384,
+          "model": "random_walk_drift_matched",
+          "observations": 580,
+          "positive_events": 309,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        }
+      ],
+      "observations": 580,
+      "positive_events": 309,
+      "realised_rate": 0.53276,
+      "sampling": {
+        "horizon_sessions": 5,
+        "independent_stride": 1,
+        "overlapping": false,
+        "step_sessions": 5
+      }
+    },
+    {
+      "discrimination": {
+        "distinguishable_from_zero": false,
+        "both_screens_reject_equal_count": true,
+        "equal_count_bins_robustness": {
+          "best_model": "har_rv",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.4783,
+              "resolution": 0.0037,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003945
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.7938,
+              "resolution": 0.002945,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004846
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.1508,
+              "resolution": 0.005867,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004024
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.0069,
+              "resolution": 0.010966,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004029
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.253,
+              "resolution": 0.005284,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004305
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.5095,
+              "resolution": 0.003752,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004041
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 579,
+          "p_value": 0.0364,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 576,
+          "rejects_at_5pct": true,
+          "resampling": "cyclic_shift",
+          "statistic": 3.4931,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "auto_arima",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.0046,
+              "resolution": 0.020499,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007759
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.899,
+              "resolution": 0.003615,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007691
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.1856,
+              "resolution": 0.010987,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007823
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.007,
+              "resolution": 0.019073,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007715
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.0706,
+              "resolution": 0.013603,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007777
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.6847,
+              "resolution": 0.005755,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007819
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 290,
+          "p_value": 0.0252,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": true,
+          "resampling": "permutation",
+          "statistic": 3.494,
+          "test": "max_studentised_resolution"
+        },
+        "full_sample": {
+          "best_model": "nhits",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 2,
+              "p_value": 0.435,
+              "resolution": 0.000731,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.000713
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.5026,
+              "resolution": 0.00441,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004708
+            },
+            "gjr_garch": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "har_rv": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "nhits": {
+              "occupied_bins": 9,
+              "p_value": 0.1179,
+              "resolution": 0.006341,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004005
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 579,
+          "p_value": 0.3293,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 576,
+          "rejects_at_5pct": false,
+          "resampling": "cyclic_shift",
+          "statistic": 1.0802,
+          "test": "max_studentised_resolution"
+        },
+        "measurable_at_equal_width": true,
+        "non_overlapping_subsample": {
+          "best_model": "chronos_t5_small",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 2,
+              "p_value": 0.2298,
+              "resolution": 0.001518,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.000865
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.202,
+              "resolution": 0.01046,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007743
+            },
+            "gjr_garch": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "har_rv": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "nhits": {
+              "occupied_bins": 8,
+              "p_value": 0.853,
+              "resolution": 0.003137,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.006048
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 290,
+          "p_value": 0.4309,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 0.7795,
+          "test": "max_studentised_resolution"
+        },
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+      },
+      "horizon_sessions": 10,
+      "independent_observations": 290,
+      "models": [
+        {
+          "base_rate": 0.5458,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 22,
+              "forecast_mean": 0.4689,
+              "lower": 0.4,
+              "observed_rate": 0.6818,
+              "upper": 0.5
+            },
+            {
+              "count": 557,
+              "forecast_mean": 0.5473,
+              "lower": 0.5,
+              "observed_rate": 0.5404,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24897,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -2.7e-05,
+            "implied_brier": 0.24894,
+            "reliability": 0.00177,
+            "resolution": 0.00073,
+            "uncertainty": 0.24791
+          },
+          "forecast_bias": -0.0014,
+          "mean_forecast": 0.5444,
+          "model": "auto_arima",
+          "observations": 579,
+          "positive_events": 316,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5458,
+          "bins": [
+            {
+              "count": 114,
+              "forecast_mean": 0.0308,
+              "lower": 0.0,
+              "observed_rate": 0.5526,
+              "upper": 0.1
+            },
+            {
+              "count": 47,
+              "forecast_mean": 0.1366,
+              "lower": 0.1,
+              "observed_rate": 0.4681,
+              "upper": 0.2
+            },
+            {
+              "count": 47,
+              "forecast_mean": 0.2549,
+              "lower": 0.2,
+              "observed_rate": 0.4894,
+              "upper": 0.3
+            },
+            {
+              "count": 28,
+              "forecast_mean": 0.3498,
+              "lower": 0.3,
+              "observed_rate": 0.6429,
+              "upper": 0.4
+            },
+            {
+              "count": 33,
+              "forecast_mean": 0.4476,
+              "lower": 0.4,
+              "observed_rate": 0.697,
+              "upper": 0.5
+            },
+            {
+              "count": 24,
+              "forecast_mean": 0.5583,
+              "lower": 0.5,
+              "observed_rate": 0.5417,
+              "upper": 0.6
+            },
+            {
+              "count": 25,
+              "forecast_mean": 0.6388,
+              "lower": 0.6,
+              "observed_rate": 0.72,
+              "upper": 0.7
+            },
+            {
+              "count": 24,
+              "forecast_mean": 0.7533,
+              "lower": 0.7,
+              "observed_rate": 0.4583,
+              "upper": 0.8
+            },
+            {
+              "count": 48,
+              "forecast_mean": 0.8576,
+              "lower": 0.8,
+              "observed_rate": 0.5625,
+              "upper": 0.9
+            },
+            {
+              "count": 189,
+              "forecast_mean": 0.9786,
+              "lower": 0.9,
+              "observed_rate": 0.5185,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.39914,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000729,
+            "implied_brier": 0.39841,
+            "reliability": 0.15491,
+            "resolution": 0.00441,
+            "uncertainty": 0.24791
+          },
+          "forecast_bias": 0.007,
+          "mean_forecast": 0.5528,
+          "model": "chronos_t5_small",
+          "observations": 579,
+          "positive_events": 316,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5458,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 579,
+              "forecast_mean": 0.5566,
+              "lower": 0.5,
+              "observed_rate": 0.5458,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24863,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000611,
+            "implied_brier": 0.24802,
+            "reliability": 0.00012,
+            "resolution": 0.0,
+            "uncertainty": 0.24791
+          },
+          "forecast_bias": 0.0108,
+          "mean_forecast": 0.5566,
+          "model": "gjr_garch",
+          "observations": 579,
+          "positive_events": 316,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5458,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 579,
+              "forecast_mean": 0.5565,
+              "lower": 0.5,
+              "observed_rate": 0.5458,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.2478,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": 0.000223,
+            "implied_brier": 0.24802,
+            "reliability": 0.00012,
+            "resolution": 0.0,
+            "uncertainty": 0.24791
+          },
+          "forecast_bias": 0.0108,
+          "mean_forecast": 0.5565,
+          "model": "har_rv",
+          "observations": 579,
+          "positive_events": 316,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5458,
+          "bins": [
+            {
+              "count": 1,
+              "forecast_mean": 0.086,
+              "lower": 0.0,
+              "observed_rate": 1.0,
+              "upper": 0.1
+            },
+            {
+              "count": 14,
+              "forecast_mean": 0.1555,
+              "lower": 0.1,
+              "observed_rate": 0.5,
+              "upper": 0.2
+            },
+            {
+              "count": 52,
+              "forecast_mean": 0.2628,
+              "lower": 0.2,
+              "observed_rate": 0.5385,
+              "upper": 0.3
+            },
+            {
+              "count": 122,
+              "forecast_mean": 0.3546,
+              "lower": 0.3,
+              "observed_rate": 0.5902,
+              "upper": 0.4
+            },
+            {
+              "count": 129,
+              "forecast_mean": 0.4514,
+              "lower": 0.4,
+              "observed_rate": 0.5969,
+              "upper": 0.5
+            },
+            {
+              "count": 130,
+              "forecast_mean": 0.548,
+              "lower": 0.5,
+              "observed_rate": 0.4385,
+              "upper": 0.6
+            },
+            {
+              "count": 93,
+              "forecast_mean": 0.6448,
+              "lower": 0.6,
+              "observed_rate": 0.5376,
+              "upper": 0.7
+            },
+            {
+              "count": 33,
+              "forecast_mean": 0.7439,
+              "lower": 0.7,
+              "observed_rate": 0.697,
+              "upper": 0.8
+            },
+            {
+              "count": 5,
+              "forecast_mean": 0.8582,
+              "lower": 0.8,
+              "observed_rate": 0.2,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.27986,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.002346,
+            "implied_brier": 0.27752,
+            "reliability": 0.03595,
+            "resolution": 0.00634,
+            "uncertainty": 0.24791
+          },
+          "forecast_bias": -0.0666,
+          "mean_forecast": 0.4792,
+          "model": "nhits",
+          "observations": 579,
+          "positive_events": 316,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5458,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 579,
+              "forecast_mean": 0.5471,
+              "lower": 0.5,
+              "observed_rate": 0.5458,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24833,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.00042,
+            "implied_brier": 0.24791,
+            "reliability": 0.0,
+            "resolution": 0.0,
+            "uncertainty": 0.24791
+          },
+          "forecast_bias": 0.0013,
+          "mean_forecast": 0.5471,
+          "model": "random_walk_drift_matched",
+          "observations": 579,
+          "positive_events": 316,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        }
+      ],
+      "observations": 579,
+      "positive_events": 316,
+      "realised_rate": 0.54577,
+      "sampling": {
+        "horizon_sessions": 10,
+        "independent_stride": 2,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    },
+    {
+      "discrimination": {
+        "distinguishable_from_zero": false,
+        "both_screens_reject_equal_count": false,
+        "equal_count_bins_robustness": {
+          "best_model": "nhits",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.4394,
+              "resolution": 0.004531,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004703
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.7276,
+              "resolution": 0.004883,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007276
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.5448,
+              "resolution": 0.004122,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004757
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.9209,
+              "resolution": 0.00221,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.005244
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.3005,
+              "resolution": 0.005532,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.005044
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.5378,
+              "resolution": 0.004395,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004982
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 577,
+          "p_value": 0.9069,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 568,
+          "rejects_at_5pct": false,
+          "resampling": "cyclic_shift",
+          "statistic": 0.1284,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "random_walk_drift_matched",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.798,
+              "resolution": 0.011821,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019469
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.3651,
+              "resolution": 0.021421,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019512
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.9326,
+              "resolution": 0.008359,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019711
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.6185,
+              "resolution": 0.015805,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.01959
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.3259,
+              "resolution": 0.022531,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019478
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.2713,
+              "resolution": 0.023903,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019474
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 116,
+          "p_value": 0.8488,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 0.5022,
+          "test": "max_studentised_resolution"
+        },
+        "full_sample": {
+          "best_model": "auto_arima",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 2,
+              "p_value": 0.051,
+              "resolution": 0.003744,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.001066
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.9772,
+              "resolution": 0.001698,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.005814
+            },
+            "gjr_garch": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 0.174,
+              "resolution": 0.001374,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.000489
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.2232,
+              "resolution": 0.006262,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.004976
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 577,
+          "p_value": 0.1494,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 568,
+          "rejects_at_5pct": false,
+          "resampling": "cyclic_shift",
+          "statistic": 2.354,
+          "test": "max_studentised_resolution"
+        },
+        "measurable_at_equal_width": true,
+        "non_overlapping_subsample": {
+          "best_model": "har_rv",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 2,
+              "p_value": 0.2092,
+              "resolution": 0.004054,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.002161
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.4335,
+              "resolution": 0.020346,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019796
+            },
+            "gjr_garch": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 1.0,
+              "resolution": 0.002174,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.002174
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.6829,
+              "resolution": 0.01511,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.019512
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 1,
+              "p_value": 1.0,
+              "resolution": 0.0,
+              "resolution_measurable": false,
+              "resolution_under_null": 0.0
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 116,
+          "p_value": 1.0,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.0,
+          "test": "max_studentised_resolution"
+        },
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+      },
+      "horizon_sessions": 21,
+      "independent_observations": 116,
+      "models": [
+        {
+          "base_rate": 0.5563,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 22,
+              "forecast_mean": 0.4496,
+              "lower": 0.4,
+              "observed_rate": 0.8636,
+              "upper": 0.5
+            },
+            {
+              "count": 555,
+              "forecast_mean": 0.5626,
+              "lower": 0.5,
+              "observed_rate": 0.5441,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.25,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -4.8e-05,
+            "implied_brier": 0.24995,
+            "reliability": 0.00687,
+            "resolution": 0.00374,
+            "uncertainty": 0.24683
+          },
+          "forecast_bias": 0.002,
+          "mean_forecast": 0.5583,
+          "model": "auto_arima",
+          "observations": 577,
+          "positive_events": 321,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5563,
+          "bins": [
+            {
+              "count": 158,
+              "forecast_mean": 0.0254,
+              "lower": 0.0,
+              "observed_rate": 0.5506,
+              "upper": 0.1
+            },
+            {
+              "count": 40,
+              "forecast_mean": 0.144,
+              "lower": 0.1,
+              "observed_rate": 0.5,
+              "upper": 0.2
+            },
+            {
+              "count": 29,
+              "forecast_mean": 0.2472,
+              "lower": 0.2,
+              "observed_rate": 0.6207,
+              "upper": 0.3
+            },
+            {
+              "count": 22,
+              "forecast_mean": 0.3461,
+              "lower": 0.3,
+              "observed_rate": 0.5455,
+              "upper": 0.4
+            },
+            {
+              "count": 25,
+              "forecast_mean": 0.449,
+              "lower": 0.4,
+              "observed_rate": 0.52,
+              "upper": 0.5
+            },
+            {
+              "count": 14,
+              "forecast_mean": 0.5571,
+              "lower": 0.5,
+              "observed_rate": 0.6429,
+              "upper": 0.6
+            },
+            {
+              "count": 19,
+              "forecast_mean": 0.6587,
+              "lower": 0.6,
+              "observed_rate": 0.6316,
+              "upper": 0.7
+            },
+            {
+              "count": 23,
+              "forecast_mean": 0.7439,
+              "lower": 0.7,
+              "observed_rate": 0.6087,
+              "upper": 0.8
+            },
+            {
+              "count": 27,
+              "forecast_mean": 0.8426,
+              "lower": 0.8,
+              "observed_rate": 0.6667,
+              "upper": 0.9
+            },
+            {
+              "count": 220,
+              "forecast_mean": 0.9812,
+              "lower": 0.9,
+              "observed_rate": 0.5364,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.42002,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.003988,
+            "implied_brier": 0.41603,
+            "reliability": 0.1709,
+            "resolution": 0.0017,
+            "uncertainty": 0.24683
+          },
+          "forecast_bias": -0.0159,
+          "mean_forecast": 0.5404,
+          "model": "chronos_t5_small",
+          "observations": 577,
+          "positive_events": 321,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5563,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 577,
+              "forecast_mean": 0.5709,
+              "lower": 0.5,
+              "observed_rate": 0.5563,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24796,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000917,
+            "implied_brier": 0.24704,
+            "reliability": 0.00021,
+            "resolution": 0.0,
+            "uncertainty": 0.24683
+          },
+          "forecast_bias": 0.0145,
+          "mean_forecast": 0.5709,
+          "model": "gjr_garch",
+          "observations": 577,
+          "positive_events": 321,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5563,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 573,
+              "forecast_mean": 0.5644,
+              "lower": 0.5,
+              "observed_rate": 0.5532,
+              "upper": 0.6
+            },
+            {
+              "count": 4,
+              "forecast_mean": 0.6017,
+              "lower": 0.6,
+              "observed_rate": 1.0,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24658,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": 0.0001,
+            "implied_brier": 0.24668,
+            "reliability": 0.00122,
+            "resolution": 0.00137,
+            "uncertainty": 0.24683
+          },
+          "forecast_bias": 0.0083,
+          "mean_forecast": 0.5646,
+          "model": "har_rv",
+          "observations": 577,
+          "positive_events": 321,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5563,
+          "bins": [
+            {
+              "count": 6,
+              "forecast_mean": 0.0612,
+              "lower": 0.0,
+              "observed_rate": 0.6667,
+              "upper": 0.1
+            },
+            {
+              "count": 37,
+              "forecast_mean": 0.1608,
+              "lower": 0.1,
+              "observed_rate": 0.6216,
+              "upper": 0.2
+            },
+            {
+              "count": 92,
+              "forecast_mean": 0.2542,
+              "lower": 0.2,
+              "observed_rate": 0.5435,
+              "upper": 0.3
+            },
+            {
+              "count": 127,
+              "forecast_mean": 0.3488,
+              "lower": 0.3,
+              "observed_rate": 0.5276,
+              "upper": 0.4
+            },
+            {
+              "count": 117,
+              "forecast_mean": 0.451,
+              "lower": 0.4,
+              "observed_rate": 0.4615,
+              "upper": 0.5
+            },
+            {
+              "count": 92,
+              "forecast_mean": 0.547,
+              "lower": 0.5,
+              "observed_rate": 0.6304,
+              "upper": 0.6
+            },
+            {
+              "count": 69,
+              "forecast_mean": 0.6478,
+              "lower": 0.6,
+              "observed_rate": 0.6087,
+              "upper": 0.7
+            },
+            {
+              "count": 27,
+              "forecast_mean": 0.7384,
+              "lower": 0.7,
+              "observed_rate": 0.7037,
+              "upper": 0.8
+            },
+            {
+              "count": 7,
+              "forecast_mean": 0.8276,
+              "lower": 0.8,
+              "observed_rate": 0.5714,
+              "upper": 0.9
+            },
+            {
+              "count": 3,
+              "forecast_mean": 0.9391,
+              "lower": 0.9,
+              "observed_rate": 0.0,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.28916,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.004041,
+            "implied_brier": 0.28512,
+            "reliability": 0.04456,
+            "resolution": 0.00626,
+            "uncertainty": 0.24683
+          },
+          "forecast_bias": -0.1225,
+          "mean_forecast": 0.4339,
+          "model": "nhits",
+          "observations": 577,
+          "positive_events": 321,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5563,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 577,
+              "forecast_mean": 0.5619,
+              "lower": 0.5,
+              "observed_rate": 0.5563,
+              "upper": 0.6
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.6,
+              "observed_rate": null,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24755,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000692,
+            "implied_brier": 0.24686,
+            "reliability": 3e-05,
+            "resolution": 0.0,
+            "uncertainty": 0.24683
+          },
+          "forecast_bias": 0.0056,
+          "mean_forecast": 0.5619,
+          "model": "random_walk_drift_matched",
+          "observations": 577,
+          "positive_events": 321,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        }
+      ],
+      "observations": 577,
+      "positive_events": 321,
+      "realised_rate": 0.55633,
+      "sampling": {
+        "horizon_sessions": 21,
+        "independent_stride": 5,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    },
+    {
+      "discrimination": {
+        "distinguishable_from_zero": false,
+        "both_screens_reject_equal_count": false,
+        "equal_count_bins_robustness": {
+          "best_model": "har_rv",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.9227,
+              "resolution": 0.002642,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.006865
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.5306,
+              "resolution": 0.011568,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.012799
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.5216,
+              "resolution": 0.00621,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.006749
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.3004,
+              "resolution": 0.008015,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007056
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.973,
+              "resolution": 0.001385,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.00626
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.4119,
+              "resolution": 0.006651,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.006762
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 572,
+          "p_value": 0.8435,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 555,
+          "rejects_at_5pct": false,
+          "resampling": "cyclic_shift",
+          "statistic": 0.2315,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "random_walk_drift_matched",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.2827,
+              "resolution": 0.042178,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034928
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.839,
+              "resolution": 0.019485,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034121
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.3473,
+              "resolution": 0.039202,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034655
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.4491,
+              "resolution": 0.034738,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034648
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.9958,
+              "resolution": 0.006464,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034118
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.1564,
+              "resolution": 0.049619,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034538
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 64,
+          "p_value": 0.6271,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.0027,
+          "test": "max_studentised_resolution"
+        },
+        "full_sample": {
+          "best_model": "auto_arima",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 3,
+              "p_value": 0.3004,
+              "resolution": 0.004673,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003768
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.3129,
+              "resolution": 0.009337,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.008087
+            },
+            "gjr_garch": {
+              "occupied_bins": 2,
+              "p_value": 0.3112,
+              "resolution": 0.002342,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.001894
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 0.4982,
+              "resolution": 0.00083,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.001958
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.7608,
+              "resolution": 0.003116,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.006194
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 2,
+              "p_value": 0.7446,
+              "resolution": 0.000233,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.002095
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 572,
+          "p_value": 0.7194,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 555,
+          "rejects_at_5pct": false,
+          "resampling": "cyclic_shift",
+          "statistic": 0.2769,
+          "test": "max_studentised_resolution"
+        },
+        "measurable_at_equal_width": true,
+        "non_overlapping_subsample": {
+          "best_model": "random_walk_drift_matched",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 3,
+              "p_value": 0.4211,
+              "resolution": 0.008481,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007844
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.3109,
+              "resolution": 0.03927,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.034473
+            },
+            "gjr_garch": {
+              "occupied_bins": 2,
+              "p_value": 0.4315,
+              "resolution": 0.002909,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003865
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 1.0,
+              "resolution": 7e-06,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.003876
+            },
+            "nhits": {
+              "occupied_bins": 9,
+              "p_value": 0.3943,
+              "resolution": 0.032614,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.030419
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 2,
+              "p_value": 0.2148,
+              "resolution": 0.007016,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.00388
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 64,
+          "p_value": 0.7295,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 0.6035,
+          "test": "max_studentised_resolution"
+        },
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+      },
+      "horizon_sessions": 42,
+      "independent_observations": 64,
+      "models": [
+        {
+          "base_rate": 0.5874,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 22,
+              "forecast_mean": 0.425,
+              "lower": 0.4,
+              "observed_rate": 0.9091,
+              "upper": 0.5
+            },
+            {
+              "count": 500,
+              "forecast_mean": 0.5813,
+              "lower": 0.5,
+              "observed_rate": 0.582,
+              "upper": 0.6
+            },
+            {
+              "count": 50,
+              "forecast_mean": 0.6071,
+              "lower": 0.6,
+              "observed_rate": 0.5,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24783,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000134,
+            "implied_brier": 0.2477,
+            "reliability": 0.01001,
+            "resolution": 0.00467,
+            "uncertainty": 0.24236
+          },
+          "forecast_bias": -0.0099,
+          "mean_forecast": 0.5775,
+          "model": "auto_arima",
+          "observations": 572,
+          "positive_events": 336,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5874,
+          "bins": [
+            {
+              "count": 187,
+              "forecast_mean": 0.0236,
+              "lower": 0.0,
+              "observed_rate": 0.6738,
+              "upper": 0.1
+            },
+            {
+              "count": 27,
+              "forecast_mean": 0.1467,
+              "lower": 0.1,
+              "observed_rate": 0.4444,
+              "upper": 0.2
+            },
+            {
+              "count": 16,
+              "forecast_mean": 0.2288,
+              "lower": 0.2,
+              "observed_rate": 0.375,
+              "upper": 0.3
+            },
+            {
+              "count": 13,
+              "forecast_mean": 0.3446,
+              "lower": 0.3,
+              "observed_rate": 0.6923,
+              "upper": 0.4
+            },
+            {
+              "count": 18,
+              "forecast_mean": 0.4494,
+              "lower": 0.4,
+              "observed_rate": 0.6111,
+              "upper": 0.5
+            },
+            {
+              "count": 14,
+              "forecast_mean": 0.5468,
+              "lower": 0.5,
+              "observed_rate": 0.4286,
+              "upper": 0.6
+            },
+            {
+              "count": 15,
+              "forecast_mean": 0.6497,
+              "lower": 0.6,
+              "observed_rate": 0.8,
+              "upper": 0.7
+            },
+            {
+              "count": 20,
+              "forecast_mean": 0.7525,
+              "lower": 0.7,
+              "observed_rate": 0.7,
+              "upper": 0.8
+            },
+            {
+              "count": 34,
+              "forecast_mean": 0.8546,
+              "lower": 0.8,
+              "observed_rate": 0.6471,
+              "upper": 0.9
+            },
+            {
+              "count": 228,
+              "forecast_mean": 0.9878,
+              "lower": 0.9,
+              "observed_rate": 0.5175,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.47279,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.001473,
+            "implied_brier": 0.47132,
+            "reliability": 0.2383,
+            "resolution": 0.00934,
+            "uncertainty": 0.24236
+          },
+          "forecast_bias": -0.0431,
+          "mean_forecast": 0.5443,
+          "model": "chronos_t5_small",
+          "observations": 572,
+          "positive_events": 336,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5874,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 383,
+              "forecast_mean": 0.5891,
+              "lower": 0.5,
+              "observed_rate": 0.6214,
+              "upper": 0.6
+            },
+            {
+              "count": 189,
+              "forecast_mean": 0.6093,
+              "lower": 0.6,
+              "observed_rate": 0.5185,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24439,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000949,
+            "implied_brier": 0.24344,
+            "reliability": 0.00342,
+            "resolution": 0.00234,
+            "uncertainty": 0.24236
+          },
+          "forecast_bias": 0.0083,
+          "mean_forecast": 0.5957,
+          "model": "gjr_garch",
+          "observations": 572,
+          "positive_events": 336,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5874,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 472,
+              "forecast_mean": 0.5797,
+              "lower": 0.5,
+              "observed_rate": 0.5742,
+              "upper": 0.6
+            },
+            {
+              "count": 100,
+              "forecast_mean": 0.6118,
+              "lower": 0.6,
+              "observed_rate": 0.65,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24321,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.001406,
+            "implied_brier": 0.24181,
+            "reliability": 0.00028,
+            "resolution": 0.00083,
+            "uncertainty": 0.24236
+          },
+          "forecast_bias": -0.0021,
+          "mean_forecast": 0.5853,
+          "model": "har_rv",
+          "observations": 572,
+          "positive_events": 336,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5874,
+          "bins": [
+            {
+              "count": 29,
+              "forecast_mean": 0.0628,
+              "lower": 0.0,
+              "observed_rate": 0.7241,
+              "upper": 0.1
+            },
+            {
+              "count": 99,
+              "forecast_mean": 0.1511,
+              "lower": 0.1,
+              "observed_rate": 0.5152,
+              "upper": 0.2
+            },
+            {
+              "count": 109,
+              "forecast_mean": 0.2516,
+              "lower": 0.2,
+              "observed_rate": 0.6147,
+              "upper": 0.3
+            },
+            {
+              "count": 92,
+              "forecast_mean": 0.3452,
+              "lower": 0.3,
+              "observed_rate": 0.5217,
+              "upper": 0.4
+            },
+            {
+              "count": 82,
+              "forecast_mean": 0.4445,
+              "lower": 0.4,
+              "observed_rate": 0.6341,
+              "upper": 0.5
+            },
+            {
+              "count": 66,
+              "forecast_mean": 0.5435,
+              "lower": 0.5,
+              "observed_rate": 0.6061,
+              "upper": 0.6
+            },
+            {
+              "count": 47,
+              "forecast_mean": 0.6524,
+              "lower": 0.6,
+              "observed_rate": 0.617,
+              "upper": 0.7
+            },
+            {
+              "count": 31,
+              "forecast_mean": 0.7441,
+              "lower": 0.7,
+              "observed_rate": 0.5806,
+              "upper": 0.8
+            },
+            {
+              "count": 12,
+              "forecast_mean": 0.8387,
+              "lower": 0.8,
+              "observed_rate": 0.5833,
+              "upper": 0.9
+            },
+            {
+              "count": 5,
+              "forecast_mean": 0.955,
+              "lower": 0.9,
+              "observed_rate": 0.6,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.32425,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000127,
+            "implied_brier": 0.32412,
+            "reliability": 0.08488,
+            "resolution": 0.00312,
+            "uncertainty": 0.24236
+          },
+          "forecast_bias": -0.2083,
+          "mean_forecast": 0.3791,
+          "model": "nhits",
+          "observations": 572,
+          "positive_events": 336,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.5874,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 513,
+              "forecast_mean": 0.581,
+              "lower": 0.5,
+              "observed_rate": 0.5926,
+              "upper": 0.6
+            },
+            {
+              "count": 59,
+              "forecast_mean": 0.6075,
+              "lower": 0.6,
+              "observed_rate": 0.5424,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.24362,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000933,
+            "implied_brier": 0.24268,
+            "reliability": 0.00056,
+            "resolution": 0.00023,
+            "uncertainty": 0.24236
+          },
+          "forecast_bias": -0.0037,
+          "mean_forecast": 0.5838,
+          "model": "random_walk_drift_matched",
+          "observations": 572,
+          "positive_events": 336,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        }
+      ],
+      "observations": 572,
+      "positive_events": 336,
+      "realised_rate": 0.58741,
+      "sampling": {
+        "horizon_sessions": 42,
+        "independent_stride": 9,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    },
+    {
+      "discrimination": {
+        "distinguishable_from_zero": false,
+        "both_screens_reject_equal_count": false,
+        "equal_count_bins_robustness": {
+          "best_model": "gjr_garch",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.739,
+              "resolution": 0.005199,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.008976
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.5441,
+              "resolution": 0.014481,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.017205
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.3915,
+              "resolution": 0.010873,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.009446
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.5551,
+              "resolution": 0.007101,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.009444
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.8199,
+              "resolution": 0.003067,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007064
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.7261,
+              "resolution": 0.004043,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007915
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 568,
+          "p_value": 0.796,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 543,
+          "rejects_at_5pct": false,
+          "resampling": "cyclic_shift",
+          "statistic": 0.294,
+          "test": "max_studentised_resolution"
+        },
+        "equal_count_non_overlapping_subsample": {
+          "best_model": "gjr_garch",
+          "binning": "equal_count",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 10,
+              "p_value": 0.9874,
+              "resolution": 0.014463,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.046615
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.216,
+              "resolution": 0.061054,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.047235
+            },
+            "gjr_garch": {
+              "occupied_bins": 10,
+              "p_value": 0.1328,
+              "resolution": 0.069008,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.046678
+            },
+            "har_rv": {
+              "occupied_bins": 10,
+              "p_value": 0.798,
+              "resolution": 0.031508,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.047248
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.879,
+              "resolution": 0.025826,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.0472
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 10,
+              "p_value": 0.1708,
+              "resolution": 0.065599,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.047162
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 44,
+          "p_value": 0.5693,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.1375,
+          "test": "max_studentised_resolution"
+        },
+        "full_sample": {
+          "best_model": "gjr_garch",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 4,
+              "p_value": 0.4228,
+              "resolution": 0.005814,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.005703
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 10,
+              "p_value": 0.6103,
+              "resolution": 0.006117,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.009282
+            },
+            "gjr_garch": {
+              "occupied_bins": 2,
+              "p_value": 0.171,
+              "resolution": 0.004016,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.001862
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 0.7004,
+              "resolution": 0.000182,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.001448
+            },
+            "nhits": {
+              "occupied_bins": 10,
+              "p_value": 0.5533,
+              "resolution": 0.004729,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.007092
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 2,
+              "p_value": 0.5257,
+              "resolution": 0.001162,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.002486
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 568,
+          "p_value": 0.4651,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 543,
+          "rejects_at_5pct": false,
+          "resampling": "cyclic_shift",
+          "statistic": 1.0738,
+          "test": "max_studentised_resolution"
+        },
+        "measurable_at_equal_width": true,
+        "non_overlapping_subsample": {
+          "best_model": "auto_arima",
+          "binning": "equal_width",
+          "models": {
+            "auto_arima": {
+              "occupied_bins": 3,
+              "p_value": 0.123,
+              "resolution": 0.022485,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.010332
+            },
+            "chronos_t5_small": {
+              "occupied_bins": 9,
+              "p_value": 0.5881,
+              "resolution": 0.036717,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.041753
+            },
+            "gjr_garch": {
+              "occupied_bins": 2,
+              "p_value": 0.6395,
+              "resolution": 0.002546,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.005104
+            },
+            "har_rv": {
+              "occupied_bins": 2,
+              "p_value": 0.5333,
+              "resolution": 0.002759,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.005276
+            },
+            "nhits": {
+              "occupied_bins": 9,
+              "p_value": 0.5225,
+              "resolution": 0.038119,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.041885
+            },
+            "random_walk_drift_matched": {
+              "occupied_bins": 2,
+              "p_value": 1.0,
+              "resolution": 6.9e-05,
+              "resolution_measurable": true,
+              "resolution_under_null": 0.005171
+            }
+          },
+          "null": "no model in this set has any resolution on direction_up: every forecast is unrelated to which window it was made in",
+          "observations": 44,
+          "p_value": 0.5179,
+          "reading": "One test over the whole set, so the multiplicity is inside the null distribution rather than corrected for afterwards \u2014 six resolution figures eyeballed against zero is the leaderboard problem again. Resolution is level-invariant: it asks whether a model can tell one window from another, which is what calling direction means, where the Brier score confounds that with getting the base rate right. It is a sum of squares and so is positive even with no skill, which is what resolution_under_null is for: a resolution is only a finding if it exceeds what this model's own binning produces by chance. The per-model p-values are description; the single p_value above is the decision.",
+          "reference_draws": 5000,
+          "rejects_at_5pct": false,
+          "resampling": "permutation",
+          "statistic": 1.3207,
+          "test": "max_studentised_resolution"
+        },
+        "reading": "Both runs must reject before any model here has been shown to discriminate, which is the standard every skill score in this repository is held to. The full sample keeps the overlap and handles it by shifting the outcomes circularly, so the null carries the same persistence the data does; the thinned subsample assumes nothing and has far fewer windows to say it with \u2014 and where the horizon does not overlap the step at all, the full sample simply permutes, which the resampling field on each run states. The equal-count pair is the same standard applied to a different partition: it is the check that a resolution of zero is a fact about the model rather than about the axis, because a direction forecast near one half can spend its whole range inside a single equal-width bin. Where the two binnings disagree the equal-count one is the one with power, and the disagreement is itself the finding."
+      },
+      "horizon_sessions": 63,
+      "independent_observations": 44,
+      "models": [
+        {
+          "base_rate": 0.6444,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 8,
+              "forecast_mean": 0.3945,
+              "lower": 0.3,
+              "observed_rate": 1.0,
+              "upper": 0.4
+            },
+            {
+              "count": 14,
+              "forecast_mean": 0.4119,
+              "lower": 0.4,
+              "observed_rate": 0.9286,
+              "upper": 0.5
+            },
+            {
+              "count": 307,
+              "forecast_mean": 0.5914,
+              "lower": 0.5,
+              "observed_rate": 0.671,
+              "upper": 0.6
+            },
+            {
+              "count": 239,
+              "forecast_mean": 0.6107,
+              "lower": 0.6,
+              "observed_rate": 0.5816,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.23898,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000109,
+            "implied_brier": 0.23887,
+            "reliability": 0.01552,
+            "resolution": 0.00581,
+            "uncertainty": 0.22916
+          },
+          "forecast_bias": -0.052,
+          "mean_forecast": 0.5923,
+          "model": "auto_arima",
+          "observations": 568,
+          "positive_events": 366,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.6444,
+          "bins": [
+            {
+              "count": 189,
+              "forecast_mean": 0.0213,
+              "lower": 0.0,
+              "observed_rate": 0.709,
+              "upper": 0.1
+            },
+            {
+              "count": 24,
+              "forecast_mean": 0.1465,
+              "lower": 0.1,
+              "observed_rate": 0.6667,
+              "upper": 0.2
+            },
+            {
+              "count": 15,
+              "forecast_mean": 0.246,
+              "lower": 0.2,
+              "observed_rate": 0.6,
+              "upper": 0.3
+            },
+            {
+              "count": 11,
+              "forecast_mean": 0.3491,
+              "lower": 0.3,
+              "observed_rate": 0.8182,
+              "upper": 0.4
+            },
+            {
+              "count": 13,
+              "forecast_mean": 0.4438,
+              "lower": 0.4,
+              "observed_rate": 0.4615,
+              "upper": 0.5
+            },
+            {
+              "count": 11,
+              "forecast_mean": 0.5382,
+              "lower": 0.5,
+              "observed_rate": 0.6364,
+              "upper": 0.6
+            },
+            {
+              "count": 16,
+              "forecast_mean": 0.6553,
+              "lower": 0.6,
+              "observed_rate": 0.75,
+              "upper": 0.7
+            },
+            {
+              "count": 18,
+              "forecast_mean": 0.7561,
+              "lower": 0.7,
+              "observed_rate": 0.6111,
+              "upper": 0.8
+            },
+            {
+              "count": 31,
+              "forecast_mean": 0.8515,
+              "lower": 0.8,
+              "observed_rate": 0.7742,
+              "upper": 0.9
+            },
+            {
+              "count": 240,
+              "forecast_mean": 0.9888,
+              "lower": 0.9,
+              "observed_rate": 0.575,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.47607,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.002894,
+            "implied_brier": 0.47317,
+            "reliability": 0.25013,
+            "resolution": 0.00612,
+            "uncertainty": 0.22916
+          },
+          "forecast_bias": -0.0906,
+          "mean_forecast": 0.5538,
+          "model": "chronos_t5_small",
+          "observations": 568,
+          "positive_events": 366,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.6444,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 59,
+              "forecast_mean": 0.5928,
+              "lower": 0.5,
+              "observed_rate": 0.8305,
+              "upper": 0.6
+            },
+            {
+              "count": 509,
+              "forecast_mean": 0.6176,
+              "lower": 0.6,
+              "observed_rate": 0.6228,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.23269,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.00165,
+            "implied_brier": 0.23104,
+            "reliability": 0.0059,
+            "resolution": 0.00402,
+            "uncertainty": 0.22916
+          },
+          "forecast_bias": -0.0293,
+          "mean_forecast": 0.615,
+          "model": "gjr_garch",
+          "observations": 568,
+          "positive_events": 366,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.6444,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 307,
+              "forecast_mean": 0.5858,
+              "lower": 0.5,
+              "observed_rate": 0.6319,
+              "upper": 0.6
+            },
+            {
+              "count": 261,
+              "forecast_mean": 0.6152,
+              "lower": 0.6,
+              "observed_rate": 0.659,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.23164,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.000627,
+            "implied_brier": 0.23101,
+            "reliability": 0.00203,
+            "resolution": 0.00018,
+            "uncertainty": 0.22916
+          },
+          "forecast_bias": -0.0451,
+          "mean_forecast": 0.5993,
+          "model": "har_rv",
+          "observations": 568,
+          "positive_events": 366,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.6444,
+          "bins": [
+            {
+              "count": 77,
+              "forecast_mean": 0.0624,
+              "lower": 0.0,
+              "observed_rate": 0.6623,
+              "upper": 0.1
+            },
+            {
+              "count": 115,
+              "forecast_mean": 0.1499,
+              "lower": 0.1,
+              "observed_rate": 0.5913,
+              "upper": 0.2
+            },
+            {
+              "count": 96,
+              "forecast_mean": 0.2451,
+              "lower": 0.2,
+              "observed_rate": 0.5312,
+              "upper": 0.3
+            },
+            {
+              "count": 78,
+              "forecast_mean": 0.3464,
+              "lower": 0.3,
+              "observed_rate": 0.6923,
+              "upper": 0.4
+            },
+            {
+              "count": 55,
+              "forecast_mean": 0.4478,
+              "lower": 0.4,
+              "observed_rate": 0.6909,
+              "upper": 0.5
+            },
+            {
+              "count": 53,
+              "forecast_mean": 0.5513,
+              "lower": 0.5,
+              "observed_rate": 0.7358,
+              "upper": 0.6
+            },
+            {
+              "count": 34,
+              "forecast_mean": 0.6388,
+              "lower": 0.6,
+              "observed_rate": 0.7059,
+              "upper": 0.7
+            },
+            {
+              "count": 40,
+              "forecast_mean": 0.7511,
+              "lower": 0.7,
+              "observed_rate": 0.65,
+              "upper": 0.8
+            },
+            {
+              "count": 13,
+              "forecast_mean": 0.8526,
+              "lower": 0.8,
+              "observed_rate": 0.7692,
+              "upper": 0.9
+            },
+            {
+              "count": 7,
+              "forecast_mean": 0.9543,
+              "lower": 0.9,
+              "observed_rate": 0.7143,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.35355,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": 0.000147,
+            "implied_brier": 0.3537,
+            "reliability": 0.12927,
+            "resolution": 0.00473,
+            "uncertainty": 0.22916
+          },
+          "forecast_bias": -0.2994,
+          "mean_forecast": 0.345,
+          "model": "nhits",
+          "observations": 568,
+          "positive_events": 366,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        },
+        {
+          "base_rate": 0.6444,
+          "bins": [
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.0,
+              "observed_rate": null,
+              "upper": 0.1
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.1,
+              "observed_rate": null,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.2,
+              "observed_rate": null,
+              "upper": 0.3
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.3,
+              "observed_rate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.4,
+              "observed_rate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 325,
+              "forecast_mean": 0.591,
+              "lower": 0.5,
+              "observed_rate": 0.6738,
+              "upper": 0.6
+            },
+            {
+              "count": 243,
+              "forecast_mean": 0.6103,
+              "lower": 0.6,
+              "observed_rate": 0.6049,
+              "upper": 0.7
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.7,
+              "observed_rate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.8,
+              "observed_rate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "forecast_mean": null,
+              "lower": 0.9,
+              "observed_rate": null,
+              "upper": 1.0
+            }
+          ],
+          "brier": 0.23226,
+          "curve_withheld": null,
+          "decomposition": {
+            "binning_error": -0.00032,
+            "implied_brier": 0.23194,
+            "reliability": 0.00394,
+            "resolution": 0.00116,
+            "uncertainty": 0.22916
+          },
+          "forecast_bias": -0.0451,
+          "mean_forecast": 0.5993,
+          "model": "random_walk_drift_matched",
+          "observations": 568,
+          "positive_events": 366,
+          "reading": "Reliability is the calibration term and lower is better; resolution is how far the forecasts move from the base rate and higher is better. A model can be perfectly reliable and useless. The decomposition is binned, so it reconstructs the exact Brier score only up to the binning error reported beside it. Read the Brier score against the uncertainty term rather than against another event's score: a rare event has a low uncertainty and therefore a low achievable Brier, and comparing across base rates measures the base rates. mean_forecast against base_rate is the model's bias on this event and is published whether or not the curve is drawn: a scalar is not a diagram, and on a rare event it is the most informative number here."
+        }
+      ],
+      "observations": 568,
+      "positive_events": 366,
+      "realised_rate": 0.64437,
+      "sampling": {
+        "horizon_sessions": 63,
+        "independent_stride": 13,
+        "overlapping": true,
+        "step_sessions": 5
+      }
+    }
+  ],
+  "models": [
+    {
+      "block_length": 10,
+      "breaks_excluded": 10,
+      "label": "gjr_garch",
+      "like_for_like_null": "random_walk_drift_matched",
+      "model": {
+        "equation": "sigma2_t = omega + (alpha + gamma*1[eps_{t-1}<0])*eps2_{t-1} + beta*sigma2_{t-1}",
+        "id": "gjr_garch",
+        "innovation": "t",
+        "mean": "zero",
+        "min_observations": 500
+      },
+      "n_paths": 4000,
+      "residual_pool": {
+        "demeaned": false,
+        "drift": "the sample's own, carried by the resampled residuals rather than fitted as a mean"
+      },
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "block_length": 10,
+      "breaks_excluded": 10,
+      "label": "har_rv",
+      "like_for_like_null": "random_walk_drift_matched",
+      "model": {
+        "cascade_days": [
+          1,
+          5,
+          22
+        ],
+        "id": "har_rv",
+        "mean": "zero",
+        "min_observations": 500
+      },
+      "n_paths": 4000,
+      "residual_pool": {
+        "demeaned": false,
+        "drift": "the sample's own, carried by the resampled residuals rather than fitted as a mean"
+      },
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "carries_drift": true,
+      "label": "auto_arima",
+      "model": {
+        "conditional_variance": false,
+        "distribution": "iid bootstrap of the fit's own in-sample residuals",
+        "family": "seasonal ARIMA, order selected per as-of date by AIC",
+        "id": "auto_arima"
+      },
+      "n_paths": 4000,
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "carries_drift": true,
+      "label": "nhits",
+      "model": {
+        "conditional_variance": false,
+        "distribution": "iid bootstrap of the fit's own in-sample residuals",
+        "family": "NHITS, neural hierarchical interpolation, refitted per as-of date",
+        "id": "nhits",
+        "input_size": 128,
+        "max_steps": 200
+      },
+      "n_paths": 4000,
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    },
+    {
+      "carries_drift": true,
+      "caveat": "Zero-shot on this series, but the checkpoint's training corpus is not auditable from this repository. If it contained gold, this is not a clean out-of-sample test and nothing here can detect that.",
+      "label": "chronos_t5_small",
+      "model": {
+        "checkpoint": "amazon/chronos-t5-small",
+        "checkpoint_revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472",
+        "conditional_variance": false,
+        "context_sessions": 512,
+        "distribution": "the model's own sampled paths, centred",
+        "family": "Chronos-T5 time-series foundation model, zero-shot",
+        "fitted": false,
+        "id": "chronos_t5_small"
+      },
+      "n_paths": 200,
+      "transform": {
+        "formula": "log(P_t) - log(P_{t-1})",
+        "id": "log"
+      }
+    }
+  ],
+  "pre_registration": "Stated before this ran, and kept as written whatever the result: resolution at or near zero for every model at every horizon, including Chronos. The foundation model has the most room to surprise here \u2014 it infers a trend from its context window rather than fitting a mean, so it is the one entrant that could in principle discriminate. If it does, that is a finding and it gets published as one.",
+  "reproduce": "uv run aurex direction --asset gold --from 2015-01-01 --to 2026-07-29 --step 5 --horizons 5,10,21,42,63 --paths 4000 --chronos-paths 200 --nhits-steps 200 --models gjr_garch,har_rv,auto_arima,nhits,chronos_t5_small",
+  "sample": {
+    "note": "resolved.to is the last observation this run could see, for forecasting and for scoring alike. Pass it back as --to to reproduce these numbers: without it the run ends at whatever the data happened to reach on the day, and the sample is not the one these numbers came from.",
+    "observations": 5408,
+    "requested": {
+      "from": "2015-01-01",
+      "to": "2026-07-29"
+    },
+    "resolved": {
+      "from": "2005-01-04",
+      "to": "2026-07-29"
+    },
+    "series_available_to": "2026-08-06",
+    "series_id": "xauusd",
+    "truncated": true
+  },
+  "scored_forecasts": 2876,
+  "skipped": [],
+  "source": {
+    "end": "2026-08-06",
+    "fallbacks": [],
+    "fetched_at": "2026-08-07T18:39:18.146687+00:00",
+    "has_ohlc": false,
+    "rows": 5414,
+    "series_id": "xauusd",
+    "source_name": "LBMA:gold_pm:USD",
+    "source_url": "https://prices.lbma.org.uk/json/gold_pm.json",
+    "start": "2005-01-04"
+  },
+  "walk_forward": {
+    "end": "2026-07-29",
+    "horizons": [
+      5,
+      10,
+      21,
+      42,
+      63
+    ],
+    "min_observations": 750,
+    "reference_moves": [
+      0.05,
+      0.1
+    ],
+    "seed": 20260803,
+    "start": "2015-01-01",
+    "step_sessions": 5,
+    "var_levels": [
+      0.05,
+      0.01
+    ],
+    "window": "expanding"
+  }
+}

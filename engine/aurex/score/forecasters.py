@@ -56,6 +56,23 @@ class AsOfForecaster(Protocol):
     @property
     def label(self) -> str: ...
 
+    @property
+    def carries_drift(self) -> bool:
+        """Whether this forecaster's simulated returns keep the sample's mean.
+
+        A protocol member rather than a convention, because two forecasters that differ
+        in their drift policy are not comparable and the difference is invisible in a
+        CRPS. It is the error this project already withdrew once: a drift-carrying model
+        scored against a null denied one was worth up to +4.6% of skill that belonged to
+        neither. Anything assembling a set of forecasters can now ask, and
+        :func:`~aurex.bench.runner.build_forecasters` refuses a set that disagrees.
+
+        Every implementation derives this from the flag that actually governs its
+        simulation rather than storing it separately, so it cannot be set inconsistently
+        with the behaviour it describes.
+        """
+        ...
+
     def forecast(
         self, history: pd.Series, *, horizons: tuple[int, ...], seed: int
     ) -> dict[int, PathEnsemble]:
@@ -93,6 +110,10 @@ class ModelForecaster:
     @property
     def label(self) -> str:
         return self.model.id
+
+    @property
+    def carries_drift(self) -> bool:
+        return not self.demean_residuals
 
     @property
     def like_for_like_null(self) -> str:
@@ -187,6 +208,10 @@ class RandomWalkForecaster:
     @property
     def label(self) -> str:
         return "random_walk" if self.demean else "random_walk_drift_matched"
+
+    @property
+    def carries_drift(self) -> bool:
+        return not self.demean
 
     def forecast(
         self, history: pd.Series, *, horizons: tuple[int, ...], seed: int
