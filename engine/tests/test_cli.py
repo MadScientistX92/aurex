@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import sys
 
 import pytest
 from typer.testing import CliRunner
@@ -160,15 +162,44 @@ class TestBenchCommand:
     Its dependencies are imported inside the command body, so `--help` works on a
     default install and the failure a user gets from actually running it is an
     ImportError naming the missing package rather than a command that does not exist.
-    CI runs without the extra, so this is the configuration the test runs in.
+    CI runs without the extra, and this asserts the property directly rather than
+    relying on that: whether or not the extra is installed here, rendering the help must
+    not pull it in.
     """
 
-    def test_help_works_without_the_bench_extra(self) -> None:
+    def test_help_does_not_import_the_bench_extra(self) -> None:
+        """The invariant the class name claims, asserted instead of assumed.
+
+        Previously this class only checked that `--help` exited zero, which passes for a
+        command that imports the whole 2.5GB stack at module scope. It also matched
+        option names against raw output, so it failed wherever Rich was emitting colour —
+        an environment difference, not a behaviour one.
+        """
+        for module in [name for name in sys.modules if name.startswith("aurex.bench")]:
+            del sys.modules[module]
+
         result = runner.invoke(app, ["bench", "--help"])
 
         assert result.exit_code == 0, result.output
-        assert "--to" in result.output
-        assert "--chronos-paths" in result.output
+        assert not [name for name in sys.modules if name.startswith("aurex.bench")], (
+            "rendering --help imported aurex.bench, so the command is only reachable "
+            "on an install that has the extra"
+        )
+
+    def test_help_lists_the_options_the_reproducer_needs(self) -> None:
+        """Matched against text with the styling stripped.
+
+        Rich renders an option as several styled runs, so "--to" appears in the raw
+        output as "-" and "-to" with escape codes between them. Asserting on the raw
+        string makes the test pass or fail on whether colour is enabled, which is a
+        property of the terminal and not of the command.
+        """
+        result = runner.invoke(app, ["bench", "--help"])
+        plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+
+        assert result.exit_code == 0, result.output
+        assert "--to" in plain
+        assert "--chronos-paths" in plain
 
     def test_the_command_is_registered_on_the_app(self) -> None:
         result = runner.invoke(app, ["--help"])

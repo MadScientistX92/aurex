@@ -530,6 +530,7 @@ def _direction_command(
     chronos_paths: int,
     nhits_steps: int,
     models: str,
+    controls: bool,
 ) -> str:
     """The command that reproduces the direction run, every option spelled out."""
     return " ".join(
@@ -544,6 +545,7 @@ def _direction_command(
             f"--chronos-paths {chronos_paths}",
             f"--nhits-steps {nhits_steps}",
             f"--models {models}",
+            "--controls" if controls else "--no-controls",
         ]
     )
 
@@ -571,6 +573,15 @@ def direction(
         "",
         "--models",
         help="Comma-separated subset of the challenger set. Empty runs all of them.",
+    ),
+    controls: bool = typer.Option(
+        True,
+        "--controls/--no-controls",
+        help=(
+            "Run the calendar placebo, the two trend-preserving nulls and "
+            "leave-one-year-out beside the screens. On by default; costs a tenth of a "
+            "second against a run measured in hours."
+        ),
     ),
     offline: bool = typer.Option(False, "--offline", help="Never touch the network."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Print without writing."),
@@ -651,7 +662,9 @@ def direction(
         events=(event,),
     )
 
-    block = describe_direction(asset, run.result, event=event, competitors=run.competitors) | {
+    block = describe_direction(
+        asset, run.result, event=event, competitors=run.competitors, controls=controls
+    ) | {
         "generated_at": datetime.now(UTC).isoformat(),
         "engine_version": __version__,
         "code": code_provenance().describe(),
@@ -670,6 +683,7 @@ def direction(
             chronos_paths=chronos_paths,
             nhits_steps=nhits_steps,
             models=",".join(include),
+            controls=controls,
         ),
         "pre_registration": (
             "Stated before this ran, and kept as written whatever the result: resolution "

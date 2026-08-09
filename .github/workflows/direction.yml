@@ -146,6 +146,16 @@ jobs:
           )
           PY
 
+      # The loop the --to work opened, closed. The artifact's internal consistency is
+      # checked above; this checks the *README* against it. The direction section quotes
+      # a placebo's resolution, two alternative nulls' p-values and a twelve-row
+      # leave-one-year-out table, and for a while every one of those came from a scratch
+      # file that no longer exists. A re-run that moves any of them now fails here rather
+      # than being committed beside prose that still quotes the old ones.
+      - name: the README's direction figures are this artifact's
+        working-directory: engine
+        run: uv run pytest tests/test_readme_direction.py -q
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

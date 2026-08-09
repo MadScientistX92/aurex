@@ -26,7 +26,10 @@ from aurex.score import (
     reliability_curve,
 )
 from aurex.score.shootout import (
+    CALENDAR_PLACEBO,
     NonFiniteLossError,
+    calendar_placebo,
+    leave_one_group_out,
     minimum_detectable_effect,
     model_confidence_set,
     resolution_screen,
@@ -793,3 +796,204 @@ class TestTheDirectionArtifact:
 
         assert "drift-matched" in block["conventions"]["drift"]
         assert "Resolution" in block["conventions"]["primary_metric"]
+
+
+def _trending_outcomes(
+    n: int = 600, groups: int = 12, seed: int = 5
+) -> tuple[np.ndarray, np.ndarray]:
+    """Outcomes whose rate climbs group by group, and the group labels for them.
+
+    The shape the controls exist for: nothing here can be ranked *within* a group, so
+    every bit of separability in the sample is the trend across groups.
+    """
+    rng = np.random.default_rng(seed)
+    labels = np.repeat(np.arange(groups), n // groups)
+    rates = np.linspace(0.25, 0.75, groups)[labels]
+    return (rng.random(labels.size) < rates).astype(float), labels
+
+
+class TestTheControlsOnTheDirectionScreen:
+    """A screen that cannot be fooled by the calendar has to be shown not to be.
+
+    These are not extra assertions about the models. They are assertions about the
+    *test* — whether a resolution it calls significant can be produced by a forecast
+    with no content, and whether the null it uses can tell a trend from an ability to
+    rank windows. Both were run by hand against the published run before they were
+    code; the point of having them here is that the next run cannot skip them.
+    """
+
+    def test_the_placebo_is_monotone_in_date_and_spans_the_unit_interval(self) -> None:
+        """Equal-count sees calendar deciles; equal-width sees ten bins rather than one.
+
+        The scaling is what makes it the *strongest* version of the placebo. Confined to
+        one equal-width bin it would score zero resolution by construction and refuting
+        it would prove nothing about the screen.
+        """
+        placebo = calendar_placebo(500)
+        assert placebo[0] == 0.0
+        assert placebo[-1] == 1.0
+        assert np.all(np.diff(placebo) > 0.0)
+        assert calendar_placebo(1).size == 1
+
+    def test_a_forecast_that_is_only_the_calendar_does_not_beat_a_trend_carrying_null(
+        self,
+    ) -> None:
+        """The control's own validity check, and the one that would matter if it failed.
+
+        Against a null that keeps each group's rate, a forecast made of nothing but the
+        date must stop looking like skill — if it did not, the grouped null would have no
+        power to distinguish trend from discrimination and reporting it would be theatre.
+        """
+        outcomes, labels = _trending_outcomes()
+        placebo = {CALENDAR_PLACEBO: calendar_placebo(outcomes.size)}
+
+        grouped = resolution_screen(
+            placebo,
+            outcomes,
+            event="direction_up",
+            sampling=DISJOINT,
+            binning="equal_count",
+            null="within_group_permutation",
+            groups=labels,
+            draws=400,
+        )
+        assert grouped is not None
+        assert not grouped.rejects
+        assert grouped.model_p_values[0] > 0.2
+
+    def test_the_grouped_nulls_hold_every_group_rate_exactly(self) -> None:
+        """What "preserves the trend" has to mean if the control is to mean anything.
+
+        Asserted on the reference set itself rather than on a p-value, because a p-value
+        that happened to come out right would not distinguish a null that preserved the
+        rates from one that nearly did.
+        """
+        from aurex.score.shootout import (
+            _within_group_cyclic_shift_index,
+            _within_group_permutation_index,
+        )
+
+        outcomes, labels = _trending_outcomes()
+        for builder in (_within_group_permutation_index, _within_group_cyclic_shift_index):
+            index = builder(labels, draws=64, seed=3)
+            reference = outcomes[index]
+            for label in np.unique(labels):
+                inside = labels == label
+                assert np.allclose(reference[:, inside].mean(axis=1), outcomes[inside].mean()), (
+                    builder.__name__
+                )
+            assert np.all(np.sort(index, axis=1) == np.arange(outcomes.size))
+
+    def test_a_grouped_null_needs_groups_and_refuses_an_unknown_name(self) -> None:
+        """Structural, not documented: the failure would be a silently wrong null."""
+        outcomes, labels = _trending_outcomes()
+        forecasts = {"m": calendar_placebo(outcomes.size)}
+
+        with pytest.raises(ValueError, match="needs groups"):
+            resolution_screen(
+                forecasts,
+                outcomes,
+                event="direction_up",
+                sampling=DISJOINT,
+                null="within_group_permutation",
+            )
+        with pytest.raises(ValueError, match="null must be"):
+            resolution_screen(
+                forecasts, outcomes, event="direction_up", sampling=DISJOINT, null="shuffle"
+            )
+        with pytest.raises(ValueError, match="groups has"):
+            resolution_screen(
+                forecasts,
+                outcomes,
+                event="direction_up",
+                sampling=DISJOINT,
+                null="within_group_permutation",
+                groups=labels[:-1],
+            )
+
+    def test_the_scheme_the_run_used_reaches_the_artifact(self) -> None:
+        """ "Which null" is load-bearing now, so it may not be inferred from anything."""
+        outcomes, labels = _trending_outcomes()
+        forecasts = {"m": calendar_placebo(outcomes.size)}
+        for null, expected in (
+            ("auto", "permutation"),
+            ("within_group_permutation", "within_group_permutation"),
+            ("within_group_cyclic_shift", "within_group_cyclic_shift"),
+        ):
+            screen = resolution_screen(
+                forecasts,
+                outcomes,
+                event="direction_up",
+                sampling=DISJOINT,
+                null=null,
+                groups=labels,
+                draws=64,
+            )
+            assert screen is not None
+            assert screen.describe()["resampling"] == expected
+
+    def test_models_are_ranked_by_the_quantity_the_maximum_is_taken_over(self) -> None:
+        """Ranks come from the studentised column, never from raw resolution.
+
+        A model spread over eight bins can post a larger raw resolution than one confined
+        to two purely from having more bins to be noisy in, so a rank read off the raw
+        figure would be a rank by bin count.
+        """
+        rng = np.random.default_rng(19)
+        outcomes = rng.integers(0, 2, size=400).astype(float)
+        informative = np.clip(0.5 + 0.25 * (outcomes - 0.5) + rng.normal(0, 0.05, 400), 0, 1)
+        screen = resolution_screen(
+            {"signal": informative, "noise": rng.random(400)},
+            outcomes,
+            event="direction_up",
+            sampling=DISJOINT,
+            draws=400,
+        )
+        assert screen is not None
+        described = screen.describe()["models"]
+        assert screen.ranking[0] == "signal"
+        assert described["signal"]["rank"] == 1
+        assert described["noise"]["rank"] == 2
+        assert described["signal"]["studentised"] > described["noise"]["studentised"]
+
+    def test_leave_one_group_out_refits_every_group_and_tracks_one_model(self) -> None:
+        """One row per group, each a full refit, all following the model fixed up front.
+
+        Re-picking the best model per refit would make each row a different model's best
+        case, which is the leaderboard problem inside a robustness check.
+        """
+        outcomes, labels = _trending_outcomes()
+        forecasts = {
+            "trend_only": calendar_placebo(outcomes.size),
+            "noise": np.random.default_rng(7).random(outcomes.size),
+        }
+        withheld = leave_one_group_out(
+            forecasts,
+            outcomes,
+            groups=labels,
+            model="trend_only",
+            event="direction_up",
+            sampling=DISJOINT,
+            draws=200,
+        )
+        assert withheld is not None
+        described = withheld.describe()
+        assert described["model"] == "trend_only"
+        assert described["refits"] == len(np.unique(labels))
+        assert described["complete_sample"]["observations"] == outcomes.size
+        for label in np.unique(labels):
+            row = described["without"][str(label)]
+            assert row is not None
+            assert row["observations"] < outcomes.size
+
+    def test_leave_one_group_out_refuses_a_grouping_that_does_not_fit_the_sample(self) -> None:
+        outcomes, labels = _trending_outcomes()
+        with pytest.raises(ValueError, match="groups has"):
+            leave_one_group_out(
+                {"m": calendar_placebo(outcomes.size)},
+                outcomes,
+                groups=labels[:-1],
+                model="m",
+                event="direction_up",
+                sampling=DISJOINT,
+            )
