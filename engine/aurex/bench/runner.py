@@ -43,7 +43,12 @@ from aurex.dist.fhs import DEMEAN_BY_DEFAULT
 from aurex.score.events import BinaryEvent
 from aurex.score.forecasters import AsOfForecaster, ModelForecaster, RandomWalkForecaster
 from aurex.score.reliability import reliability_curve
+from aurex.score.sampling import Sampling
 from aurex.score.shootout import (
+    CALENDAR_PLACEBO,
+    ResolutionScreen,
+    calendar_placebo,
+    leave_one_group_out,
     minimum_detectable_effect,
     model_confidence_set,
     resolution_screen,
@@ -263,6 +268,7 @@ def describe_shootout(
     result: WalkForwardResult,
     *,
     competitors: tuple[AsOfForecaster, ...] = (),
+    controls: bool = True,
     seed: int = 20260807,
 ) -> dict[str, Any]:
     """The artifact block: every model, every horizon, and the tests that decide it."""
@@ -417,12 +423,151 @@ def _probabilities_by_model(
     return series
 
 
+def _direction_controls(
+    forecasts: dict[str, np.ndarray],
+    outcomes: np.ndarray,
+    *,
+    years: np.ndarray,
+    event_id: str,
+    sampling: Sampling,
+    seed: int,
+    published: ResolutionScreen | None,
+) -> dict[str, Any]:
+    """The checks that say what the equal-count screen's rejection is *not*.
+
+    Every figure the README's direction section quotes about the controls is emitted
+    here, because a published number that only a deleted scratch file can reproduce is
+    the failure this repository's ``--to`` work exists to prevent. The controls are run
+    unconditionally rather than behind a flag: they cost seconds against a run that costs
+    hours, and a control that is only reached when someone suspects something is a
+    control that documents suspicion rather than removing it.
+
+    Three questions, three answers:
+
+    *Is the screen fooled by a forecast that is only the calendar?* Score one and see.
+    The placebo enters as an extra column so its rank among real models is meaningful,
+    and the six-model p-value is reported beside the seven-model one so the cost of
+    adding it is visible rather than assumed away.
+
+    *Is the resolution a slow trend rather than an ability to rank windows?* Re-run
+    against nulls that keep the year-level rate and destroy only within-year alignment.
+    Two of them, because permuting inside a year gives up the autocorrelation a shift
+    preserves, and the shift version gives it back.
+
+    *Did the ability hold across the sample or live in a corner of it?* Leave one
+    calendar year out, twelve times.
+    """
+    # Every control runs on both samples, for the reason the screens themselves do: a
+    # result this repository will state needs the full sample and the thinned one to
+    # agree, and a control reported on only one of them could not be held to that.
+    thinned_forecasts = {label: sampling.thin(values) for label, values in forecasts.items()}
+    thinned_outcomes = sampling.thin(outcomes)
+    thinned_years = sampling.thin(years)
+    thinned_sampling = sampling.independent()
+
+    def placebo_screen(
+        entries: dict[str, np.ndarray], observed: np.ndarray, shape: Sampling
+    ) -> ResolutionScreen | None:
+        with_placebo = dict(entries) | {CALENDAR_PLACEBO: calendar_placebo(observed.size)}
+        return resolution_screen(
+            with_placebo,
+            observed,
+            event=event_id,
+            sampling=shape,
+            binning="equal_count",
+            seed=seed,
+        )
+
+    def grouped_screen(
+        entries: dict[str, np.ndarray], observed: np.ndarray, labels: np.ndarray, shape: Sampling
+    ) -> dict[str, ResolutionScreen | None]:
+        return {
+            name: resolution_screen(
+                entries,
+                observed,
+                event=event_id,
+                sampling=shape,
+                binning="equal_count",
+                null=name,
+                groups=labels,
+                seed=seed,
+            )
+            for name in ("within_group_permutation", "within_group_cyclic_shift")
+        }
+
+    seven = placebo_screen(forecasts, outcomes, sampling)
+    seven_thinned = placebo_screen(thinned_forecasts, thinned_outcomes, thinned_sampling)
+    grouped = grouped_screen(forecasts, outcomes, years, sampling)
+    grouped_thinned = grouped_screen(
+        thinned_forecasts, thinned_outcomes, thinned_years, thinned_sampling
+    )
+    # The model the published screen ranked first is the one the leave-one-out column
+    # follows. Fixing it in advance rather than re-picking the best of each refit is what
+    # keeps the column a series rather than twelve separate best cases.
+    #
+    # Ranked first, not ``best``: ``best`` is None when no model clears its own null, and
+    # taking it would make the table disappear from exactly the artifacts where a reader
+    # most wants to check that nothing was found. The top of the ranking is defined
+    # whatever the screen concluded.
+    tracked = published.ranking[0] if published is not None and published.models else None
+    withheld = (
+        leave_one_group_out(
+            forecasts,
+            outcomes,
+            groups=years,
+            model=tracked,
+            event=event_id,
+            sampling=sampling,
+            binning="equal_count",
+            seed=seed,
+        )
+        if tracked is not None
+        else None
+    )
+
+    def placebo_row(screen: ResolutionScreen | None) -> dict[str, Any] | None:
+        if screen is None:
+            return None
+        return screen.describe()["models"][CALENDAR_PLACEBO] | {
+            "entrants": len(screen.models),
+            "set_p_value_with_placebo": round(screen.p_value, 4),
+        }
+
+    def grouped_rows(screens: dict[str, ResolutionScreen | None]) -> dict[str, Any]:
+        return {
+            name: None if screen is None else screen.describe() for name, screen in screens.items()
+        }
+
+    return {
+        "calendar_placebo": placebo_row(seven),
+        "calendar_placebo_non_overlapping_subsample": placebo_row(seven_thinned),
+        "set_p_value_without_placebo": (None if published is None else round(published.p_value, 4)),
+        "trend_preserving_nulls": grouped_rows(grouped),
+        "trend_preserving_nulls_non_overlapping_subsample": grouped_rows(grouped_thinned),
+        "leave_one_year_out": None if withheld is None else withheld.describe(),
+        "grouping": "calendar_year",
+        "reading": (
+            "These do not decide anything; they say what a rejection is not. The placebo "
+            "is the calendar and nothing else, so it scores whatever a screen gives to a "
+            "forecast that merely drifts — if it beats the models, the metric is "
+            "measuring the date. The grouped nulls hold each year's realised rate fixed "
+            "and destroy only the alignment inside a year, so a resolution that is a "
+            "slow trend stops rejecting under them while one that ranks windows does "
+            "not; they are restricted nulls and therefore sharper, so a lower p-value "
+            "there is evidence about where an effect is not, never a stronger claim of "
+            "skill. Leave-one-year-out asks whether whatever was found held across the "
+            "sample or belonged to one period of it."
+        ),
+    }
+
+
 def describe_direction(
     asset: Asset,
     result: WalkForwardResult,
     *,
     event: BinaryEvent,
     competitors: tuple[AsOfForecaster, ...] = (),
+    controls: bool = True,
     seed: int = 20260807,
 ) -> dict[str, Any]:
     """Grade every model on one binary event, with resolution as the headline.
@@ -491,6 +636,19 @@ def describe_direction(
             binning="equal_count",
             seed=seed,
         )
+        control_block = (
+            _direction_controls(
+                forecasts,
+                outcomes,
+                years=np.array([r.as_of.year for r in records], dtype=int),
+                event_id=event.id,
+                sampling=sampling,
+                seed=seed,
+                published=by_rank,
+            )
+            if controls
+            else None
+        )
 
         horizons.append(
             {
@@ -525,6 +683,7 @@ def describe_direction(
                     "measurable_at_equal_width": bool(
                         full is not None and any(count > 1 for count in full.occupied_bins)
                     ),
+                    "controls": control_block,
                     "reading": (
                         "Both runs must reject before any model here has been shown to "
                         "discriminate, which is the standard every skill score in this "

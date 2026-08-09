@@ -517,6 +517,38 @@ SHIFT_GUARD_STRIDES = 1
 #: test cannot produce the answer it is being asked for and says so instead.
 MIN_REFERENCE_DRAWS = 20
 
+#: The label the calendar placebo is scored under. Reserved: a real model may not use it.
+CALENDAR_PLACEBO = "calendar_placebo"
+
+
+def calendar_placebo(n: int) -> np.ndarray:
+    """A "forecaster" that is the as-of date and nothing else, for use as a control.
+
+    This is not a model and is never a competitor. It exists because a resolution screen
+    can be fooled by a forecast that merely drifts with the calendar: if the realised
+    rate trends across the sample, a probability that is any monotone function of the
+    as-of date will separate early windows from late ones and post resolution without
+    knowing anything. Scoring that forecast is the direct test of whether the screen has
+    that failure, and it is a *stronger* test than reasoning about it, because it runs
+    through the identical code path the models do.
+
+    Rank rather than the date itself, scaled onto the unit interval, so the equal-count
+    binning sees the calendar deciles (any monotone map gives identical bins there) and
+    the equal-width binning sees ten occupied bins rather than one — the version most
+    generous to the placebo, which is the version worth refuting.
+
+    On the published sample it does not score: its resolution comes in *below* the mean
+    of its own reference distribution, because a contiguous-date binning has an
+    unusually high null mean under a circular shift. The outcome series keeps its autocorrelation
+    through a shift, so calendar-block bins pick up that clustering in nearly every
+    alignment. The shift therefore over-represents trend alignment rather than
+    under-representing it, which is the opposite of the concern that motivates the check,
+    and the studentisation was already pricing it in.
+    """
+    if n < 2:
+        return np.zeros(max(n, 0), dtype=float)
+    return np.arange(n, dtype=float) / float(n - 1)
+
 
 def _resolutions(assignment: np.ndarray, outcomes: np.ndarray, *, bins: int) -> np.ndarray:
     """Murphy resolution of one model's forecasts against many outcome vectors at once.
@@ -584,6 +616,55 @@ def _cyclic_shift_index(n: int, *, guard: int) -> np.ndarray:
     return (np.arange(n)[None, :] + shifts[:, None]) % n
 
 
+def _group_blocks(groups: np.ndarray) -> list[np.ndarray]:
+    labels = np.asarray(groups)
+    return [np.flatnonzero(labels == label) for label in np.unique(labels)]
+
+
+def _within_group_permutation_index(groups: np.ndarray, *, draws: int, seed: int) -> np.ndarray:
+    """``(draws, n)`` permuting only inside each group, so group-level rates survive.
+
+    The circular shift destroys *all* alignment between forecasts and outcomes, including
+    the part that is nothing but a slow trend across the sample. If the realised rate
+    drifts, a forecast that drifts with it scores resolution the shift null will read as
+    signal. Permuting within calendar year holds each year's rate fixed and destroys only
+    the within-year alignment, so a forecaster that knew nothing beyond roughly-when
+    stops rejecting while one that ranks windows inside a year does not.
+
+    It is a restricted null and therefore a sharper test, not a weaker one: p-values fall
+    rather than rise when the effect is genuinely within-group. What it gives up is the
+    autocorrelation the shift preserves exactly — see
+    :func:`_within_group_cyclic_shift_index`, which keeps both.
+    """
+    rng = np.random.default_rng(seed)
+    size = int(np.asarray(groups).size)
+    index = np.tile(np.arange(size), (draws, 1))
+    for positions in _group_blocks(groups):
+        index[:, positions] = positions[np.argsort(rng.random((draws, positions.size)), axis=1)]
+    return index
+
+
+def _within_group_cyclic_shift_index(groups: np.ndarray, *, draws: int, seed: int) -> np.ndarray:
+    """Both at once: the group's rate is held fixed *and* its serial dependence is kept.
+
+    The companion to :func:`_within_group_permutation_index`, and the reason the pair is
+    shipped rather than either alone. An iid permutation inside a group breaks the
+    persistence the outcome series has, which is the failure this module refuses
+    everywhere else — it makes the null's bin means less variable than they really are
+    and turns ordinary autocorrelation into a rejection. Shifting inside the group
+    instead preserves that dependence up to one wrap per group. When the two agree, the
+    result does not rest on either compromise.
+    """
+    rng = np.random.default_rng(seed)
+    size = int(np.asarray(groups).size)
+    index = np.tile(np.arange(size), (draws, 1))
+    for positions in _group_blocks(groups):
+        width = positions.size
+        offsets = rng.integers(0, width, size=draws)
+        index[:, positions] = positions[(np.arange(width)[None, :] + offsets[:, None]) % width]
+    return index
+
+
 @dataclass(frozen=True, slots=True)
 class ResolutionScreen:
     """Can any model here tell one window from another? One test over the whole set.
@@ -610,6 +691,11 @@ class ResolutionScreen:
     null_means: tuple[float, ...]
     #: Marginal p per model. Description, not decision — see ``p_value``.
     model_p_values: tuple[float, ...]
+    #: Each model's resolution in units of its own null's standard deviation. This is the
+    #: quantity the maximum is taken over, so it is the only one on which models can be
+    #: ranked against each other; raw resolutions cannot be, which is the whole reason
+    #: for studentising. Zero exactly for a model whose null has no spread.
+    studentised: tuple[float, ...]
     #: How many bins each model's forecasts actually reached. A model confined to one bin
     #: has a resolution of zero whatever it knew, so this is what separates "measured no
     #: discrimination" from "this partition could not have measured any".
@@ -625,7 +711,14 @@ class ResolutionScreen:
     def rejects(self) -> bool:
         return self.p_value < DEFAULT_ALPHA
 
+    @property
+    def ranking(self) -> tuple[str, ...]:
+        """Models best-first by studentised resolution — the order the maximum sees."""
+        order = np.argsort(-np.asarray(self.studentised), kind="stable")
+        return tuple(self.models[position] for position in order)
+
     def describe(self) -> dict[str, Any]:
+        ranks = {name: position for position, name in enumerate(self.ranking, start=1)}
         return {
             "test": "max_studentised_resolution",
             "resampling": self.scheme,
@@ -642,14 +735,17 @@ class ResolutionScreen:
                 name: {
                     "resolution": round(value, 6),
                     "resolution_under_null": round(null, 6),
+                    "studentised": round(t, 4),
+                    "rank": ranks[name],
                     "p_value": round(p, 4),
                     "occupied_bins": occupied,
                     "resolution_measurable": occupied > 1,
                 }
-                for name, value, null, p, occupied in zip(
+                for name, value, null, t, p, occupied in zip(
                     self.models,
                     self.resolutions,
                     self.null_means,
+                    self.studentised,
                     self.model_p_values,
                     self.occupied_bins,
                     strict=True,
@@ -680,6 +776,8 @@ def resolution_screen(
     sampling: Sampling,
     bins: int = DEFAULT_BINS,
     binning: str = "equal_width",
+    null: str = "auto",
+    groups: np.ndarray | None = None,
     draws: int = DEFAULT_DRAWS,
     seed: int = 20260807,
 ) -> ResolutionScreen | None:
@@ -691,11 +789,26 @@ def resolution_screen(
     on a direction forecast, which lives near one half, the two can differ for reasons
     that have nothing to do with the model.
 
-    On an overlapping sample the reference set is every admissible circular shift of the
-    outcome series, enumerated rather than sampled — there are only ``n`` of them and
-    enumerating makes the test exact. On a non-overlapping one it is ``draws`` random
-    permutations, which is valid precisely because thinning has already removed the
-    dependence a shift exists to preserve.
+    ``null`` chooses what the reference set destroys, and it is load-bearing rather than
+    a detail — a resolution is only ever a statement relative to the null it beat:
+
+    ``auto``
+        Every admissible circular shift of the outcome series on an overlapping sample,
+        enumerated rather than sampled, which makes the test exact; ``draws`` random
+        permutations on a non-overlapping one, valid precisely because thinning has
+        already removed the dependence a shift exists to preserve. This is the default
+        and the one the published table leads with.
+    ``within_group_permutation``
+        Permute only inside each ``groups`` block, so group-level rates survive and only
+        within-group alignment is destroyed. Requires ``groups``.
+    ``within_group_cyclic_shift``
+        The same, keeping each block's serial dependence as well. Requires ``groups``.
+
+    The two grouped schemes exist to answer one question the shift cannot: whether a
+    resolution is a slow drift across the sample rather than an ability to rank windows.
+    Their p-values are *lower* than the shift's when the effect is genuinely within-group,
+    because a restricted null is a sharper test — a grouped null that rejects harder is
+    not a stronger claim of skill, it is evidence about where the effect is not.
 
     ``None`` where the sample cannot support the test: no models, or too few reference
     draws to produce a p-value that could reject.
@@ -715,7 +828,25 @@ def resolution_screen(
         reference_name="realised outcomes",
     )
 
-    if sampling.overlapping:
+    if null in ("within_group_permutation", "within_group_cyclic_shift"):
+        if groups is None:
+            raise ValueError(f"null={null!r} needs groups to permute within")
+        labels = np.asarray(groups)
+        if labels.size != n:
+            raise ValueError(f"groups has {labels.size} entries for {n} outcomes")
+        scheme = null
+        builder = (
+            _within_group_permutation_index
+            if null == "within_group_permutation"
+            else _within_group_cyclic_shift_index
+        )
+        index = builder(labels, draws=draws, seed=seed)
+    elif null != "auto":
+        raise ValueError(
+            f"null must be auto, within_group_permutation or within_group_cyclic_shift, "
+            f"got {null!r}"
+        )
+    elif sampling.overlapping:
         scheme = "cyclic_shift"
         index = _cyclic_shift_index(n, guard=SHIFT_GUARD_STRIDES * sampling.stride)
     else:
@@ -775,10 +906,146 @@ def resolution_screen(
         resolutions=tuple(float(value) for value in actual),
         null_means=tuple(float(value) for value in centre),
         model_p_values=marginal,
+        studentised=tuple(float(value) for value in studentised_actual),
         occupied_bins=tuple(int(np.unique(assignments[name]).size) for name in names),
         statistic=statistic,
         best=names[int(np.argmax(studentised_actual))] if statistic > 0.0 else None,
         p_value=p_value,
         n=n,
         draws=k,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class LeaveOneGroupOut:
+    """Refit the whole screen with one group withheld, once per group.
+
+    A resolution computed over eleven years is one number, and one number cannot say
+    whether the ability it describes held throughout or lived in a corner of the sample.
+    Dropping each group in turn and refitting answers that directly: an effect spread
+    across the sample survives every deletion with its p-value roughly intact, and one
+    carried by a single period collapses when that period goes.
+
+    Deliberately reported rather than tested. There is no p-value here and no threshold —
+    twelve dependent refits do not combine into one, and inventing a rule for how many
+    may fail would be choosing a standard after seeing which groups matter. The rows are
+    published and the reader draws the line.
+    """
+
+    #: The model this characterises. Ranking is set-level, so it is fixed in advance
+    #: rather than re-chosen per refit — otherwise each row would report a different
+    #: model's best case and the column would not be a series.
+    model: str
+    event: str
+    binning: str
+    #: Group label -> the refit with that group withheld. ``None`` where dropping it left
+    #: too little sample to screen at all.
+    without: dict[Any, ResolutionScreen | None]
+    #: The screen on the whole sample, for the row every other row is read against.
+    complete: ResolutionScreen
+    #: Group label -> that group's realised event rate. Published because a row saying
+    #: "dropping 2017 removed the effect" is unreadable without knowing what 2017 was.
+    group_rates: dict[Any, float]
+
+    def describe(self) -> dict[str, Any]:
+        def row(screen: ResolutionScreen | None) -> dict[str, Any] | None:
+            if screen is None or self.model not in screen.models:
+                return None
+            position = screen.models.index(self.model)
+            return {
+                "observations": screen.n,
+                "resolution": round(screen.resolutions[position], 6),
+                "resolution_under_null": round(screen.null_means[position], 6),
+                "p_value": round(screen.model_p_values[position], 4),
+                "set_p_value": round(screen.p_value, 4),
+                "set_best_model": screen.best,
+                "rejects_at_5pct": screen.model_p_values[position] < DEFAULT_ALPHA,
+            }
+
+        rows = {}
+        for label, screen in sorted(self.without.items()):
+            entry = row(screen)
+            if entry is not None:
+                entry["withheld_group_rate"] = round(self.group_rates[label], 5)
+            rows[str(label)] = entry
+        live = [entry for entry in rows.values() if entry is not None]
+        return {
+            "model": self.model,
+            "event": self.event,
+            "binning": self.binning,
+            "complete_sample": row(self.complete),
+            "without": rows,
+            "refits_rejecting_marginally": sum(1 for e in live if e["rejects_at_5pct"]),
+            "refits_rejecting_at_set_level": sum(
+                1 for e in live if e["set_p_value"] < DEFAULT_ALPHA
+            ),
+            "refits": len(live),
+            "reading": (
+                "Each row drops one group, re-ranks the survivors into bins, rebuilds the "
+                "reference set for the shorter series and refits the whole screen. A "
+                "p-value that moves little across every row describes an ability that "
+                "held across the sample; one that collapses when a single group is "
+                "removed describes that group. No threshold is applied to the counts "
+                "below on purpose — the refits are dependent and choosing a rule for "
+                "them after seeing which group mattered would be the move this "
+                "repository refuses everywhere else."
+            ),
+        }
+
+
+def leave_one_group_out(
+    probabilities: dict[str, np.ndarray],
+    outcomes: np.ndarray,
+    *,
+    groups: np.ndarray,
+    model: str,
+    event: str,
+    sampling: Sampling,
+    bins: int = DEFAULT_BINS,
+    binning: str = "equal_count",
+    draws: int = DEFAULT_DRAWS,
+    seed: int = 20260807,
+) -> LeaveOneGroupOut | None:
+    """Screen the whole set once per withheld group, tracking one model across the refits.
+
+    ``None`` when the complete sample cannot be screened at all, which is the only case
+    where there is nothing to characterise.
+    """
+    labels = np.asarray(groups)
+    outcome_values = np.asarray(outcomes, dtype=float)
+    if labels.size != outcome_values.size:
+        raise ValueError(f"groups has {labels.size} entries for {outcome_values.size} outcomes")
+
+    screen_kwargs: dict[str, Any] = {
+        "event": event,
+        "sampling": sampling,
+        "bins": bins,
+        "binning": binning,
+        "draws": draws,
+        "seed": seed,
+    }
+    complete = resolution_screen(probabilities, outcome_values, **screen_kwargs)
+    if complete is None:
+        return None
+
+    without: dict[Any, ResolutionScreen | None] = {}
+    for label in np.unique(labels):
+        keep = labels != label
+        without[label.item() if hasattr(label, "item") else label] = resolution_screen(
+            {name: np.asarray(values)[keep] for name, values in probabilities.items()},
+            outcome_values[keep],
+            **screen_kwargs,
+        )
+    return LeaveOneGroupOut(
+        model=model,
+        event=event,
+        binning=binning,
+        without=without,
+        complete=complete,
+        group_rates={
+            (label.item() if hasattr(label, "item") else label): float(
+                outcome_values[labels == label].mean()
+            )
+            for label in np.unique(labels)
+        },
     )
