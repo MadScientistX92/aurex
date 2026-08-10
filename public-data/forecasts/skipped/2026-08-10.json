@@ -1,0 +1,118 @@
+{
+  "code": null,
+  "date": "2026-08-10",
+  "detail": {
+    "policy": "A blocking series \u2014 the price series, and the exchange rate of any published lens \u2014 must reach the run date within its declared tolerance or the run publishes nothing and exits non-zero. Tolerances are calendar days and are stated per series with the publication calendar they were derived from. Non-blocking series are measured and reported here but never block: a stale factor moves a fitted loading, which is a smaller problem than a fabricated price.",
+    "publishable": false,
+    "run_date": "2026-08-10",
+    "series": [
+      {
+        "blocking": false,
+        "detail": "dxy: last observation 2026-07-31 is 10 days behind the run date, tolerance is 10 (US business days, published in arrears)",
+        "lag_days": 10,
+        "last_observation": "2026-07-31",
+        "series_id": "dxy",
+        "tolerance": {
+          "calendar": "US business days, published in arrears",
+          "max_lag_days": 10,
+          "rationale": "DTWEXBGS runs materially further behind than the other FRED series \u2014 six days behind on the 2026-07-30 run, which was an ordinary day. Ten days is set from that observed lag rather than from the market calendar; a tighter number would fire on healthy runs and train the reader to ignore it."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "ibja_gold: last observation 2026-08-06 is 4 days behind the run date, tolerance is 6 (Indian business days)",
+        "lag_days": 4,
+        "last_observation": "2026-08-06",
+        "series_id": "ibja_gold",
+        "tolerance": {
+          "calendar": "Indian business days",
+          "max_lag_days": 6,
+          "rationale": "Not blocking. IBJA closes for local holidays that cluster several days deep, and \u00a70's sixth rule already covers the consequence: where there is no observation the premium is NaN rather than computed. Six days keeps a Diwali week from reading as a fault while still surfacing a dead feed."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "real_yield_10y: last observation 2026-08-06 is 4 days behind the run date, tolerance is 5 (US business days)",
+        "lag_days": 4,
+        "last_observation": "2026-08-06",
+        "series_id": "real_yield_10y",
+        "tolerance": {
+          "calendar": "US business days",
+          "max_lag_days": 5,
+          "rationale": "DFII10 is published each business day with about a one-day lag. Five days absorbs a Monday holiday landing on top of that lag."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": true,
+        "detail": "usdinr: last observation 2026-08-10 is 0 days behind the run date, tolerance is 4 (FX trading days)",
+        "lag_days": 0,
+        "last_observation": "2026-08-10",
+        "series_id": "usdinr",
+        "tolerance": {
+          "calendar": "FX trading days",
+          "max_lag_days": 4,
+          "rationale": "FX trades Sunday 22:00 to Friday 22:00 UTC, so the calendar matches the fix's. Blocking because the rupee lens converts through it: a stale rate over a fresh fix publishes a rupee price that was never quoted."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "vix: last observation 2026-08-07 is 3 days behind the run date, tolerance is 5 (US equity market days)",
+        "lag_days": 3,
+        "last_observation": "2026-08-07",
+        "series_id": "vix",
+        "tolerance": {
+          "calendar": "US equity market days",
+          "max_lag_days": 5,
+          "rationale": "Yahoo carries the previous session by the following morning; the FRED fallback lags a day further. Five days covers a long weekend plus the fallback's own lag without hiding a genuine multi-day outage."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "wti: last observation 2026-08-03 is 7 days behind the run date, tolerance is 7 (US business days, published in arrears)",
+        "lag_days": 7,
+        "last_observation": "2026-08-03",
+        "series_id": "wti",
+        "tolerance": {
+          "calendar": "US business days, published in arrears",
+          "max_lag_days": 7,
+          "rationale": "DCOILWTICO was three days behind on the 2026-07-30 run. Seven days covers that lag plus a holiday week."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "xau_futures: last observation 2026-08-09 is 1 days behind the run date, tolerance is 4 (COMEX trading days)",
+        "lag_days": 1,
+        "last_observation": "2026-08-09",
+        "series_id": "xau_futures",
+        "tolerance": {
+          "calendar": "COMEX trading days",
+          "max_lag_days": 4,
+          "rationale": "Not blocking \u2014 futures feed the realised-volatility estimators, never a published price. Declared and measured anyway so a Yahoo rate limit that silently degrades the vol layer to close-only is visible in the artifact."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": true,
+        "detail": "xauusd: unavailable \u2014 xauusd: all sources failed and no cache. Tried:\n  LBMA:gold_pm:USD: JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+        "lag_days": null,
+        "last_observation": null,
+        "series_id": "xauusd",
+        "tolerance": {
+          "calendar": "London business days (LBMA PM fix)",
+          "max_lag_days": 4,
+          "rationale": "The PM fix prints at 15:00 London, so it is available well before a 02:00 UTC run the next day. The longest ordinary gap is a 02:00 Tuesday run after a Monday holiday reading Friday's fix \u2014 four days. Anything beyond that is a multi-day closure or a broken source, and both must refuse: this series is the anchor every published price and every simulated path is built from."
+        },
+        "verdict": "unavailable"
+      }
+    ]
+  },
+  "note": "No forecast was published for this date. This file is the record of that decision: a night the engine refused is a visible hole, and a night it fabricated would not be.",
+  "reason": "price series did not reach the run date within its declared tolerance",
+  "recorded_at": "2026-08-10T03:48:10.898349+00:00"
+}
