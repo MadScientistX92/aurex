@@ -11,10 +11,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from aurex.data.base import LoadedSeries, SeriesMeta
+from aurex.data.base import LoadedSeries, SeriesMeta, SourceCitation
 from aurex.data.cache import CacheStore
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
+
+#: Provenance for made-up data. Every fixture carries one because the loader protocol
+#: requires it of every real source, and a test helper that could skip it would be the
+#: one place the rule does not hold.
+TEST_CITATION = SourceCitation(
+    source_url="https://example.invalid/series",
+    source_confidence="secondary",
+)
 
 
 @pytest.fixture
@@ -59,6 +67,7 @@ def wandering_series(
             series_id=series_id,
             source_name="test:source",
             source_url="https://example.invalid/series",
+            citation=TEST_CITATION,
             fetched_at=datetime.now(UTC),
             rows=len(frame),
             start=index[0].date(),
@@ -117,6 +126,7 @@ def make_series(
             series_id=series_id,
             source_name=source_name,
             source_url="https://example.invalid/series",
+            citation=TEST_CITATION,
             fetched_at=datetime(2026, 7, 31, tzinfo=UTC),
             rows=len(frame),
             start=index[0].date(),
@@ -189,6 +199,7 @@ class StubLoader:
     ) -> None:
         self.series_id = series_id
         self.source_name = source_name
+        self.citation = TEST_CITATION
         self._result = result
         self._error = error
         self.calls = 0

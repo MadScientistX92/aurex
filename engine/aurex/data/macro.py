@@ -18,7 +18,7 @@ from aurex.data.base import Loader
 from aurex.data.cache import CacheStore
 from aurex.data.chain import SourceChain
 from aurex.data.freshness import SeriesFreshness
-from aurex.data.sources import FredLoader, YahooLoader
+from aurex.data.sources import FredLoader, GprDailyLoader, YahooLoader
 
 
 def _spec() -> dict[str, Sequence[Loader]]:
@@ -30,6 +30,14 @@ def _spec() -> dict[str, Sequence[Loader]]:
         "real_yield_10y": (FredLoader("real_yield_10y", "DFII10", "real_yield"),),
         "dxy": (FredLoader("dxy", "DTWEXBGS", "dxy"),),
         "wti": (FredLoader("wti", "DCOILWTICO", "wti"),),
+        # Single-source deliberately. There is no second publisher of this index —
+        # a mirror would be a copy of the same file with a worse citation, and the
+        # chain's fallback to cache is the right degradation for a weekly series.
+        "gpr": (GprDailyLoader("gpr"),),
+        # The importing economy's side of the transmission chain. Monthly, and both
+        # reached through FRED, which is why both are `secondary` in the artifact.
+        "local_cpi": (FredLoader("local_cpi", "INDCPIALLMINMEI", "cpi"),),
+        "local_policy_rate": (FredLoader("local_policy_rate", "IRSTCI01INM156N", "rate"),),
     }
 
 
@@ -75,6 +83,41 @@ _FRESHNESS: dict[str, SeriesFreshness] = {
         rationale=(
             "DCOILWTICO was three days behind on the 2026-07-30 run. Seven days covers "
             "that lag plus a holiday week."
+        ),
+    ),
+    "gpr": SeriesFreshness(
+        max_lag_days=10,
+        calendar="calendar days; the daily file is refreshed every Monday",
+        rationale=(
+            "The index itself is daily and covers weekends, but the workbook carrying "
+            "it is rebuilt weekly — the authors state Monday, moving to the next "
+            "business day when Monday is a federal holiday. So the last observation "
+            "sits up to six days behind by Sunday, seven with the holiday shift. Ten "
+            "days leaves room for one skipped update to be visible without a healthy "
+            "Saturday run reading as a fault."
+        ),
+    ),
+    "local_cpi": SeriesFreshness(
+        max_lag_days=45,
+        calendar="monthly, published in arrears",
+        rationale=(
+            "A monthly index released a few weeks after the month it measures, so 45 "
+            "days is the ordinary lag rather than a fault. THIS SERIES IS EXPECTED TO "
+            "READ STALE: the OECD discontinued it upstream and its last observation is "
+            "2025-03. That is deliberately not papered over by widening the tolerance "
+            "to swallow it — the chain is estimated to the last observation the "
+            "publisher made, and the artifact should say so on every run rather than "
+            "let a dead series look alive."
+        ),
+    ),
+    "local_policy_rate": SeriesFreshness(
+        max_lag_days=75,
+        calendar="monthly, published in arrears",
+        rationale=(
+            "The immediate-rate series runs a full month or more behind: on the "
+            "2026-08-12 read its last observation was 2026-05. Seventy-five days is "
+            "set from that observed lag rather than from the monthly calendar alone, "
+            "which would fire on every ordinary run."
         ),
     ),
 }

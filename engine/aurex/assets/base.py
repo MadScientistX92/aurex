@@ -35,6 +35,13 @@ class FactorSpec:
     #: How the raw series becomes a regressor: ``diff`` | ``pct_change`` | ``level``.
     transform: str
     description: str
+    #: Which column of a multi-column series carries the driver. ``None`` falls back to
+    #: :func:`~aurex.data.base.price_column`, which is right for a series that carries
+    #: one number. It is wrong, and silently so, for a series that carries several: the
+    #: report behind this asset's flow proxy also carries two local rates and a
+    #: reference fix, and the fallback would have picked whichever sorted first and
+    #: fitted a loading on it under the flow factor's name.
+    column: str | None = None
     #: Optional factors drop out with a recorded reason when their source is
     #: unavailable, rather than failing the run. Oil's EIA inventory series are the
     #: motivating case: the key is free but Aurex must never require one.
@@ -170,6 +177,7 @@ def describe_asset(asset: Asset) -> dict[str, Any]:
                 "id": f.id,
                 "series_id": f.series_id,
                 "transform": f.transform,
+                "column": f.column,
                 "description": f.description,
                 "required": f.required,
             }

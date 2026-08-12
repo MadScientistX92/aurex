@@ -2,7 +2,11 @@
 name = "aurex"
 version = "0.1.0"
 description = "Calibrated uncertainty engine for gold, priced in INR. Distributions, not point forecasts."
-readme = "../README.md"
+# No `readme` key. The README lives at the repository root, one level above this
+# project, and hatchling refuses a readme path outside the project directory — which
+# failed `uv sync` outright, and with it every CI job, since all of them install with
+# `--frozen` and that still builds the package editable. Nothing here publishes to an
+# index, so the long description was buying nothing to begin with.
 requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
 
@@ -20,6 +24,10 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "pypdf>=5.1",
     "yfinance>=0.2.50",
+    # The geopolitical-risk index is published as a legacy .xls workbook and nowhere
+    # else. xlrd is pure Python and ~100KB, which is a smaller price than either
+    # hand-decoding BIFF or citing a mirror instead of the authors' own file.
+    "xlrd>=2.0.1",
 ]
 
 [project.optional-dependencies]

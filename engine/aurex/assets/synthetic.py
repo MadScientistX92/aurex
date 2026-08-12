@@ -22,7 +22,7 @@ from aurex.assets.base import FactorSpec, VolConfig, describe_asset
 from aurex.assets.friction import FrictionProfile, PhysicalFriction, RollFriction
 from aurex.assets.lens import CurrencyLens, NativeLens, TaxedImportLens
 from aurex.assets.transforms import ReturnTransform, ShiftedLogReturn
-from aurex.data.base import LoadedSeries, build_meta
+from aurex.data.base import LoadedSeries, SourceCitation, build_meta
 from aurex.data.cache import CacheStore
 from aurex.data.chain import SourceChain
 from aurex.data.freshness import SeriesFreshness
@@ -53,6 +53,15 @@ _FRESHNESS: dict[str, SeriesFreshness] = {
 class GeneratedLoader:
     """Deterministic in-process price series. No network, no fixtures."""
 
+    #: Generated in process, so the publisher is this file. Labelled ``primary``
+    #: because the citation points at the code that computes it and there is no hand
+    #: it passed through on the way — not because synthetic data is authoritative.
+    citation = SourceCitation(
+        source_url="https://example.invalid/synthetic",
+        source_confidence="primary",
+        cite_as="aurex.assets.synthetic.GeneratedLoader",
+    )
+
     def __init__(self, series_id: str, start_value: float = 100.0, seed: int = 0) -> None:
         self.series_id = series_id
         self.source_name = f"synthetic:{series_id}"
@@ -75,6 +84,7 @@ class GeneratedLoader:
                 series_id=self.series_id,
                 source_name=self.source_name,
                 source_url="https://example.invalid/synthetic",
+                citation=self.citation,
                 frame=frame,
             ),
         )

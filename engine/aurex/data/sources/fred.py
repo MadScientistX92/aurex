@@ -12,14 +12,22 @@ from datetime import date
 
 import pandas as pd
 
-from aurex.data.base import LoadedSeries, build_meta
+from aurex.data.base import LoadedSeries, SourceCitation, build_meta
 from aurex.data.sources import http
 
 CSV_ENDPOINT = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+SERIES_PAGE = "https://fred.stlouisfed.org/series"
 
 
 class FredLoader:
     """Load one FRED series by its FRED code.
+
+    Every series reached this way is ``secondary`` by construction and the constant is
+    not a parameter: FRED redistributes observations computed by somebody else — the
+    Treasury, the EIA, the OECD, an exchange — and which one is stated on the series
+    page rather than in the CSV this loader reads. Naming an originator here would be
+    asserting a citation from memory, so the citation points at the page that carries
+    it instead.
 
     Args:
         series_id: Aurex's internal series name (the cache key).
@@ -32,6 +40,10 @@ class FredLoader:
         self.fred_code = fred_code
         self.column = column
         self.source_name = f"FRED:{fred_code}"
+        self.citation = SourceCitation(
+            source_url=f"{SERIES_PAGE}/{fred_code}",
+            source_confidence="secondary",
+        )
 
     @property
     def url(self) -> str:
@@ -61,6 +73,7 @@ class FredLoader:
                 series_id=self.series_id,
                 source_name=self.source_name,
                 source_url=self.url,
+                citation=self.citation,
                 frame=frame,
             ),
         )

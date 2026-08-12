@@ -262,22 +262,40 @@ class Gold:
         FactorSpec(
             id="d_geopolitical_risk",
             series_id="gpr",
-            transform="level",
-            required=False,
+            # Changed from `level` when the series was wired, and before any loading
+            # was fitted. Two reasons, both stated in the README's pre-registration so
+            # neither can be read as a choice made after seeing a coefficient. First,
+            # every other regressor here is news — a change, not a stock — and a
+            # persistent level regressed on near-unpredictable returns is the classic
+            # way to manufacture a significant-looking coefficient. Second, the channel
+            # being measured is the bid that arrives when risk *rises*; a risk level
+            # that has been elevated for a month is already in the price.
+            transform="diff",
+            # The one factor whose absence changes the SIGN of a published story rather
+            # than the size of a coefficient, so attribution refuses rather than
+            # degrades when it is missing. Optional factors drop out with a recorded
+            # reason; this one cannot, because the reason would be recorded in a field
+            # nobody reads while the loadings underneath told a confident, inverted
+            # story about escalation.
+            required=True,
             description=(
-                "Geopolitical risk. Present so the safe-haven channel is ESTIMATED "
-                "rather than omitted. Without it the scenario engine reaches "
-                "'escalation -> gold down' purely through the real-yield channel, "
-                "with a clean causal story and very likely the wrong sign, since "
-                "gold historically rallies on escalation. Omitted-variable bias here "
-                "is more dangerous than a hand-typed view because it passes the "
-                "check §6 and §17.7 specify."
+                "Geopolitical risk, Caldara-Iacoviello daily index, weekly change. "
+                "Present so the safe-haven channel is ESTIMATED rather than omitted. "
+                "Without it the scenario engine reaches 'escalation -> gold down' "
+                "purely through the real-yield channel, with a clean causal story and "
+                "very likely the wrong sign, since gold historically rallies on "
+                "escalation. Omitted-variable bias here is more dangerous than a "
+                "hand-typed view because it passes the check §6 and §17.7 specify."
             ),
         ),
         FactorSpec(
             id="etf_flow",
             series_id="ibja_gold",
             transform="diff",
+            # Named explicitly. This series carries four columns and the flow proxy is
+            # not the first of them; without this the factor would have loaded the AM
+            # local rate and reported it under the flow factor's name.
+            column="spdr_gold_tonnes",
             required=False,
             description="SPDR holdings in tonnes, from the IBJA daily report.",
         ),

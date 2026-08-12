@@ -14,7 +14,7 @@ from aurex.assets import GOLD
 from aurex.data.base import LoadedSeries, SeriesMeta
 from aurex.data.cache import CacheStore
 from aurex.pipeline import _price_column, run, write_artifact, write_forecast_log
-from tests.conftest import make_series
+from tests.conftest import TEST_CITATION, make_series
 
 START, END = date(2026, 6, 1), date(2026, 7, 30)
 
@@ -33,6 +33,7 @@ def ibja_series(index: pd.DatetimeIndex, level: float = 142_000.0) -> LoadedSeri
             series_id="ibja_gold",
             source_name="IBJA:daily-bullion-report",
             source_url="https://www.ibja.co/Upload/x.pdf",
+            citation=TEST_CITATION,
             fetched_at=pd.Timestamp("2026-07-31", tz="UTC").to_pydatetime(),
             rows=len(frame),
             start=index[0].date(),
@@ -83,12 +84,29 @@ class TestOfflineRun:
         assert factors["d_real_yield"]["available"] is False
         assert factors["d_real_yield"]["reason"]
 
-    def test_geopolitical_risk_factor_is_declared_optional(self, seeded_cache: CacheStore) -> None:
-        """Present so the safe-haven channel is estimated rather than omitted; it
-        has no loader yet, so it must degrade rather than fail the run."""
+    def test_geopolitical_risk_is_required_and_says_so_when_absent(
+        self, seeded_cache: CacheStore
+    ) -> None:
+        """The one factor whose absence inverts a published sign rather than widening it.
+
+        It was optional while it had no loader. Now that it has one it is required, and
+        this asserts the pair of things that follow: the declaration says so, and a run
+        that cannot resolve it reports the absence with a reason instead of quietly
+        fitting the factor set that reaches "escalation is bearish" through real yields
+        alone. Refusing outright is attribution's job, not the nightly artifact's — the
+        artifact still publishes a distribution, which does not depend on this factor.
+        """
         factors = {f["id"]: f for f in gold_block(seeded_cache)["factors"]}
-        assert factors["d_geopolitical_risk"]["required"] is False
-        assert factors["d_geopolitical_risk"]["available"] is False
+        entry = factors["d_geopolitical_risk"]
+
+        assert entry["required"] is True
+        assert entry["available"] is False
+        assert entry["reason"], "a required factor that dropped out must say why"
+
+    def test_the_flow_factor_names_the_column_it_means(self) -> None:
+        """Its series carries four columns and the flow proxy is not the first."""
+        spec = next(f for f in GOLD.factor_set if f.id == "etf_flow")
+        assert spec.column == "spdr_gold_tonnes"
 
 
 class TestLensBlocks:

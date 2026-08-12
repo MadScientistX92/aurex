@@ -12,7 +12,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from aurex.data.base import LoadedSeries, build_meta
+from aurex.data.base import LoadedSeries, SourceCitation, build_meta
 
 _OHLC = ["Open", "High", "Low", "Close"]
 
@@ -29,6 +29,12 @@ class YahooLoader:
         self.series_id = series_id
         self.ticker = ticker
         self.source_name = f"yfinance:{ticker}"
+        # Secondary: Yahoo redistributes exchange and index data it does not
+        # compute, and does not publish a citation form for it.
+        self.citation = SourceCitation(
+            source_url=f"https://finance.yahoo.com/quote/{ticker}/history",
+            source_confidence="secondary",
+        )
 
     @property
     def url(self) -> str:
@@ -73,6 +79,7 @@ class YahooLoader:
                 series_id=self.series_id,
                 source_name=self.source_name,
                 source_url=self.url,
+                citation=self.citation,
                 frame=frame,
                 has_ohlc=True,
             ),

@@ -1,4 +1,10 @@
 {
+  "citation": {
+    "cite_as": null,
+    "licence": null,
+    "source_confidence": "secondary",
+    "source_url": "https://finance.yahoo.com/quote/^VIX/history"
+  },
   "end": "2026-07-30",
   "fallbacks": [],
   "fetched_at": "2026-07-30T22:34:23.399770+00:00",
