@@ -173,13 +173,43 @@ Three things make that residual mean what it says.
 
 Whether retail prices actually follow a duty change is a **measurement**, not an assumption. The pipeline reports a passthrough diagnostic either side of each break and takes no position on what it should be. This distinction is load-bearing in the test suite: the wiring test asserts the mechanical step in *parity*, because under complete passthrough the *premium* does not move at all — an assertion there would fail on correct code.
 
-### Factor attribution *(not built yet — step 4)*
+### Factor attribution
 
-An elastic-net regression of weekly returns on real yields, the dollar index, crude, VIX, ETF flows, and lagged momentum, on a rolling three-year window.
+An elastic-net regression of weekly returns on real yields, the dollar index, crude, VIX, geopolitical risk, ETF flows, and lagged momentum, on a rolling three-year window.
 
-**This is for attribution and scenario propagation, never for directional forecasting.** Loadings will be published with bootstrap confidence intervals, and out-of-sample R² reported honestly — which usually means "close to zero". That is the truthful answer, and hiding it would defeat the point of the project.
+**This is for attribution and scenario propagation, never for directional forecasting.** Loadings are published with bootstrap confidence intervals, and out-of-sample R² reported honestly — which usually means "close to zero". That is the truthful answer, and hiding it would defeat the point of the project.
 
 Step 4 also carries the India transmission chain: crude → import bill → CPI and the current account → policy response → the rupee → the rupee gold price. Every arrow is estimated by local projections, lagged, and uncertain; uncertainty compounds multiplicatively across the links, so the compounded band is what gets displayed. If it spans zero at every horizon, that is the finding and it will be stated as one.
+
+### The one bias this project named in advance
+
+The driver set has declared a geopolitical-risk regressor since it was written, with no source behind it. That gap was not neutral, and this section is the reason step 4 could not start until it was closed.
+
+Every other regressor reaches an escalation through a channel that pushes the metal **down**. Crude rises, expected inflation rises, policy turns hawkish, the real yield rises, and a loading fitted on real yields alone will duly report that escalation is bearish for gold. The safe-haven bid — the thing that actually moves the price on the day of an escalation — had no regressor to load on, so it would have been absorbed into the residual. The output would have been a wrong sign carrying honestly estimated coefficients and a clean causal story, and it would have passed the guard against hand-typed views **because nothing was hand-typed**. An omitted variable is more dangerous here than a fabricated one, because a fabricated view is visible in a diff.
+
+So the Caldara-Iacoviello daily index is wired first, from the authors' own file, under the same provenance rule as every other external fact. Two decisions about it were made before a single loading was fitted, and are recorded here so neither can be read as a choice made after seeing a coefficient:
+
+- **It enters as a change, not a level**, though the factor set originally declared `level`. Every other regressor here is news; a persistent level regressed on near-unpredictable returns is a well-known way to manufacture a significant-looking coefficient. And the channel being measured is the bid that arrives when risk *rises* — risk that has been elevated for a month is already in the price.
+- **It is a required factor, not an optional one.** Optional factors drop out with a recorded reason when their source fails. This one cannot, because the reason would be recorded in a field nobody reads while the loadings underneath told a confident, inverted story about escalation. If the index is unavailable, attribution refuses to publish rather than degrading to the factor set that has this bug.
+
+### Pre-registered: what step 4 was expected to find
+
+Written **before** the estimator was run, and left exactly as written whatever the numbers turned out to be. Two of this repository's four graded pre-registrations have missed; both were worth more than the number they predicted, which is the reason to keep making them.
+
+**Out-of-sample R² will be low, and plausibly indistinguishable from zero.** Stating it now, before it exists. Attribution that explains little is the expected result for weekly returns on macro factors, and it is not a failure of the estimator — it is the measurement the project exists to publish honestly.
+
+That prediction is only falsifiable if it says *which* R², because the factor set admits two and they answer different questions:
+
+- **Predictive** — factors lagged one week, so the regression is asked to forecast. §5 forbids using this for direction, and it is reported precisely so the ban has a number behind it. **Prediction: indistinguishable from zero, and this one is held with confidence.**
+- **Contemporaneous** — factors from the same week as the return, coefficients fitted on windows that end before it. This is what attribution actually means: how much of last week's move do these drivers account for, using loadings that did not see it. **Prediction: positive and material, on the order of 0.2 to 0.45, and carried almost entirely by the dollar and the real yield.** If this one is near zero too, the decomposition is not worth publishing and the honest output is to say so.
+
+**Loading stability across the rolling window will be poor.** Made falsifiable: at least one factor changes sign between windows, and the spread of a factor's rolling loading is wide relative to its full-sample confidence interval. If the rolling loadings are stable, the three-year window was unnecessary and a single full-sample fit would have been the honest estimator.
+
+**The compounded band on crude → CPI → policy → rupee will span zero at every horizon.** Four noisy monthly links multiplied together, on a sample of a couple of hundred months, with a fuel-tax buffer sitting in the middle of the first link. The band is what gets published; a point estimate from this chain would be a story with a number attached.
+
+**The two routes from crude to the rupee gold price will disagree.** Estimating it link-by-link and estimating it directly measure overlapping things through different amounts of noise. That disagreement is published as a finding rather than reconciled, and neither number is tuned toward the other.
+
+**Nothing here is ever summed.** Crude is already in the factor set as an inflation proxy, so the direct loading and the chain measure the same driver twice through different paths. They are published as alternative decompositions, side by side, with the overlap stated — never added together into a total that would double-count it.
 
 ### Scenario engine *(not built yet — steps 4–5)*
 
@@ -236,9 +266,16 @@ No API key is required to run Aurex. `FRED_API_KEY` is used if set and ignored o
 | 10y TIPS real yield | FRED `DFII10` | |
 | Dollar index | FRED `DTWEXBGS` | |
 | WTI crude | FRED `DCOILWTICO` | |
+| Geopolitical risk | Caldara-Iacoviello daily GPR | The authors' own workbook. Daily, weekends included, 1985– |
+| India CPI | FRED `INDCPIALLMINMEI` | Monthly. **Discontinued upstream; last observation 2025-03** |
+| India money-market rate | FRED `IRSTCI01INM156N` | Monthly. The policy corridor's transmission, not the repo rate itself |
 | India 24K + ETF flow | IBJA daily bullion report (PDF) | 999 AM/PM rates, SPDR tonnes, London fix |
 
 Each series resolves through a priority chain, and the artifact records which source actually answered, so provenance is never implied. Yahoo rate-limits aggressively, which is why nothing depends on it alone.
+
+**Every series now carries a `source_confidence`, on the same rule the duty and GST schedules have always followed.** `primary` means the publisher's own file — the LBMA's fix, IBJA's report, the GPR authors' workbook. `secondary` means a redistributor: FRED serves observations computed by the Treasury, the EIA and the OECD, and Yahoo serves exchange data it did not compute. Neither label is a quality judgement; it records how many hands the number passed through, which is the one thing a URL cannot tell you. It is a member of the loader protocol rather than a field read back with `getattr`, so a source that declares no citation is rejected at the boundary instead of quietly serving numbers with no confidence recorded against them.
+
+The geopolitical-risk index is the one series with a stated citation form, and the authors ask for it: Caldara, Dario and Matteo Iacoviello (2022), "Measuring Geopolitical Risk," *American Economic Review*, April, 112(4), pp. 1194–1225, with data downloaded from <https://www.matteoiacoviello.com/gpr.htm>. It is published under CC BY. `cite_as` is filled for that series and empty for the others, because a citation nobody supplied is not a field to fill with something plausible.
 
 IBJA's daily PDF replaced two dead ends: their homepage rate block is rendered client-side, and SPDR's published `.csv` endpoint now serves a PDF. The report also supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
 
