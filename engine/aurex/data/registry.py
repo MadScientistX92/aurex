@@ -24,9 +24,10 @@ def chains_for(
 ) -> dict[str, SourceChain]:
     """Every chain needed to run ``assets``.
 
-    Only macro series some asset actually references in its ``factor_set`` are
-    loaded — there is no reason to fetch VIX for an asset that never looks at it,
-    and it keeps a self-contained asset genuinely self-contained.
+    Only macro series some asset actually references — in its ``factor_set`` or in its
+    ``transmission_chain`` — are loaded. There is no reason to fetch equity volatility
+    for an asset that never looks at it, and it keeps a self-contained asset genuinely
+    self-contained.
 
     Asset-declared sources win on collision: an asset that has a better route to a
     series than the shared macro table is entitled to use it.
@@ -37,6 +38,13 @@ def chains_for(
     chains: dict[str, SourceChain] = {}
     if include_macro:
         wanted = {factor.series_id for asset in assets for factor in asset.factor_set}
+        # A declared transmission chain names series no factor does — the importing
+        # economy's own statistics. They are wanted for exactly the same reason a factor's
+        # series is: something the asset declared cannot be estimated without them.
+        for asset in assets:
+            declared = asset.transmission_chain
+            if declared is not None:
+                wanted |= set(declared.series_ids())
         chains = {sid: chain for sid, chain in macro_chains(store).items() if sid in wanted}
 
     for asset in assets:

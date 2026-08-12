@@ -25,7 +25,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from aurex.data.base import LoadedSeries, build_meta
+from aurex.data.base import LoadedSeries, SourceCitation, build_meta
 from aurex.data.sources import http
 
 REPORT_URL = "https://www.ibja.co/Upload/IBJA_Bullion Daily Report - {stamp}.pdf"
@@ -100,6 +100,14 @@ class IbjaReportLoader:
     """
 
     source_name = "IBJA:daily-bullion-report"
+
+    #: Primary: the association publishes its own reference rate. The URL cited is the
+    #: report index rather than any one dated PDF, because ``source_url`` on the meta
+    #: already records the exact report a given fetch read.
+    citation = SourceCitation(
+        source_url="https://www.ibja.co/",
+        source_confidence="primary",
+    )
 
     def __init__(self, series_id: str = "ibja_gold", max_reports: int = 5) -> None:
         self.series_id = series_id
@@ -179,6 +187,7 @@ class IbjaReportLoader:
                 series_id=self.series_id,
                 source_name=self.source_name,
                 source_url=self.report_url(end),
+                citation=self.citation,
                 frame=frame,
             ),
         )

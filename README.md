@@ -6,7 +6,7 @@
 [![Nightly](https://github.com/MadScientistX92/aurex/actions/workflows/nightly.yml/badge.svg)](https://github.com/MadScientistX92/aurex/actions/workflows/nightly.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
-> **Build status: steps 1, 1.5, 2, 3a, 3b, 7 and most of 5 are complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, the scoring layer with a walk-forward backtest from 2015, routes with per-jurisdiction friction and the breakeven hurdle, the nightly job that publishes one dated forecast a night or refuses and says why, and the dashboard's three buildable views. Not built: factor attribution, the scenario engine, the benchmark shootout, and the second asset. The dashboard's *Drivers* and *Scenarios* views wait on step 4's factor loadings and are omitted rather than stubbed. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
+> **Build status: steps 1, 1.5, 2, 3a, 3b, 4, 6, 7 and most of 5 are complete.** Built: the data layer, dated tax schedules, import parity, currency lenses, the asset abstraction, the volatility and distribution engine, the scoring layer with a walk-forward backtest from 2015, routes with per-jurisdiction friction and the breakeven hurdle, the benchmark shootout and the directional grading beside it, factor attribution with the transmission chain, the nightly job that publishes one dated forecast a night or refuses and says why, and the dashboard's three buildable views. Not built: the scenario engine and the second asset. The dashboard's *Drivers* and *Scenarios* views are still omitted rather than stubbed — step 4's loadings now exist, but the views wait on the scenario engine that reads them. Sections below are marked *(not built yet)* where that is the case — they are commitments, not claims.
 >
 > **Calibration has now been measured, and the headline is a negative result.** Across 2,876 out-of-sample forecasts from January 2015, the CRPS skill against the random walk is between −0.4% and +0.9% depending on the horizon, and a Diebold-Mariano test rejects at none of them — the smallest p-value in the table is 0.23. The distributions are close to the right *shape*: PIT uniformity survives a KS test at all five horizons, and a chi-square rejects at one of them. Direction carries no information at all — and that is now measured for every model in the benchmark set rather than for this one alone: resolution is indistinguishable from zero at four of the five horizons on both binnings, with the fifth published beside the reasons it reads as noise. An earlier version of this section reported up to +4.6% CRPS skill; that number was a model carrying drift beating a null that had been denied one, it has been withdrawn, and the simulation no longer carries the drift. It would not have survived a Diebold-Mariano test either — measured, p = 0.27. Everything below is published with the test behind it, in both directions.
 
@@ -50,7 +50,6 @@ A sixth rule emerged while building the data layer, and it earned its place:
 
 ## What it does not do yet
 
-- **Factor attribution** and the crude → CPI → policy → rupee transmission chain *(step 4)*
 - **Event scenarios** with probabilities sourced from prediction markets *(steps 4–5)*
 - **The dashboard**, the currency toggle, and user-set leverage *(step 5)*
 - **The benchmark table** against the random walk and the foundation models *(step 6)*
@@ -173,15 +172,103 @@ Three things make that residual mean what it says.
 
 Whether retail prices actually follow a duty change is a **measurement**, not an assumption. The pipeline reports a passthrough diagnostic either side of each break and takes no position on what it should be. This distinction is load-bearing in the test suite: the wiring test asserts the mechanical step in *parity*, because under complete passthrough the *premium* does not move at all — an assertion there would fail on correct code.
 
-### Factor attribution *(not built yet — step 4)*
+### Factor attribution
 
-An elastic-net regression of weekly returns on real yields, the dollar index, crude, VIX, ETF flows, and lagged momentum, on a rolling three-year window.
+An elastic-net regression of weekly returns on real yields, the dollar index, crude, VIX, geopolitical risk, ETF flows, and lagged momentum, on a rolling three-year window.
 
-**This is for attribution and scenario propagation, never for directional forecasting.** Loadings will be published with bootstrap confidence intervals, and out-of-sample R² reported honestly — which usually means "close to zero". That is the truthful answer, and hiding it would defeat the point of the project.
+**This is for attribution and scenario propagation, never for directional forecasting.** Loadings are published with bootstrap confidence intervals, and out-of-sample R² reported honestly — which usually means "close to zero". That is the truthful answer, and hiding it would defeat the point of the project.
 
-Step 4 also carries the India transmission chain: crude → import bill → CPI and the current account → policy response → the rupee → the rupee gold price. Every arrow is estimated by local projections, lagged, and uncertain; uncertainty compounds multiplicatively across the links, so the compounded band is what gets displayed. If it spans zero at every horizon, that is the finding and it will be stated as one.
+Step 4 also carries the India transmission chain: crude → import bill → CPI and the current account → policy response → the rupee → the rupee gold price. Every arrow is estimated by local projections, lagged, and uncertain; uncertainty compounds multiplicatively across the links, so the compounded band is what gets displayed. It spans zero at every horizon, which is the finding, and it is stated as one below.
 
-### Scenario engine *(not built yet — steps 4–5)*
+### The one bias this project named in advance
+
+The driver set has declared a geopolitical-risk regressor since it was written, with no source behind it. That gap was not neutral, and this section is the reason step 4 could not start until it was closed.
+
+Every other regressor reaches an escalation through a channel that pushes the metal **down**. Crude rises, expected inflation rises, policy turns hawkish, the real yield rises, and a loading fitted on real yields alone will duly report that escalation is bearish for gold. The safe-haven bid — the thing that actually moves the price on the day of an escalation — had no regressor to load on, so it would have been absorbed into the residual. The output would have been a wrong sign carrying honestly estimated coefficients and a clean causal story, and it would have passed the guard against hand-typed views **because nothing was hand-typed**. An omitted variable is more dangerous here than a fabricated one, because a fabricated view is visible in a diff.
+
+So the Caldara-Iacoviello daily index is wired first, from the authors' own file, under the same provenance rule as every other external fact. Two decisions about it were made before a single loading was fitted, and are recorded here so neither can be read as a choice made after seeing a coefficient:
+
+- **It enters as a change, not a level**, though the factor set originally declared `level`. Every other regressor here is news; a persistent level regressed on near-unpredictable returns is a well-known way to manufacture a significant-looking coefficient. And the channel being measured is the bid that arrives when risk *rises* — risk that has been elevated for a month is already in the price.
+- **It is a required factor, not an optional one.** Optional factors drop out with a recorded reason when their source fails. This one cannot, because the reason would be recorded in a field nobody reads while the loadings underneath told a confident, inverted story about escalation. If the index is unavailable, attribution refuses to publish rather than degrading to the factor set that has this bug.
+
+### Pre-registered: what step 4 was expected to find
+
+Written **before** the estimator was run, and left exactly as written whatever the numbers turned out to be. Two of this repository's four graded pre-registrations have missed; both were worth more than the number they predicted, which is the reason to keep making them.
+
+**Out-of-sample R² will be low, and plausibly indistinguishable from zero.** Stating it now, before it exists. Attribution that explains little is the expected result for weekly returns on macro factors, and it is not a failure of the estimator — it is the measurement the project exists to publish honestly.
+
+That prediction is only falsifiable if it says *which* R², because the factor set admits two and they answer different questions:
+
+- **Predictive** — factors lagged one week, so the regression is asked to forecast. §5 forbids using this for direction, and it is reported precisely so the ban has a number behind it. **Prediction: indistinguishable from zero, and this one is held with confidence.**
+- **Contemporaneous** — factors from the same week as the return, coefficients fitted on windows that end before it. This is what attribution actually means: how much of last week's move do these drivers account for, using loadings that did not see it. **Prediction: positive and material, on the order of 0.2 to 0.45, and carried almost entirely by the dollar and the real yield.** If this one is near zero too, the decomposition is not worth publishing and the honest output is to say so.
+
+**Loading stability across the rolling window will be poor.** Made falsifiable: at least one factor changes sign between windows, and the spread of a factor's rolling loading is wide relative to its full-sample confidence interval. If the rolling loadings are stable, the three-year window was unnecessary and a single full-sample fit would have been the honest estimator.
+
+**The compounded band on crude → CPI → policy → rupee will span zero at every horizon.** Four noisy monthly links multiplied together, on a sample of a couple of hundred months, with a fuel-tax buffer sitting in the middle of the first link. The band is what gets published; a point estimate from this chain would be a story with a number attached.
+
+**The two routes from crude to the rupee gold price will disagree.** Estimating it link-by-link and estimating it directly measure overlapping things through different amounts of noise. That disagreement is published as a finding rather than reconciled, and neither number is tuned toward the other.
+
+**Nothing here is ever summed.** Crude is already in the factor set as an inflation proxy, so the direct loading and the chain measure the same driver twice through different paths. They are published as alternative decompositions, side by side, with the overlap stated — never added together into a total that would double-count it.
+
+### The loadings, against that prediction
+
+`aurex factors` writes `public-data/factors.json`; every figure below is read out of it by `tests/test_readme_factors.py`, which fails the build if the README and the artifact disagree in either direction. **1074 weeks, 2006-01-13 to 2026-08-07.** The sample starts in 2006 because the dollar index does, and the artifact names it as the binding regressor rather than leaving a reader to infer it from a start date.
+
+| Driver | Loading | 95% interval (OLS) | OLS p | Selected | Sign flips | R² without it |
+|---|---|---|---|---|---|---|
+| `d_dxy` | -0.010532 | [-0.013383, -0.009714] | 0.0000 | 1.000 | 0 | 0.09717 |
+| `d_vix` | +0.003129 | [0.001924, 0.007207] | 0.0007 | 0.997 | 2 | 0.22795 |
+| `d_real_yield` | -0.002009 | [-0.005256, 0.000157] | 0.0648 | 0.941 | 1 | 0.16769 |
+| `d_oil` | +0.001545 | [0.000573, 0.004324] | 0.0105 | 0.942 | 4 | 0.18548 |
+| `momentum` | -0.000199 | [-0.002963, 0.000765] | 0.2479 | 0.567 | 1 | 0.19207 |
+| `d_geopolitical_risk` | +0.000192 | [-0.000339, 0.002204] | 0.1505 | 0.615 | 4 | 0.18998 |
+
+The loading is the change in the weekly log return per one standard deviation of the driver, which is the only scale on which two of these are comparable. *Selected* is the share of 2000 moving-block bootstrap replicates in which the penalised fit kept the driver at all — reported because a percentile bootstrap around a penalised estimator is not valid at exactly zero, so an interval that excludes zero there is weaker evidence than it looks, and the OLS interval beside it is the one without that caveat. *R² without it* is the whole set refitted with that driver removed. `etf_flow` is not in the table: its source accumulates a few days of history per fetch, and admitting it would have cut the sample from 1074 weeks to 2.
+
+**The out-of-sample R² was pre-registered in two forms and both were graded.**
+
+- **Predictive: -0.00218** over 917 weeks, Diebold-Mariano p **0.8346** against the training-window mean. Pre-registered as indistinguishable from zero and held with confidence. **Hit.** It is also slightly negative, which is what a factor model doing worse out of sample than "the average of the last three years" looks like. §5's ban on using this for direction now has a number under it rather than an assurance.
+- **Contemporaneous: 0.18699** over 918 weeks, DM p **0.0000**. Pre-registered as *positive and material, on the order of 0.2 to 0.45*. **Missed, narrowly and on the low side.** The direction and the significance were right; the range was not, and 0.187 sits just below the bottom of it. In-sample R² is 0.23315, so about a fifth of the fit does not survive being asked to work on weeks it did not see.
+
+**The half of that prediction that missed badly was the mechanism, not the magnitude.** The pre-registration said the contemporaneous fit would be *carried almost entirely by the dollar and the real yield*. The dollar half is right and then some: remove it and out-of-sample R² falls from 0.18699 to **0.09717**, roughly half the explanatory power in one regressor. The real yield half is wrong. Its loading is the third largest, its OLS interval covers zero (p = 0.0648), and removing it costs about two points of R². The factor set's own description calls it "the dominant carry channel" and this sample does not support that; equity volatility has a larger loading and a smaller p-value.
+
+**Two drivers make the fit worse out of sample.** Removing `d_vix` raises R² from 0.18699 to **0.22795**, and removing `momentum` raises it to **0.19207**. Both are kept: this is an attribution set, the decomposition is the product, and dropping regressors because they hurt an out-of-sample score would be selecting a model on the thing being reported. But it is stated here, because a reader entitled to the loadings is entitled to know that two of them are net negative for the only forecast-shaped number in the section.
+
+**Stability was pre-registered as poor, and it split.** The prediction was made falsifiable in two parts. *At least one driver changes sign between windows* — **hit**, and comfortably: five of six do, with `d_oil` and `d_geopolitical_risk` flipping four times each across 230 rolling three-year windows. *The rolling spread is wide relative to the full-sample interval* — **missed**. The ratio of a driver's rolling interquartile range to the width of its own interval runs from 0.369 to 0.993, and never exceeds one. So the loadings do wander, and the wandering is contained by intervals that were already wide enough to cover it. The two halves of "unstable" turn out to measure different things, and only the first one holds. The dollar is the exception on both counts: 230 windows, 230 selections, zero sign changes.
+
+### What the index that had to be wired first actually did
+
+Nothing measurable, and that is the result.
+
+`d_geopolitical_risk` loads **positive** — rising geopolitical risk goes with a higher gold return, which is the sign the omitted-variable argument said would otherwise be inverted. But it is not distinguishable from zero: OLS p = 0.1505, kept in 61.5% of bootstrap replicates, and it changes sign in four of the 230 rolling windows. And removing it entirely moves the largest surviving loading by **0.00001566** — twenty-five times less than any other driver in the set — while out-of-sample R² goes *up*, from 0.18699 to 0.18998.
+
+So the honest reading is this. The bias this project identified in advance did not materialise in the loadings on this sample. No other driver flips sign without the index, and none moves appreciably. That is not an argument that wiring it was unnecessary: "we checked and the bias was negligible" and "we did not check" produce the same coefficients and are not the same claim, and the second one is the one that gets published with a confident causal story attached. The trap was always in the *propagation* rather than in the fit — the scenario engine is step 5, and it will now reach for an estimated safe-haven loading that says **small, positive, and not distinguishable from zero**, which is a far weaker input than the clean story a real-yield-only chain would have handed it. Weakening that input was the point.
+
+### The chain, and the two answers it gives
+
+Local projections per §19, monthly, one regression per horizon with its own band and no identifying assumptions imposed. The HAC truncation is at least the horizon, because the cumulative response makes the residual a moving average of order *h* by construction. Sample: 175 months, 2012-02 to 2026-08.
+
+| Horizon (months) | Compounded | 95% band | Direct | Orthogonalised |
+|---|---|---|---|---|
+| 0 | -0.000002 | [-0.000264, +0.000222] | -0.02770 | -0.02310 |
+| 1 | +0.000107 | [-0.000183, +0.000618] | -0.03493 | -0.03343 |
+| 3 | +0.001261 | [-0.003317, +0.003031] | -0.06998 | -0.06696 |
+| 6 | +0.002690 | [-0.005972, +0.005897] | -0.13401 | -0.13181 |
+| 12 | -0.000590 | [-0.006663, +0.008290] | -0.04265 | -0.03851 |
+
+**The compounded band spans zero at every horizon** — pre-registered, and **hit**. The band is not the product of the links' own bands — multiplying three intervals would treat estimates from overlapping windows of one economy as independent. It comes from a bootstrap that resamples months once per replicate and re-estimates every link on the same months, so whatever dependence the sample has survives into the product.
+
+The middle link is why. Inflation into the policy response spans zero at all five horizons on its own, with a point estimate that changes sign between the impact month and one month later. Any product running through it inherits that, and no amount of precision in the other two links can rescue it.
+
+**The two routes disagree — pre-registered, and hit — and this is the finding rather than a discrepancy to tune away.** Chain-implied at six months: +0.0027. Direct at six months: **-0.13401**, with a band of [-0.233278, -0.034744] that is the one cell in the whole section that excludes zero. Opposite signs and two orders of magnitude apart. Neither number was moved toward the other. The direct estimate is one horizon of five in one of two specifications, so it is a single rejection in a section with plenty of cells; it is published at its face value with that noted, and not promoted into a mechanism.
+
+**Orthogonalised** is the same regression with the quote-currency fix held constant, so its coefficient is the part of the path running through the local economy — the tax stack, the exchange rate, the domestic premium — with the global price channel the weekly loadings already carry taken out. It barely moves the estimate, which says the two channels are close to separable here. **The chain and the direct loading are never summed.** A test asserts that no field anywhere in the emitted block is named like a total.
+
+**The last arrow is not estimated.** The currency lens computes the rupee price from the fix and the rate by arithmetic, so its elasticity is one by construction. Measured as a check rather than fitted, it comes back at 1.0695 on the rate and 0.9588 on the fix with R² 0.94804 — away from one because the duty and GST steps moved inside the sample, which is a fact about the schedule and not about transmission.
+
+**The fuel-tax buffer, and the hole in it.** Indian central excise on petrol and diesel is adjusted by hand, in the opposite direction, precisely when crude moves. On 2026-03-27, with the benchmark up about 75% in four weeks, excise was cut by ₹10/litre on both fuels and the pump price did not change at all — a passthrough of zero produced by a fiscal decision, which an uncontrolled regression would score as a property of the pricing mechanism. The control is a schedule with per-entry citations, mostly PIB releases, and it covers **74 months** with moves flagged at 2017-11, 2022-06, 2025-04 and 2026-04. It does **not** cover October 2018 to November 2021, which contains at least three changes with no retrievable primary document behind them; that window is declared a gap, the resolver returns nothing inside it, and those months drop out of the controlled estimate. Holding the 2018 level across the largest fuel-tax increase in the sample would have put a fabricated constant into the one control that exists to absorb discretionary tax moves.
+
+### Scenario engine *(not built yet — step 5)*
 
 You cannot forecast a ceasefire. You can enumerate outcomes, weight them, and propagate them — which is what risk desks actually do.
 
@@ -236,9 +323,16 @@ No API key is required to run Aurex. `FRED_API_KEY` is used if set and ignored o
 | 10y TIPS real yield | FRED `DFII10` | |
 | Dollar index | FRED `DTWEXBGS` | |
 | WTI crude | FRED `DCOILWTICO` | |
+| Geopolitical risk | Caldara-Iacoviello daily GPR | The authors' own workbook. Daily, weekends included, 1985– |
+| India CPI | FRED `INDCPIALLMINMEI` | Monthly. **Discontinued upstream; last observation 2025-03** |
+| India money-market rate | FRED `IRSTCI01INM156N` | Monthly. The policy corridor's transmission, not the repo rate itself |
 | India 24K + ETF flow | IBJA daily bullion report (PDF) | 999 AM/PM rates, SPDR tonnes, London fix |
 
 Each series resolves through a priority chain, and the artifact records which source actually answered, so provenance is never implied. Yahoo rate-limits aggressively, which is why nothing depends on it alone.
+
+**Every series now carries a `source_confidence`, on the same rule the duty and GST schedules have always followed.** `primary` means the publisher's own file — the LBMA's fix, IBJA's report, the GPR authors' workbook. `secondary` means a redistributor: FRED serves observations computed by the Treasury, the EIA and the OECD, and Yahoo serves exchange data it did not compute. Neither label is a quality judgement; it records how many hands the number passed through, which is the one thing a URL cannot tell you. It is a member of the loader protocol rather than a field read back with `getattr`, so a source that declares no citation is rejected at the boundary instead of quietly serving numbers with no confidence recorded against them.
+
+The geopolitical-risk index is the one series with a stated citation form, and the authors ask for it: Caldara, Dario and Matteo Iacoviello (2022), "Measuring Geopolitical Risk," *American Economic Review*, April, 112(4), pp. 1194–1225, with data downloaded from <https://www.matteoiacoviello.com/gpr.htm>. It is published under CC BY. `cite_as` is filled for that series and empty for the others, because a citation nobody supplied is not a field to fill with something plausible.
 
 IBJA's daily PDF replaced two dead ends: their homepage rate block is rendered client-side, and SPDR's published `.csv` endpoint now serves a PDF. The report also supplies SPDR tonnes, a better ETF-flow proxy than shares outstanding.
 
@@ -451,7 +545,7 @@ Every interface convention pushes toward one number, one arrow, one confident he
 | **Today** | The distribution across horizons, the exceedance curve against breakeven, and every route × jurisdiction hurdle with its odds |
 | **Track record** | Sample window and the command that reproduces it, CRPS skill with its Diebold-Mariano p-values, PIT histograms, reliability diagrams, and the live log |
 | **Calculator** | Grams, route, jurisdiction → the specific breakeven, the gross gain needed, and the published odds of clearing it |
-| ~~Drivers~~ | **Omitted.** Needs step 4's factor loadings |
+| ~~Drivers~~ | **Omitted.** Step 4's loadings exist; the view waits on the scenario engine that propagates them |
 | ~~Scenarios~~ | **Omitted.** Needs step 4 |
 
 The last two are absent rather than stubbed. An empty tab implies the work is done and merely unpopulated; naming them as missing costs a line and says something true.
@@ -729,7 +823,7 @@ Generated by [`aurex direction`](engine/aurex/cli.py) into [`public-data/directi
 |---|---|
 | ~~3a~~ | ~~Scoring the distributions the engine already produces: PIT, CRPS skill against the random walk, Kupiec, Christoffersen, reliability. Walk-forward, expanding window, 2015→present~~ — **done**, results above |
 | ~~3b~~ | ~~Routes and jurisdictions; friction per route; the breakeven hurdle and the calibration of clearing it~~ — **done**, results above |
-| 4 | Elastic-net factor attribution; market-sourced scenario priors; the crude → CPI → policy → rupee transmission chain by local projections |
+| 4 | ~~Elastic-net factor attribution; the crude → CPI → policy → rupee transmission chain by local projections~~ — **done**, above. Market-sourced scenario priors remain and belong to the scenario engine |
 | 5 | ~~Dashboard: Today, Track record, Calculator~~ — **done**, above. Uncertainty decomposition and user-set leverage with a live liquidation probability remain, and the Drivers and Scenarios views wait on step 4 |
 | ~~6~~ | ~~Benchmark shootout vs random walk, AutoARIMA, NHITS, Chronos — **including the rows where Aurex loses**~~ — **done**, results above. Nothing beat the null; Chronos lost by a quarter of its CRPS. Per-model **direction** is now graded too, in its own uncentred run: resolution is indistinguishable from zero at four of five horizons, and the fifth is published with the reasons it reads as noise. Per-model PIT uniformity remains unmeasured |
 | 7 | ~~Nightly automation: CI, the staleness refusal, track-record integrity, the live log~~ — **done**, above. Deploy waits on step 5 |

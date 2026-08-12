@@ -906,6 +906,178 @@ def index(
     )
 
 
+def _factors_command(
+    *, asset_id: str, since: str, until: str, window: int, draws: int, horizons: str
+) -> str:
+    """The command that reproduces the attribution run, every option spelled out."""
+    return " ".join(
+        [
+            "uv run aurex factors",
+            f"--asset {asset_id}",
+            f"--from {since}",
+            f"--to {until}",
+            f"--window {window}",
+            f"--draws {draws}",
+            f"--horizons {horizons}",
+        ]
+    )
+
+
+@app.command()
+def factors(
+    asset_id: str = typer.Option("gold", "--asset", help="Which registered asset to attribute."),
+    since: str = typer.Option("2000-01-01", "--from", help="Earliest observation, YYYY-MM-DD."),
+    until: str = typer.Option(
+        "",
+        "--to",
+        help=(
+            "Last observation the run may see, YYYY-MM-DD. Defaults to the price "
+            "series' own last observation, never to today. Pass the resolved value "
+            "back to reproduce the run byte for byte."
+        ),
+    ),
+    window: int = typer.Option(156, "--window", help="Rolling window, in weeks."),
+    draws: int = typer.Option(2_000, "--draws", help="Bootstrap replicates."),
+    horizons: str = typer.Option("0,1,3,6,12", "--horizons", help="Chain horizons, in months."),
+    offline: bool = typer.Option(False, "--offline", help="Never touch the network."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print without writing."),
+) -> None:
+    """Estimate driver loadings and the declared transmission chain.
+
+    Attribution, never direction forecasting. Loadings are published with bootstrap
+    intervals and an out-of-sample R-squared reported at whatever it is; the chain is
+    estimated by local projections with a band per horizon and no identifying
+    assumptions imposed. Writes ``public-data/factors.json``.
+
+    Refuses rather than degrades when a *required* driver is missing. The geopolitical
+    risk index is required for exactly that reason: without it the loadings reach
+    "escalation is bearish" through the real-yield channel alone, honestly estimated and
+    with the wrong sign.
+    """
+    import json as _json
+    from datetime import UTC, date, datetime
+
+    import pandas as pd
+
+    from aurex import config
+    from aurex import factors as factors_module
+    from aurex.assets import get, lens_by_code
+    from aurex.assets.lens import LensContext
+    from aurex.pipeline import _price_column, resolve_series
+
+    asset = get(asset_id)
+    start_date = date.fromisoformat(since)
+
+    series, unavailable = resolve_series(
+        [asset], start=start_date, end=datetime.now(UTC).date(), offline=offline
+    )
+    price = series.get(asset.price_series_id)
+    if price is None:
+        typer.echo(
+            f"cannot attribute {asset.id}: {asset.price_series_id} is unavailable "
+            f"({unavailable.get(asset.price_series_id, 'no reason recorded')})",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    last = pd.Timestamp(_price_column(price.frame).dropna().index[-1])
+    end_stamp = pd.Timestamp(date.fromisoformat(until.strip())) if until.strip() else last
+
+    # Bounded at both ends before anything is estimated, so the reproducing command in
+    # the artifact is a command and not a description of one. §0's reproducibility claim
+    # is what makes this mandatory rather than tidy.
+    frames = {sid: loaded.frame.loc[:end_stamp] for sid, loaded in series.items()}
+
+    declared = asset.transmission_chain
+    if declared is not None:
+        lens = lens_by_code(asset, declared.terminal_lens)
+        fx = None
+        if lens.fx_series_id is not None and lens.fx_series_id in frames:
+            fx = _price_column(frames[lens.fx_series_id])
+        local = lens.apply(_price_column(frames[asset.price_series_id]), LensContext(fx=fx))
+        # The lens computes the local price; the chain never recomputes one. There is one
+        # implementation of the tax stack and it is the one carrying the citations.
+        frames[declared.terminal_series_id] = local[["price"]].rename(columns={"price": "close"})
+
+    try:
+        attribution = factors_module.estimate_loadings(
+            asset, frames, unavailable=unavailable, window=window, draws=draws
+        )
+    except factors_module.DesignError as exc:
+        typer.echo(f"refusing to publish loadings: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    chain = None
+    chain_reason = None
+    try:
+        chain = factors_module.estimate_chain(
+            asset,
+            frames,
+            horizons=tuple(int(h) for h in horizons.split(",") if h.strip()),
+            draws=draws,
+        )
+    except factors_module.ChainError as exc:
+        # The chain degrades where the loadings refuse, and the asymmetry is deliberate:
+        # a missing chain leaves the loadings correct, while a missing required driver
+        # leaves them confidently wrong.
+        chain_reason = str(exc)
+        typer.echo(f"chain not estimated: {exc}", err=True)
+
+    block = factors_module.describe(asset, attribution, chain) | {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "engine_version": __version__,
+        "code": code_provenance().describe(),
+        "sources": {sid: loaded.meta.to_dict() for sid, loaded in sorted(series.items())},
+        "chain_unavailable_reason": chain_reason,
+        "reproduce": _factors_command(
+            asset_id=asset.id,
+            since=start_date.isoformat(),
+            until=end_stamp.date().isoformat(),
+            window=window,
+            draws=draws,
+            horizons=horizons,
+        ),
+        "pre_registration": (
+            "Stated in the README before this ran and left as written: out-of-sample "
+            "R-squared low and plausibly indistinguishable from zero, with the "
+            "predictive form held to be indistinguishable from zero with confidence and "
+            "the contemporaneous form expected positive and material at 0.2 to 0.45; "
+            "rolling loading stability poor; and the compounded chain band spanning "
+            "zero at every horizon."
+        ),
+    }
+
+    if dry_run:
+        typer.echo(_json.dumps(block, indent=2, sort_keys=True))
+        return
+
+    config.PUBLIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out = config.PUBLIC_DATA_DIR / "factors.json"
+    out.write_text(_json.dumps(block, indent=2, sort_keys=True) + "\n")
+    typer.echo(f"wrote {out}")
+
+    design = block["attribution"]["design"]
+    typer.echo(f"  {design['observations']} weeks, {design['first_week']}..{design['last_week']}")
+    for loading in block["attribution"]["loadings"]:
+        typer.echo(
+            f"      {loading['factor']:<22} {loading['standardised']:+.5f}  "
+            f"selected {loading['selection_rate']}  OLS p {loading['ols_p_value']}"
+        )
+    for kind in ("contemporaneous", "predictive"):
+        scored = block["attribution"]["out_of_sample"][kind]
+        if scored is not None:
+            typer.echo(
+                f"      R2 {kind:<16} {scored['r_squared_oos']:+.4f}  DM p {scored['dm_p_value']}"
+            )
+    if chain is not None:
+        for entry in block["chain"]["compounded"]["horizons"]:
+            low, high = entry["interval_95"]
+            typer.echo(
+                f"      chain h={entry['horizon_months']:>2}  {entry['compounded']:+.6f} "
+                f"[{low:+.6f}, {high:+.6f}]  spans zero: {entry['spans_zero']}"
+            )
+
+
 @app.command()
 def version() -> None:
     """Print the engine version."""

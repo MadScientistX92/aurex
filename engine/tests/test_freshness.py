@@ -32,7 +32,7 @@ from aurex.data.freshness import (
 )
 from aurex.data.registry import blocking_series, freshness_for
 from aurex.pipeline import run
-from tests.conftest import make_series
+from tests.conftest import TEST_CITATION, make_series
 
 RUN_DATE = date(2026, 8, 5)
 
@@ -73,6 +73,7 @@ def series_ending(
             series_id=series_id,
             source_name="test:source",
             source_url="https://example.invalid/series",
+            citation=TEST_CITATION,
             fetched_at=datetime(2026, 8, 5, tzinfo=UTC),
             rows=len(frame),
             start=index[0].date(),

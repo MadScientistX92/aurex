@@ -22,6 +22,7 @@ from aurex.data.base import LoadedSeries, SeriesMeta
 from aurex.data.cache import CacheStore
 from aurex.forecast import ForecastRequest, forecast_asset
 from aurex.pipeline import run
+from tests.conftest import TEST_CITATION
 
 START, END = date(2020, 1, 1), date(2026, 7, 30)
 
@@ -41,6 +42,7 @@ def random_walk(series_id: str, *, level: float, sigma: float, seed: int) -> Loa
             series_id=series_id,
             source_name="test:random-walk",
             source_url="https://example.invalid/series",
+            citation=TEST_CITATION,
             fetched_at=pd.Timestamp("2026-07-31", tz="UTC").to_pydatetime(),
             rows=len(frame),
             start=index[0].date(),
@@ -67,6 +69,7 @@ def long_cache(cache: CacheStore) -> CacheStore:
                 series_id="ibja_gold",
                 source_name="IBJA:daily-bullion-report",
                 source_url="https://www.ibja.co/Upload/x.pdf",
+                citation=TEST_CITATION,
                 fetched_at=pd.Timestamp("2026-07-31", tz="UTC").to_pydatetime(),
                 rows=len(index),
                 start=index[0].date(),
@@ -265,6 +268,7 @@ class TestDegradation:
                         series_id=series_id,
                         source_name="test:flat",
                         source_url="https://example.invalid/series",
+                        citation=TEST_CITATION,
                         fetched_at=pd.Timestamp("2026-07-31", tz="UTC").to_pydatetime(),
                         rows=len(frame),
                         start=index[0].date(),

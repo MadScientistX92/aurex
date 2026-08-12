@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import json
 from datetime import date
+from pathlib import Path
 from typing import ClassVar
 
 import pandas as pd
 import pytest
 import responses
 
+from aurex.data.base import LoadedSeries, Loader, SourceCitation
+from aurex.data.schedules.provenance import VALID_CONFIDENCE
 from aurex.data.sources.fred import CSV_ENDPOINT, FredLoader
+from aurex.data.sources.gpr import DAILY_XLS_URL, GprDailyLoader, parse_daily
 from aurex.data.sources.ibja import IbjaReportLoader, parse_report
 from aurex.data.sources.lbma import GOLD_PM_URL, LbmaGoldLoader
 from aurex.data.sources.yahoo import YahooLoader
@@ -185,6 +189,143 @@ class TestYahoo:
         monkeypatch.setattr(yfinance, "download", lambda *a, **k: partial)
         with pytest.raises(ValueError, match="missing columns"):
             YahooLoader("xauusd", "GC=F").fetch(date(2026, 7, 1), date(2026, 7, 3))
+
+
+class TestGeopoliticalRisk:
+    """The index the driver set declared and went without until step 4.
+
+    The parse is tested against a recorded slice of the authors' own workbook rather
+    than a hand-written frame, because the two things that can break here are both
+    properties of the real file: the columns it names, and the data dictionary it keeps
+    in trailing columns beside the observations.
+    """
+
+    @pytest.fixture
+    def sheet(self, fixture_dir: Path) -> pd.DataFrame:
+        return pd.read_csv(fixture_dir / "gpr_daily_2026-08-10.csv")
+
+    def test_parses_the_three_series_it_reads(self, sheet: pd.DataFrame) -> None:
+        frame = parse_daily(sheet)
+
+        assert list(frame.columns) == ["gpr", "gpr_threats", "gpr_acts"]
+        assert isinstance(frame.index, pd.DatetimeIndex)
+        assert frame.index[0] == pd.Timestamp("1985-01-01")
+        assert frame.index[-1] == pd.Timestamp("2026-08-10")
+        assert frame["gpr"].iloc[-1] == pytest.approx(154.9739227294922)
+
+    def test_the_data_dictionary_never_reaches_a_regressor(self, sheet: pd.DataFrame) -> None:
+        """``var_name``/``var_label`` sit beside the observations, not under them."""
+        assert {"var_name", "var_label"} <= set(sheet.columns)
+        frame = parse_daily(sheet)
+
+        assert not {"var_name", "var_label"} & set(frame.columns)
+        assert frame.notna().all().all(), "a dictionary cell leaked into a numeric column"
+
+    def test_the_index_covers_weekends(self, sheet: pd.DataFrame) -> None:
+        """Calendar-daily, which is why weekly aggregation is a mean and not a last."""
+        frame = parse_daily(sheet)
+        assert pd.Timestamp("1985-01-05").dayofweek == 5
+        assert pd.Timestamp("1985-01-05") in frame.index
+
+    @pytest.mark.parametrize("column", ["date", "GPRD", "GPRD_THREAT", "GPRD_ACT"])
+    def test_a_renamed_column_fails_loudly(self, sheet: pd.DataFrame, column: str) -> None:
+        """Schema drift must raise, so the chain falls through to the cache."""
+        with pytest.raises(ValueError, match=column):
+            parse_daily(sheet.drop(columns=[column]))
+
+    @responses.activate
+    def test_fetch_windows_and_carries_the_citation(
+        self, sheet: pd.DataFrame, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The workbook is binary, so only its decoding is stubbed — not the parse."""
+        responses.add(responses.GET, DAILY_XLS_URL, body=b"<xls bytes>", status=200)
+        monkeypatch.setattr(pd, "read_excel", lambda *a, **k: sheet)
+
+        loaded = GprDailyLoader("gpr").fetch(date(2026, 1, 1), date(2026, 12, 31))
+
+        assert loaded.frame.index[0] == pd.Timestamp("2026-08-05"), "window not applied"
+        assert loaded.meta.source_url == DAILY_XLS_URL
+        assert loaded.meta.citation.source_confidence == "primary"
+        assert "Caldara" in (loaded.meta.citation.cite_as or "")
+        assert loaded.meta.has_ohlc is False
+
+    @responses.activate
+    def test_an_empty_window_raises_rather_than_serving_nothing(
+        self, sheet: pd.DataFrame, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        responses.add(responses.GET, DAILY_XLS_URL, body=b"<xls bytes>", status=200)
+        monkeypatch.setattr(pd, "read_excel", lambda *a, **k: sheet)
+
+        with pytest.raises(ValueError, match="no observations"):
+            GprDailyLoader("gpr").fetch(date(2000, 1, 1), date(2000, 12, 31))
+
+    @pytest.mark.network
+    def test_the_published_workbook_still_has_the_columns_we_read(self) -> None:
+        """The one thing a recorded fixture cannot tell us: whether the file still exists."""
+        loaded = GprDailyLoader("gpr").fetch(date(2026, 1, 1), date(2026, 12, 31))
+        assert list(loaded.frame.columns) == ["gpr", "gpr_threats", "gpr_acts"]
+        assert loaded.frame["gpr"].gt(0).all()
+
+
+class TestEverySourceCitesItself:
+    """The provenance rule, applied to series the way it is applied to schedules.
+
+    Every dated schedule entry has carried its own ``source_url`` and
+    ``source_confidence`` since the duty table existed. Series were the last external
+    facts here not held to that rule; these assert the rule now reaches them, and that
+    it is enforced at the boundary rather than by a convention each loader remembers.
+    """
+
+    def _loaders(self) -> list[object]:
+        from aurex.assets import GOLD
+        from aurex.assets.synthetic import SYNTHETIC
+        from aurex.data.macro import macro_chains
+
+        chains = dict(macro_chains())
+        chains |= GOLD.price_sources()
+        chains |= SYNTHETIC.price_sources()
+        return [loader for chain in chains.values() for loader in chain.loaders]
+
+    def test_the_guard_is_looking_at_something(self) -> None:
+        assert len(self._loaders()) > 5
+
+    def test_every_registered_loader_declares_a_citation(self) -> None:
+        for loader in self._loaders():
+            citation = loader.citation  # type: ignore[attr-defined]
+            assert citation.source_url.startswith("http"), loader
+            assert citation.source_confidence in VALID_CONFIDENCE, loader
+
+    def test_a_loader_without_a_citation_is_not_a_loader(self) -> None:
+        """Why the citation is a protocol member and not something read with getattr.
+
+        Under duck typing this class serves numbers with no recorded confidence and
+        nothing anywhere fails. As a protocol member it is rejected at the boundary.
+        """
+
+        class UncitedLoader:
+            series_id = "x"
+            source_name = "test:uncited"
+
+            def fetch(self, start: date, end: date) -> LoadedSeries:
+                raise NotImplementedError
+
+        assert not isinstance(UncitedLoader(), Loader)
+        assert isinstance(FredLoader("x", "DFII10"), Loader)
+
+    def test_a_confidence_outside_the_vocabulary_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="source_confidence"):
+            SourceCitation(source_url="https://example.invalid", source_confidence="probably")  # type: ignore[arg-type]
+
+    def test_a_citation_without_a_url_cites_nothing(self) -> None:
+        with pytest.raises(ValueError, match="cites nothing"):
+            SourceCitation(source_url="", source_confidence="primary")
+
+    def test_redistributors_and_publishers_are_told_apart(self) -> None:
+        """The label records how many hands the number passed through, nothing more."""
+        from aurex.data.sources import LbmaGoldLoader
+
+        assert FredLoader("wti", "DCOILWTICO").citation.source_confidence == "secondary"
+        assert LbmaGoldLoader("xauusd").citation.source_confidence == "primary"
 
 
 class TestHttpPoliteness:

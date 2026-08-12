@@ -22,7 +22,14 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, ClassVar
 
-from aurex.assets.base import FactorSpec, VolConfig, describe_asset
+from aurex.assets.base import (
+    ChainControl,
+    ChainLink,
+    FactorSpec,
+    TransmissionChain,
+    VolConfig,
+    describe_asset,
+)
 from aurex.assets.friction import US_COLLECTIBLES_NOTE, FrictionProfile, PhysicalFriction
 from aurex.assets.lens import CurrencyLens, NativeLens, TaxedImportLens
 from aurex.assets.transforms import LogReturn, ReturnTransform
@@ -31,7 +38,7 @@ from aurex.data.base import Loader
 from aurex.data.cache import CacheStore
 from aurex.data.chain import SourceChain
 from aurex.data.freshness import SeriesFreshness
-from aurex.data.schedules import duty_on, gst_on
+from aurex.data.schedules import duty_on, fuel_excise_on, gst_on, load_fuel_excise
 from aurex.data.sources import FredLoader, IbjaReportLoader, LbmaGoldLoader, YahooLoader
 
 #: India's GST regime begins here; before it, state-varying VAT plus excise with no
@@ -105,6 +112,48 @@ def _gst_for(day: date) -> float:
     return entry.metal if entry else 0.0
 
 
+def _excise_for(day: date) -> float | None:
+    """Total central excise per litre across both transport fuels on ``day``.
+
+    ``None`` inside the window the schedule declares it does not know, rather than the
+    last known level carried forward. See ``fuel_excise.yaml``: at least three changes
+    fall in that window with no retrievable primary document behind them, and a control
+    silently held constant across the largest fuel-tax increase in the sample would be
+    worse than no control at all.
+    """
+    entry = fuel_excise_on(day)
+    return None if entry is None else entry.combined
+
+
+def _excise_provenance() -> dict[str, Any]:
+    """Every citation behind the excise control, and every hole in it."""
+    entries, gaps = load_fuel_excise()
+    return {
+        "units": "rupees_per_litre_petrol_plus_diesel",
+        "entries": [
+            {
+                "effective_from": entry.effective_from.isoformat(),
+                "petrol": entry.petrol,
+                "diesel": entry.diesel,
+                "combined": round(entry.combined, 2),
+                "source_url": entry.source_url,
+                "source_confidence": entry.source_confidence,
+            }
+            for entry in entries
+        ],
+        "gaps": [
+            {
+                "from": gap.start.isoformat(),
+                "until": gap.end.isoformat(),
+                "reason": gap.reason,
+                "source_url": gap.source_url,
+                "source_confidence": gap.source_confidence,
+            }
+            for gap in gaps
+        ],
+    }
+
+
 def _provenance_for(day: date) -> dict[str, Any]:
     """Citations for the duty and GST applied on ``day``.
 
@@ -156,6 +205,77 @@ class Gold:
     )
 
     scenario_axes = ("geopolitics", "cpi", "payrolls")
+
+    transmission_chain = TransmissionChain(
+        id="crude_to_local_price",
+        label="Crude to the rupee price of gold",
+        links=(
+            ChainLink(
+                id="crude_to_cpi",
+                source_series="wti",
+                target_series="local_cpi",
+                source_transform="log_diff",
+                target_transform="log_diff",
+                description=(
+                    "Crude into the import bill and through to consumer prices. This is "
+                    "the link the fuel-tax buffer sits inside: excise and state VAT are "
+                    "adjusted by hand, in the opposite direction, precisely when crude "
+                    "moves, so an uncontrolled estimate here measures a fiscal decision "
+                    "as if it were a pricing mechanism."
+                ),
+            ),
+            ChainLink(
+                id="cpi_to_policy",
+                source_series="local_cpi",
+                target_series="local_policy_rate",
+                source_transform="log_diff",
+                target_transform="diff",
+                description=(
+                    "Inflation into the policy response, measured on the money-market "
+                    "rate rather than on the repo rate itself. That is a deliberate "
+                    "weakening of the claim: the corridor's transmission is what is "
+                    "observable in a free monthly series, and calling it the policy rate "
+                    "would assert a passthrough this repository has not measured."
+                ),
+            ),
+            ChainLink(
+                id="policy_to_rupee",
+                source_series="local_policy_rate",
+                target_series="usdinr",
+                source_transform="diff",
+                target_transform="log_diff",
+                description="The policy response into the exchange rate.",
+            ),
+        ),
+        terminal_lens="INR",
+        # Not a loaded series: the INR lens computes it from the fix, the rate and the
+        # dated tax schedules, and the caller passes that output in under this id. The
+        # chain never recomputes a local price — there is one implementation of the tax
+        # stack and it is the one with the citations attached.
+        terminal_series_id="local_price",
+        direct_source_series="wti",
+        # The quote-currency fix, held constant so the direct estimate's coefficient is
+        # the local-economy part of the path. Without it, the direct estimate carries the
+        # global gold-price channel that the weekly crude loading already measures, and
+        # the two numbers would be two views of one thing presented as two things.
+        direct_controls=("xauusd",),
+        controls=(
+            ChainControl(
+                id="fuel_excise",
+                description=(
+                    "Total central excise per litre on petrol and diesel, summed. The "
+                    "discretionary buffer between a crude move and a consumer price."
+                ),
+                resolver=_excise_for,
+                provenance=_excise_provenance,
+            ),
+        ),
+        note=(
+            "Four arrows, of which three are estimated and one is arithmetic. The last "
+            "step from the exchange rate to the rupee price is an identity the lens "
+            "computes, so it is asserted at one and checked, not fitted."
+        ),
+    )
 
     currency_lenses: tuple[CurrencyLens, ...] = (
         NativeLens(
@@ -262,22 +382,44 @@ class Gold:
         FactorSpec(
             id="d_geopolitical_risk",
             series_id="gpr",
-            transform="level",
-            required=False,
+            # Changed from `level` when the series was wired, and before any loading
+            # was fitted. Two reasons, both stated in the README's pre-registration so
+            # neither can be read as a choice made after seeing a coefficient. First,
+            # every other regressor here is news — a change, not a stock — and a
+            # persistent level regressed on near-unpredictable returns is the classic
+            # way to manufacture a significant-looking coefficient. Second, the channel
+            # being measured is the bid that arrives when risk *rises*; a risk level
+            # that has been elevated for a month is already in the price.
+            transform="diff",
+            # Averaged over the week rather than read off Friday. The index is
+            # calendar-daily and spiky — a single day's value is a draw, not a summary —
+            # and a Friday reading would discard six sevenths of what the week said.
+            aggregation="mean",
+            # The one factor whose absence changes the SIGN of a published story rather
+            # than the size of a coefficient, so attribution refuses rather than
+            # degrades when it is missing. Optional factors drop out with a recorded
+            # reason; this one cannot, because the reason would be recorded in a field
+            # nobody reads while the loadings underneath told a confident, inverted
+            # story about escalation.
+            required=True,
             description=(
-                "Geopolitical risk. Present so the safe-haven channel is ESTIMATED "
-                "rather than omitted. Without it the scenario engine reaches "
-                "'escalation -> gold down' purely through the real-yield channel, "
-                "with a clean causal story and very likely the wrong sign, since "
-                "gold historically rallies on escalation. Omitted-variable bias here "
-                "is more dangerous than a hand-typed view because it passes the "
-                "check §6 and §17.7 specify."
+                "Geopolitical risk, Caldara-Iacoviello daily index, weekly change. "
+                "Present so the safe-haven channel is ESTIMATED rather than omitted. "
+                "Without it the scenario engine reaches 'escalation -> gold down' "
+                "purely through the real-yield channel, with a clean causal story and "
+                "very likely the wrong sign, since gold historically rallies on "
+                "escalation. Omitted-variable bias here is more dangerous than a "
+                "hand-typed view because it passes the check §6 and §17.7 specify."
             ),
         ),
         FactorSpec(
             id="etf_flow",
             series_id="ibja_gold",
             transform="diff",
+            # Named explicitly. This series carries four columns and the flow proxy is
+            # not the first of them; without this the factor would have loaded the AM
+            # local rate and reported it under the flow factor's name.
+            column="spdr_gold_tonnes",
             required=False,
             description="SPDR holdings in tonnes, from the IBJA daily report.",
         ),
@@ -285,6 +427,12 @@ class Gold:
             id="momentum",
             series_id="xauusd",
             transform="pct_change",
+            # One week, and this is not a detail. Every other factor is contemporaneous
+            # with the return being attributed, which is what attribution means. This
+            # one is built from the price series itself, so at zero lag it would hand
+            # the regression its own target under a different name and report an
+            # R-squared near one.
+            lag=1,
             description="Lagged own return. Attribution only, never a directional signal.",
         ),
     )

@@ -12,7 +12,7 @@ from datetime import date
 
 import pandas as pd
 
-from aurex.data.base import LoadedSeries, build_meta
+from aurex.data.base import LoadedSeries, SourceCitation, build_meta
 from aurex.data.sources import http
 
 GOLD_PM_URL = "https://prices.lbma.org.uk/json/gold_pm.json"
@@ -43,6 +43,11 @@ class LbmaGoldLoader:
         self.fix = fix.upper()
         self.currency = currency
         self.source_name = f"LBMA:gold_{self.fix.lower()}:{currency}"
+        # Primary: the LBMA publishes the fix it administers, on its own host.
+        self.citation = SourceCitation(
+            source_url="https://www.lbma.org.uk/prices-and-data/precious-metal-prices",
+            source_confidence="primary",
+        )
         self.url = GOLD_PM_URL if self.fix == "PM" else GOLD_AM_URL
 
     def fetch(self, start: date, end: date) -> LoadedSeries:
@@ -76,6 +81,7 @@ class LbmaGoldLoader:
                 series_id=self.series_id,
                 source_name=self.source_name,
                 source_url=self.url,
+                citation=self.citation,
                 frame=frame,
                 has_ohlc=False,
             ),

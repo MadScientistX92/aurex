@@ -100,3 +100,52 @@ class TestCorruption:
         cache.write(make_series("vix"))
         (cache.root / "vix.parquet").write_bytes(b"definitely not parquet")
         assert cache.read("vix") is None
+
+
+class TestASidecarWrittenBeforeCitationsExisted:
+    """The migration path, which must cost provenance strictness and nothing else.
+
+    ``citation`` is read strictly: an entry without one cannot be *served*, because a
+    series that publishes with no recorded confidence is the failure the rule exists to
+    prevent. It must not also cost the observations, and for a series whose history only
+    accumulates a few days per fetch that difference is the whole cache.
+    """
+
+    @staticmethod
+    def _strip_citation(cache: CacheStore, series_id: str) -> None:
+        path = cache.root / f"{series_id}.meta.json"
+        raw = json.loads(path.read_text())
+        del raw["citation"]
+        path.write_text(json.dumps(raw))
+
+    def test_it_cannot_be_served(self, cache: CacheStore) -> None:
+        cache.write(make_series("ibja_gold", start="2026-07-01", periods=8))
+        self._strip_citation(cache, "ibja_gold")
+        assert cache.read("ibja_gold") is None
+
+    def test_its_rows_survive_the_next_fetch(self, cache: CacheStore) -> None:
+        cache.write(make_series("ibja_gold", start="2026-07-01", periods=8))
+        self._strip_citation(cache, "ibja_gold")
+
+        fresh = make_series("ibja_gold", start="2026-07-13", periods=4, value=101.0)
+        merged = cache.merge_write(fresh)
+
+        assert len(merged.frame) == 12, "history was discarded with the unreadable sidecar"
+        assert merged.frame.index[0] == pd.Timestamp("2026-07-01")
+        assert merged.meta.citation == fresh.meta.citation
+
+    def test_the_merged_entry_is_readable_again(self, cache: CacheStore) -> None:
+        cache.write(make_series("ibja_gold", start="2026-07-01", periods=8))
+        self._strip_citation(cache, "ibja_gold")
+        cache.merge_write(make_series("ibja_gold", start="2026-07-13", periods=4))
+
+        recovered = cache.read("ibja_gold")
+        assert recovered is not None and len(recovered.frame) == 12
+
+    def test_close_only_history_does_not_inherit_an_ohlc_claim(self, cache: CacheStore) -> None:
+        """With no sidecar to ask, the rows are the evidence — and they have no range."""
+        cache.write(make_series("vix", start="2026-07-01", periods=8))
+        self._strip_citation(cache, "vix")
+
+        fresh = make_series("vix", start="2026-07-13", periods=4, has_ohlc=True)
+        assert cache.merge_write(fresh).meta.has_ohlc is False

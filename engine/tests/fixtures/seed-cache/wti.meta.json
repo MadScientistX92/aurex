@@ -1,4 +1,10 @@
 {
+  "citation": {
+    "cite_as": null,
+    "licence": null,
+    "source_confidence": "secondary",
+    "source_url": "https://fred.stlouisfed.org/series/DCOILWTICO"
+  },
   "end": "2026-07-27",
   "fallbacks": [],
   "fetched_at": "2026-07-30T22:34:27.991653+00:00",

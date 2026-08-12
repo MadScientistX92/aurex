@@ -18,11 +18,11 @@ from typing import Any, ClassVar
 import numpy as np
 import pandas as pd
 
-from aurex.assets.base import FactorSpec, VolConfig, describe_asset
+from aurex.assets.base import ChainLink, FactorSpec, TransmissionChain, VolConfig, describe_asset
 from aurex.assets.friction import FrictionProfile, PhysicalFriction, RollFriction
 from aurex.assets.lens import CurrencyLens, NativeLens, TaxedImportLens
 from aurex.assets.transforms import ReturnTransform, ShiftedLogReturn
-from aurex.data.base import LoadedSeries, build_meta
+from aurex.data.base import LoadedSeries, SourceCitation, build_meta
 from aurex.data.cache import CacheStore
 from aurex.data.chain import SourceChain
 from aurex.data.freshness import SeriesFreshness
@@ -53,6 +53,15 @@ _FRESHNESS: dict[str, SeriesFreshness] = {
 class GeneratedLoader:
     """Deterministic in-process price series. No network, no fixtures."""
 
+    #: Generated in process, so the publisher is this file. Labelled ``primary``
+    #: because the citation points at the code that computes it and there is no hand
+    #: it passed through on the way — not because synthetic data is authoritative.
+    citation = SourceCitation(
+        source_url="https://example.invalid/synthetic",
+        source_confidence="primary",
+        cite_as="aurex.assets.synthetic.GeneratedLoader",
+    )
+
     def __init__(self, series_id: str, start_value: float = 100.0, seed: int = 0) -> None:
         self.series_id = series_id
         self.source_name = f"synthetic:{series_id}"
@@ -75,6 +84,7 @@ class GeneratedLoader:
                 series_id=self.series_id,
                 source_name=self.source_name,
                 source_url="https://example.invalid/synthetic",
+                citation=self.citation,
                 frame=frame,
             ),
         )
@@ -145,12 +155,46 @@ class SyntheticAsset:
     # nothing outside its own definition. `absent_driver` exercises the
     # graceful-degradation path for a factor whose series has no loader — the same
     # path oil's EIA inventories take when no API key is present.
+    #: A one-link chain over this asset's own series, so §16's synthetic run exercises
+    #: the projection and composition code rather than leaving it covered only where a
+    #: real asset happens to declare one.
+    transmission_chain = TransmissionChain(
+        id="synthetic_path",
+        label="Rate to local reference",
+        links=(
+            ChainLink(
+                id="fx_to_local",
+                source_series="widget_fx",
+                target_series="widget_local",
+                source_transform="log_diff",
+                target_transform="log_diff",
+                description="A single estimated arrow.",
+            ),
+        ),
+        terminal_lens=TEST_LENS_CURRENCY,
+        terminal_series_id="local_price",
+        direct_source_series="widget_fx",
+        direct_controls=("widget_price",),
+        note="Exists to be estimated, not to be true of anything.",
+    )
+
     factor_set: tuple[FactorSpec, ...] = (
         FactorSpec(
             id="momentum",
             series_id="widget_price",
             transform="pct_change",
+            # One week, because this driver is built from the asset's own price series
+            # and the design layer refuses it at lag zero. Exercised here on purpose:
+            # the synthetic asset is where every protocol member gets used at least once.
+            lag=1,
             description="Lagged own return.",
+        ),
+        FactorSpec(
+            id="local_gap",
+            series_id="widget_local",
+            transform="pct_change",
+            aggregation="mean",
+            description="A contemporaneous driver, averaged over the week.",
         ),
         FactorSpec(
             id="absent_driver",
