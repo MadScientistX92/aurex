@@ -14,8 +14,9 @@ every asset to the default cache directory and make tests share state.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any, Protocol, runtime_checkable
 
 from aurex.assets.friction import FrictionProfile
@@ -42,10 +43,119 @@ class FactorSpec:
     #: reference fix, and the fallback would have picked whichever sorted first and
     #: fitted a loading on it under the flow factor's name.
     column: str | None = None
+    #: How daily observations become one weekly number: ``last`` | ``mean``. ``last``
+    #: suits a series whose end-of-week level is the thing that moved; ``mean`` suits
+    #: one that is calendar-daily and spiky, where a Friday reading is a draw rather
+    #: than a summary. Declared per factor rather than inferred from the calendar,
+    #: because a rule that reads the data would change what it estimates the first time
+    #: a publisher changed its schedule.
+    aggregation: str = "last"
+    #: Weeks of lag applied before alignment. Zero is contemporaneous, which is what
+    #: attribution means. A factor built from this asset's own price MUST set at least
+    #: one, or the regression is handed the target under another name — a variable that
+    #: would report an R-squared near one and a loading that means nothing.
+    lag: int = 0
     #: Optional factors drop out with a recorded reason when their source is
     #: unavailable, rather than failing the run. Oil's EIA inventory series are the
     #: motivating case: the key is free but Aurex must never require one.
     required: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class ChainLink:
+    """One arrow in a transmission chain, declared by the asset that has one."""
+
+    id: str
+    #: Series the shock is measured on, and the series the response is measured on.
+    source_series: str
+    target_series: str
+    #: ``log_diff`` for a level that moves proportionally — a price, an index, a rate of
+    #: exchange. ``diff`` for something already in points, such as a policy rate.
+    source_transform: str
+    target_transform: str
+    source_column: str | None = None
+    target_column: str | None = None
+    description: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class ChainControl:
+    """A dated administered rate held constant across a link.
+
+    Resolved by callable rather than by series id because its source is a schedule with
+    per-entry citations, not a published series — the same shape
+    :class:`~aurex.assets.lens.TaxedImportLens` already uses for duty and consumption
+    tax. ``resolver`` returns ``None`` where the schedule does not know the rate, and the
+    months it returns ``None`` for drop out of the controlled estimate rather than
+    inheriting the last known value.
+    """
+
+    id: str
+    description: str
+    resolver: Callable[[date], float | None]
+    provenance: Callable[[], dict[str, Any]]
+    #: How the resolved level becomes a regressor. ``diff`` is almost always right: the
+    #: level of an administered rate is a step function, and a regression on a step is a
+    #: regression on a regime dummy.
+    transform: str = "diff"
+
+
+@dataclass(frozen=True, slots=True)
+class TransmissionChain:
+    """A declared path from a global driver to this asset's price in one lens.
+
+    The estimator that consumes this knows nothing about what the links are. That is the
+    point: the arrows are a claim about one economy and one asset, so they live with the
+    asset, and ``factors/`` sees a list of series ids and transforms.
+    """
+
+    id: str
+    label: str
+    links: tuple[ChainLink, ...]
+    #: The lens whose price the chain terminates in, and the series id under which the
+    #: caller supplies that lens's price series to the estimator.
+    terminal_lens: str
+    terminal_series_id: str
+    #: The shock the direct estimate starts from — the same one the first link starts
+    #: from, which is exactly why the two overlap and must never be summed.
+    direct_source_series: str
+    #: Series held constant in the direct estimate so its coefficient measures the part
+    #: of the path the factor loadings do not already carry.
+    direct_controls: tuple[str, ...] = ()
+    controls: tuple[ChainControl, ...] = ()
+    note: str = ""
+
+    def series_ids(self) -> frozenset[str]:
+        """Every series id this chain needs, so the registry can resolve them."""
+        ids = {self.direct_source_series, *self.direct_controls}
+        for link in self.links:
+            ids.update({link.source_series, link.target_series})
+        return frozenset(ids)
+
+    def describe(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "label": self.label,
+            "terminal_lens": self.terminal_lens,
+            "links": [
+                {
+                    "id": link.id,
+                    "source": link.source_series,
+                    "target": link.target_series,
+                    "source_transform": link.source_transform,
+                    "target_transform": link.target_transform,
+                    "description": link.description,
+                }
+                for link in self.links
+            ],
+            "direct_source": self.direct_source_series,
+            "direct_controls": list(self.direct_controls),
+            "controls": [
+                {"id": control.id, "description": control.description} | control.provenance()
+                for control in self.controls
+            ],
+            "note": self.note,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +242,16 @@ class Asset(Protocol):
     def scenario_axes(self) -> tuple[str, ...]: ...
 
     @property
+    def transmission_chain(self) -> TransmissionChain | None:
+        """The declared macro path from a global driver to this asset's local price.
+
+        ``None`` for an asset with no such claim, which is the honest default: a chain is
+        an assertion about how one economy transmits a shock, and an asset that has not
+        had one estimated must not present an empty one as if it had.
+        """
+        ...
+
+    @property
     def vol_defaults(self) -> VolConfig: ...
 
     @property
@@ -178,12 +298,17 @@ def describe_asset(asset: Asset) -> dict[str, Any]:
                 "series_id": f.series_id,
                 "transform": f.transform,
                 "column": f.column,
+                "aggregation": f.aggregation,
+                "lag_weeks": f.lag,
                 "description": f.description,
                 "required": f.required,
             }
             for f in asset.factor_set
         ],
         "scenario_axes": list(asset.scenario_axes),
+        "transmission_chain": (
+            None if asset.transmission_chain is None else asset.transmission_chain.describe()
+        ),
         "vol_defaults": {
             "default_model": asset.vol_defaults.default_model,
             "annualisation_days": asset.vol_defaults.annualisation_days,

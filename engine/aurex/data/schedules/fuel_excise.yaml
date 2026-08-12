@@ -1,0 +1,154 @@
+# India central excise on transport fuel — the discretionary buffer between crude and CPI.
+#
+# WHY THIS FILE EXISTS. The transmission chain's first link asks how much a crude move
+# reaches domestic consumer prices. Between the two sits a tax that the government
+# adjusts by hand, in the opposite direction, precisely when crude moves — which is not
+# a theory. On 2026-03-27, with the international benchmark up about 75% in four weeks,
+# the excise was cut by Rs 10/litre on both fuels and the pump price did not change at
+# all. An uncontrolled regression over that month measures a passthrough of zero and
+# attributes it to the pricing mechanism, when what it actually measured was a fiscal
+# decision.
+#
+# `petrol` and `diesel` are the TOTAL central excise per litre on the unbranded grades:
+# basic excise plus special additional excise plus the road-and-infrastructure cess plus
+# the agriculture infrastructure and development cess where levied. State VAT is NOT
+# here and is not modelled — it varies by state, which is the same reason §15 keeps US
+# sales tax out of the reference price.
+#
+# PROVENANCE RULE: every entry carries its own source_url and source_confidence, and no
+# entry inherits a table-level default. Same rule and the same enforcing function as the
+# duty and GST schedules.
+#
+#   primary   = a Government of India document (PIB release, PPAC published tariff table)
+#   secondary = reputable reporting or research summarising one
+#
+# WHAT IS NOT HERE, AND WHY THAT IS RECORDED RATHER THAN FILLED IN. The window between
+# October 2018 and November 2021 contains at least three rate changes this schedule
+# cannot cite to a retrievable primary document. They are not guessed and they are not
+# interpolated: the window is listed under `gaps`, the resolver returns None inside it,
+# and the chain drops those months from the controlled regression rather than modelling
+# them as unchanged. A schedule that quietly held the 2018 level through 2021 would be
+# asserting no change across the largest fuel-tax increase in the sample.
+
+meta:
+  name: india_fuel_excise
+  units: rupees_per_litre
+  applies_to: "total central excise on unbranded petrol and unbranded high-speed diesel"
+  excludes: "state VAT and sales tax, which vary by state and are not modelled"
+  note: >-
+    Levels before 2017-03-10 are omitted rather than guessed. That date is the earliest
+    at which a primary document states a level rather than a change, and a schedule of
+    changes with no anchored level is a schedule of unknowns.
+
+schedule:
+  - effective_from: "2017-03-10"
+    petrol: 21.48
+    diesel: 17.33
+    source_url: "https://www.pib.gov.in/PressReleasePage.aspx?PRID=1484166"
+    source_confidence: primary
+    note: >-
+      The opening anchor, and the only entry sourced from a statement of the level in
+      force rather than of a change to it. Ministry of Finance, Lok Sabha written reply,
+      10 March 2017: petrol Rs 21.48 (Rs 9.48 BED + Rs 6 SAED + Rs 6 AED) and diesel
+      Rs 17.33 (Rs 11.33 BED + Rs 6 AED). The effective_from is the date of the
+      statement, not of a change — the rate had been in force for some months.
+
+  - effective_from: "2017-10-04"
+    petrol: 19.48
+    diesel: 15.33
+    source_url: "https://pib.gov.in/PressReleasePage.aspx?PRID=1656643"
+    source_confidence: primary
+    note: >-
+      "reduced the Central Excise duty on petrol and diesel by Rs. 2 per litre with
+      effect from 4th October, 2017". Level derived by applying that cut to the anchor
+      above.
+
+  - effective_from: "2018-10-05"
+    petrol: 17.98
+    diesel: 13.83
+    source_url: "https://pib.gov.in/PressReleasePage.aspx?PRID=1656643"
+    source_confidence: primary
+    note: >-
+      "further reduced the Central Excise duty on petrol and diesel by Rs. 1.5 per litre
+      with effect from 5th October, 2018". The same release notes OMCs absorbed a further
+      Re 1, which is not a tax and is not counted here.
+
+  - effective_from: "2021-11-04"
+    petrol: 27.90
+    diesel: 21.80
+    source_url: "https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1776114"
+    source_confidence: primary
+    note: >-
+      "reduced the Central Excise duty on petrol and diesel by Rs.5 per litre and Rs.10
+      per litre respectively with effect from 4th November, 2021". The level is the
+      pre-cut Rs 32.90 / Rs 31.80 less that cut. The pre-cut level is not from this
+      release — it is chained back from the PPAC component table below and agrees with
+      the Rs 32.9 / Rs 31.8 reported for October 2021 by PRS Legislative Research.
+
+  - effective_from: "2022-05-22"
+    petrol: 19.90
+    diesel: 15.80
+    source_url: "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2038431"
+    source_confidence: primary
+    note: >-
+      "reduced Central Excise duty by a total of Rs. 13/litre and Rs. 16/litre on petrol
+      and diesel respectively in two tranches in November 2021 and May 2022". This
+      tranche is that cumulative figure less the November 2021 tranche above — Rs 8 on
+      petrol and Rs 6 on diesel — which is arithmetic on two cited figures rather than a
+      third citation, and is recorded as such.
+
+  - effective_from: "2025-04-01"
+    petrol: 21.90
+    diesel: 17.80
+    source_url: "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2159407"
+    source_confidence: primary
+    note: >-
+      "In April 2025, excise duty on petrol and diesel was increased by Rs. 2 per litre
+      each, but this was not passed on to consumers." The release states the month and
+      not the day, so the effective date is the first of the month and is approximate.
+      Note the second clause: a tax change that did not reach the pump is exactly the
+      buffer this control exists to hold constant.
+
+  - effective_from: "2026-03-27"
+    petrol: 11.90
+    diesel: 7.80
+    source_url: "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2245970"
+    source_confidence: primary
+    note: >-
+      "reduced excise duty by Rs 10 per litre on both petrol and diesel with immediate
+      effect", against an international benchmark that had gone from about USD 70 to
+      about USD 122 a barrel in under four weeks. "Retail pump prices of petrol and
+      diesel will not change." The resulting level is independently confirmed by the
+      PPAC tariff table posted the same day, which totals Rs 11.90 on petrol
+      (1.40 BED + 3.00 SAED + 2.50 AIDC + 5.00 road cess) and Rs 7.80 on diesel
+      (1.80 BED + 4.00 AIDC + 2.00 road cess).
+
+# Windows where the level is unknown to this schedule. The resolver returns None inside
+# them; it does not carry the last known level forward.
+gaps:
+  - from: "2018-10-06"
+    until: "2021-11-03"
+    source_url: "https://prsindia.org/theprsblog/petrol-and-diesel-prices"
+    source_confidence: secondary
+    reason: >-
+      At least three changes fall in this window — a Budget 2019 increase, a March 2020
+      increase, and the May 2020 increase of about Rs 10 on petrol and Rs 13 on diesel —
+      and no retrievable primary document states the resulting levels. That they happened
+      is not in doubt: the level entering the window is Rs 17.98 and PRS Legislative
+      Research reports Rs 32.9 on petrol and Rs 31.8 on diesel for October 2021, so the
+      rate roughly doubled inside it. Holding the 2018 level across the largest fuel-tax
+      increase in the sample would put a fabricated constant into the one control that
+      exists to absorb discretionary tax moves, so the window is declared unknown and
+      the months in it drop out of the controlled regression.
+
+# The two published anchors disagree by small change, and that is recorded rather than
+# reconciled. Chaining the cited cuts forward from the 2017 anchor gives Rs 11.98 on
+# petrol against the PPAC table's Rs 11.90, a difference of 8 paise carried since the
+# 2020 restructuring of the cess components. The gap above sits between the two anchors,
+# so no single entry here is built across the discrepancy; entries up to 2018 use the
+# 2017 anchor and entries from 2021 use the PPAC one.
+discrepancies:
+  - what: "petrol total, 2017 anchor chained forward vs 2026 PPAC component table"
+    magnitude_rupees_per_litre: 0.08
+    source_url: "https://ppac.gov.in/prices/central-excise-and-customs-rate-on-major-petroleum-products"
+    source_confidence: primary

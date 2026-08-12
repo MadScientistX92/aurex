@@ -1,0 +1,1396 @@
+{
+  "asset": {
+    "base_unit": "troy_ounce",
+    "currency_lenses": [
+      {
+        "code": "USD",
+        "grams_per_unit": 31.1034768,
+        "price_linkage": "mechanical",
+        "produces_local_premium": false,
+        "requires_fx": false,
+        "unit": "troy_ounce",
+        "units_per_base": 1.0
+      },
+      {
+        "code": "INR",
+        "fx_series_id": "usdinr",
+        "grams_per_unit": 10.0,
+        "high_confidence_from": "2017-07-01",
+        "notes": [
+          "IBJA publishes its 999 rate exclusive of GST; the domestic premium is measured against price_ex_consumption_tax."
+        ],
+        "price_linkage": "mechanical",
+        "produces_local_premium": true,
+        "requires_fx": true,
+        "unit": "10g",
+        "units_per_base": 0.3215074656862798
+      }
+    ],
+    "factors": [
+      {
+        "aggregation": "last",
+        "column": null,
+        "description": "Change in 10y TIPS real yield. The dominant carry channel.",
+        "id": "d_real_yield",
+        "lag_weeks": 0,
+        "required": true,
+        "series_id": "real_yield_10y",
+        "transform": "diff"
+      },
+      {
+        "aggregation": "last",
+        "column": null,
+        "description": "Trade-weighted dollar. Gold is priced in it.",
+        "id": "d_dxy",
+        "lag_weeks": 0,
+        "required": true,
+        "series_id": "dxy",
+        "transform": "pct_change"
+      },
+      {
+        "aggregation": "last",
+        "column": null,
+        "description": "Crude, as an inflation-expectations proxy.",
+        "id": "d_oil",
+        "lag_weeks": 0,
+        "required": true,
+        "series_id": "wti",
+        "transform": "pct_change"
+      },
+      {
+        "aggregation": "last",
+        "column": null,
+        "description": "Equity volatility, a partial risk-appetite proxy.",
+        "id": "d_vix",
+        "lag_weeks": 0,
+        "required": true,
+        "series_id": "vix",
+        "transform": "diff"
+      },
+      {
+        "aggregation": "mean",
+        "column": null,
+        "description": "Geopolitical risk, Caldara-Iacoviello daily index, weekly change. Present so the safe-haven channel is ESTIMATED rather than omitted. Without it the scenario engine reaches 'escalation -> gold down' purely through the real-yield channel, with a clean causal story and very likely the wrong sign, since gold historically rallies on escalation. Omitted-variable bias here is more dangerous than a hand-typed view because it passes the check \u00a76 and \u00a717.7 specify.",
+        "id": "d_geopolitical_risk",
+        "lag_weeks": 0,
+        "required": true,
+        "series_id": "gpr",
+        "transform": "diff"
+      },
+      {
+        "aggregation": "last",
+        "column": "spdr_gold_tonnes",
+        "description": "SPDR holdings in tonnes, from the IBJA daily report.",
+        "id": "etf_flow",
+        "lag_weeks": 0,
+        "required": false,
+        "series_id": "ibja_gold",
+        "transform": "diff"
+      },
+      {
+        "aggregation": "last",
+        "column": null,
+        "description": "Lagged own return. Attribution only, never a directional signal.",
+        "id": "momentum",
+        "lag_weeks": 1,
+        "required": true,
+        "series_id": "xauusd",
+        "transform": "pct_change"
+      }
+    ],
+    "friction_profiles": {
+      "inr_etf": {
+        "buyback_discount": 0.005,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.005,
+        "horizon_dependent": false,
+        "id": "inr_etf",
+        "kind": "physical",
+        "label": "India gold ETF",
+        "notes": [
+          "Expense ratio accrues separately and is not in the round-trip spread."
+        ]
+      },
+      "inr_retail": {
+        "buyback_discount": 0.03,
+        "consumption_tax": 0.03,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "inr_retail",
+        "kind": "physical",
+        "label": "India retail jeweller",
+        "notes": [
+          "GST on metal is 3%; making charges are taxed separately at 5%."
+        ]
+      },
+      "inr_sgb": {
+        "buyback_discount": 0.0,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.0,
+        "horizon_dependent": false,
+        "id": "inr_sgb",
+        "kind": "physical",
+        "label": "Sovereign gold bond",
+        "notes": [
+          "No GST and no making charge. Liquidity before maturity is the binding constraint rather than spread."
+        ]
+      },
+      "usd_bar": {
+        "buyback_discount": 0.01,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.015,
+        "horizon_dependent": false,
+        "id": "usd_bar",
+        "kind": "physical",
+        "label": "US larger bar",
+        "notes": [
+          "Sales tax defaults to 0% and is user-editable.",
+          "US long-term capital gains on physical gold are taxed as a collectible, at a higher maximum rate than equities. Aurex does not compute tax. See IRS Topic 409: https://www.irs.gov/taxtopics/tc409"
+        ]
+      },
+      "usd_coin": {
+        "buyback_discount": 0.02,
+        "consumption_tax": 0.0,
+        "dealer_premium": 0.03,
+        "horizon_dependent": false,
+        "id": "usd_coin",
+        "kind": "physical",
+        "label": "US retail coin",
+        "notes": [
+          "Sales tax defaults to 0% and is user-editable: treatment varies by state and many exempt bullion.",
+          "US long-term capital gains on physical gold are taxed as a collectible, at a higher maximum rate than equities. Aurex does not compute tax. See IRS Topic 409: https://www.irs.gov/taxtopics/tc409"
+        ]
+      }
+    },
+    "id": "gold",
+    "label": "Gold",
+    "ohlc_series_id": "xau_futures",
+    "price_series_id": "xauusd",
+    "quote_currency": "USD",
+    "return_transform": {
+      "formula": "log(P_t) - log(P_{t-1})",
+      "id": "log"
+    },
+    "scenario_axes": [
+      "geopolitics",
+      "cpi",
+      "payrolls"
+    ],
+    "transmission_chain": {
+      "controls": [
+        {
+          "description": "Total central excise per litre on petrol and diesel, summed. The discretionary buffer between a crude move and a consumer price.",
+          "entries": [
+            {
+              "combined": 38.81,
+              "diesel": 17.33,
+              "effective_from": "2017-03-10",
+              "petrol": 21.48,
+              "source_confidence": "primary",
+              "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=1484166"
+            },
+            {
+              "combined": 34.81,
+              "diesel": 15.33,
+              "effective_from": "2017-10-04",
+              "petrol": 19.48,
+              "source_confidence": "primary",
+              "source_url": "https://pib.gov.in/PressReleasePage.aspx?PRID=1656643"
+            },
+            {
+              "combined": 31.81,
+              "diesel": 13.83,
+              "effective_from": "2018-10-05",
+              "petrol": 17.98,
+              "source_confidence": "primary",
+              "source_url": "https://pib.gov.in/PressReleasePage.aspx?PRID=1656643"
+            },
+            {
+              "combined": 49.7,
+              "diesel": 21.8,
+              "effective_from": "2021-11-04",
+              "petrol": 27.9,
+              "source_confidence": "primary",
+              "source_url": "https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=1776114"
+            },
+            {
+              "combined": 35.7,
+              "diesel": 15.8,
+              "effective_from": "2022-05-22",
+              "petrol": 19.9,
+              "source_confidence": "primary",
+              "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2038431"
+            },
+            {
+              "combined": 39.7,
+              "diesel": 17.8,
+              "effective_from": "2025-04-01",
+              "petrol": 21.9,
+              "source_confidence": "primary",
+              "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2159407"
+            },
+            {
+              "combined": 19.7,
+              "diesel": 7.8,
+              "effective_from": "2026-03-27",
+              "petrol": 11.9,
+              "source_confidence": "primary",
+              "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2245970"
+            }
+          ],
+          "gaps": [
+            {
+              "from": "2018-10-06",
+              "reason": "At least three changes fall in this window \u2014 a Budget 2019 increase, a March 2020 increase, and the May 2020 increase of about Rs 10 on petrol and Rs 13 on diesel \u2014 and no retrievable primary document states the resulting levels. That they happened is not in doubt: the level entering the window is Rs 17.98 and PRS Legislative Research reports Rs 32.9 on petrol and Rs 31.8 on diesel for October 2021, so the rate roughly doubled inside it. Holding the 2018 level across the largest fuel-tax increase in the sample would put a fabricated constant into the one control that exists to absorb discretionary tax moves, so the window is declared unknown and the months in it drop out of the controlled regression.",
+              "source_confidence": "secondary",
+              "source_url": "https://prsindia.org/theprsblog/petrol-and-diesel-prices",
+              "until": "2021-11-03"
+            }
+          ],
+          "id": "fuel_excise",
+          "units": "rupees_per_litre_petrol_plus_diesel"
+        }
+      ],
+      "direct_controls": [
+        "xauusd"
+      ],
+      "direct_source": "wti",
+      "id": "crude_to_local_price",
+      "label": "Crude to the rupee price of gold",
+      "links": [
+        {
+          "description": "Crude into the import bill and through to consumer prices. This is the link the fuel-tax buffer sits inside: excise and state VAT are adjusted by hand, in the opposite direction, precisely when crude moves, so an uncontrolled estimate here measures a fiscal decision as if it were a pricing mechanism.",
+          "id": "crude_to_cpi",
+          "source": "wti",
+          "source_transform": "log_diff",
+          "target": "local_cpi",
+          "target_transform": "log_diff"
+        },
+        {
+          "description": "Inflation into the policy response, measured on the money-market rate rather than on the repo rate itself. That is a deliberate weakening of the claim: the corridor's transmission is what is observable in a free monthly series, and calling it the policy rate would assert a passthrough this repository has not measured.",
+          "id": "cpi_to_policy",
+          "source": "local_cpi",
+          "source_transform": "log_diff",
+          "target": "local_policy_rate",
+          "target_transform": "diff"
+        },
+        {
+          "description": "The policy response into the exchange rate.",
+          "id": "policy_to_rupee",
+          "source": "local_policy_rate",
+          "source_transform": "diff",
+          "target": "usdinr",
+          "target_transform": "log_diff"
+        }
+      ],
+      "note": "Four arrows, of which three are estimated and one is arithmetic. The last step from the exchange rate to the rupee price is an identity the lens computes, so it is asserted at one and checked, not fitted.",
+      "terminal_lens": "INR"
+    },
+    "vol_defaults": {
+      "annualisation_days": 252,
+      "break_aware": true,
+      "default_model": "gjr_garch",
+      "min_observations": 500,
+      "model_options": {},
+      "session_limit": null
+    }
+  },
+  "attribution": {
+    "bootstrap": {
+      "block_weeks": 8,
+      "caveat": "A percentile bootstrap around a penalised estimator is not valid at coefficients that are exactly zero. The interval is published with that stated rather than omitted, and the OLS interval beside each loading is the one without the caveat.",
+      "draws": 2000,
+      "method": "moving_block"
+    },
+    "design": {
+      "alignment": "Weekly observations anchored on Friday. A regressor at lag zero is contemporaneous with the return it helps account for, which is what attribution means and is not a forecast. Rows are kept only where the target and every regressor are observed, so the sample is the intersection rather than a padded union.",
+      "dropped": {
+        "etf_flow": "including it would cut the sample from 1074 weeks to 2, below the 80% of the required-driver sample an optional driver has to leave standing. Its own history is the constraint, not the driver's usefulness."
+      },
+      "first_week": "2006-01-13",
+      "frequency": "W-FRI",
+      "last_week": "2026-08-07",
+      "observations": 1074,
+      "regressors": [
+        {
+          "aggregation": "last",
+          "column": null,
+          "description": "Change in 10y TIPS real yield. The dominant carry channel.",
+          "id": "d_real_yield",
+          "lag_weeks": 0,
+          "series_id": "real_yield_10y",
+          "transform": "diff"
+        },
+        {
+          "aggregation": "last",
+          "column": null,
+          "description": "Trade-weighted dollar. Gold is priced in it.",
+          "id": "d_dxy",
+          "lag_weeks": 0,
+          "series_id": "dxy",
+          "transform": "pct_change"
+        },
+        {
+          "aggregation": "last",
+          "column": null,
+          "description": "Crude, as an inflation-expectations proxy.",
+          "id": "d_oil",
+          "lag_weeks": 0,
+          "series_id": "wti",
+          "transform": "pct_change"
+        },
+        {
+          "aggregation": "last",
+          "column": null,
+          "description": "Equity volatility, a partial risk-appetite proxy.",
+          "id": "d_vix",
+          "lag_weeks": 0,
+          "series_id": "vix",
+          "transform": "diff"
+        },
+        {
+          "aggregation": "mean",
+          "column": null,
+          "description": "Geopolitical risk, Caldara-Iacoviello daily index, weekly change. Present so the safe-haven channel is ESTIMATED rather than omitted. Without it the scenario engine reaches 'escalation -> gold down' purely through the real-yield channel, with a clean causal story and very likely the wrong sign, since gold historically rallies on escalation. Omitted-variable bias here is more dangerous than a hand-typed view because it passes the check \u00a76 and \u00a717.7 specify.",
+          "id": "d_geopolitical_risk",
+          "lag_weeks": 0,
+          "series_id": "gpr",
+          "transform": "diff"
+        },
+        {
+          "aggregation": "last",
+          "column": null,
+          "description": "Lagged own return. Attribution only, never a directional signal.",
+          "id": "momentum",
+          "lag_weeks": 1,
+          "series_id": "xauusd",
+          "transform": "pct_change"
+        }
+      ],
+      "sample_binding_factor": "d_dxy"
+    },
+    "estimator": {
+      "folds": 5,
+      "l1_ratio": 0.5,
+      "model": "elastic_net",
+      "note": "Folds are contiguous blocks of weeks rather than a shuffle. A shuffled fold in a serially dependent series trains on the neighbours of what it scores, which selects too small a penalty and makes the fit look better than it is.",
+      "penalty": 0.0015556103301378422,
+      "penalty_selection": "blocked_cross_validation"
+    },
+    "in_sample_r_squared": 0.23315,
+    "loadings": [
+      {
+        "bootstrap_interval_95": [
+          -0.004719,
+          0.0
+        ],
+        "factor": "d_real_yield",
+        "ols_excludes_zero": false,
+        "ols_interval_95": [
+          -0.005256,
+          0.000157
+        ],
+        "ols_p_value": 0.0648,
+        "ols_standardised": -0.00255,
+        "per_unit": -0.01793976,
+        "reading": "The standardised coefficient is the change in the weekly return per one standard deviation of this driver, which is the scale on which two drivers are comparable. The bootstrap interval is around a penalised estimator and is not valid at exactly zero, so selection_rate is the more honest summary of whether this driver survives at all; the OLS interval beside it has no selection and no such caveat.",
+        "selected": true,
+        "selection_rate": 0.941,
+        "sign_agreement": 0.9973,
+        "standardised": -0.002009
+      },
+      {
+        "bootstrap_interval_95": [
+          -0.012903,
+          -0.008264
+        ],
+        "factor": "d_dxy",
+        "ols_excludes_zero": true,
+        "ols_interval_95": [
+          -0.013383,
+          -0.009714
+        ],
+        "ols_p_value": 0.0,
+        "ols_standardised": -0.011549,
+        "per_unit": -1.37890989,
+        "reading": "The standardised coefficient is the change in the weekly return per one standard deviation of this driver, which is the scale on which two drivers are comparable. The bootstrap interval is around a penalised estimator and is not valid at exactly zero, so selection_rate is the more honest summary of whether this driver survives at all; the OLS interval beside it has no selection and no such caveat.",
+        "selected": true,
+        "selection_rate": 1.0,
+        "sign_agreement": 1.0,
+        "standardised": -0.010532
+      },
+      {
+        "bootstrap_interval_95": [
+          0.0,
+          0.003446
+        ],
+        "factor": "d_oil",
+        "ols_excludes_zero": true,
+        "ols_interval_95": [
+          0.000573,
+          0.004324
+        ],
+        "ols_p_value": 0.0105,
+        "ols_standardised": 0.002449,
+        "per_unit": 0.02511692,
+        "reading": "The standardised coefficient is the change in the weekly return per one standard deviation of this driver, which is the scale on which two drivers are comparable. The bootstrap interval is around a penalised estimator and is not valid at exactly zero, so selection_rate is the more honest summary of whether this driver survives at all; the OLS interval beside it has no selection and no such caveat.",
+        "selected": true,
+        "selection_rate": 0.9415,
+        "sign_agreement": 1.0,
+        "standardised": 0.001545
+      },
+      {
+        "bootstrap_interval_95": [
+          0.000672,
+          0.00584
+        ],
+        "factor": "d_vix",
+        "ols_excludes_zero": true,
+        "ols_interval_95": [
+          0.001924,
+          0.007207
+        ],
+        "ols_p_value": 0.0007,
+        "ols_standardised": 0.004565,
+        "per_unit": 0.00088966,
+        "reading": "The standardised coefficient is the change in the weekly return per one standard deviation of this driver, which is the scale on which two drivers are comparable. The bootstrap interval is around a penalised estimator and is not valid at exactly zero, so selection_rate is the more honest summary of whether this driver survives at all; the OLS interval beside it has no selection and no such caveat.",
+        "selected": true,
+        "selection_rate": 0.997,
+        "sign_agreement": 1.0,
+        "standardised": 0.003129
+      },
+      {
+        "bootstrap_interval_95": [
+          0.0,
+          0.001485
+        ],
+        "factor": "d_geopolitical_risk",
+        "ols_excludes_zero": false,
+        "ols_interval_95": [
+          -0.000339,
+          0.002204
+        ],
+        "ols_p_value": 0.1505,
+        "ols_standardised": 0.000933,
+        "per_unit": 7.27e-06,
+        "reading": "The standardised coefficient is the change in the weekly return per one standard deviation of this driver, which is the scale on which two drivers are comparable. The bootstrap interval is around a penalised estimator and is not valid at exactly zero, so selection_rate is the more honest summary of whether this driver survives at all; the OLS interval beside it has no selection and no such caveat.",
+        "selected": true,
+        "selection_rate": 0.615,
+        "sign_agreement": 0.9976,
+        "standardised": 0.000192
+      },
+      {
+        "bootstrap_interval_95": [
+          -0.002076,
+          9.2e-05
+        ],
+        "factor": "momentum",
+        "ols_excludes_zero": false,
+        "ols_interval_95": [
+          -0.002963,
+          0.000765
+        ],
+        "ols_p_value": 0.2479,
+        "ols_standardised": -0.001099,
+        "per_unit": -0.00796008,
+        "reading": "The standardised coefficient is the change in the weekly return per one standard deviation of this driver, which is the scale on which two drivers are comparable. The bootstrap interval is around a penalised estimator and is not valid at exactly zero, so selection_rate is the more honest summary of whether this driver survives at all; the OLS interval beside it has no selection and no such caveat.",
+        "selected": true,
+        "selection_rate": 0.567,
+        "sign_agreement": 0.94,
+        "standardised": -0.000199
+      }
+    ],
+    "out_of_sample": {
+      "contemporaneous": {
+        "benchmark": "training_window_mean",
+        "dm_p_value": 0.0,
+        "dm_statistic": -4.7948,
+        "kind": "contemporaneous",
+        "mean_loss_differential": -9.12832e-05,
+        "observations": 918,
+        "r_squared_oos": 0.18699,
+        "reading": "Out-of-sample R-squared is measured against the mean of the training window, not against zero, because a forecaster that says 'the average' is the thing a factor model has to beat. Negative is common and is not a bug: it means the fitted loadings did worse than that average out of sample. The differential is squared error of the model minus squared error of that benchmark, so a negative differential is the model doing better and a large p-value means the difference of either sign is not distinguishable from zero on this sample.",
+        "window_weeks": 156
+      },
+      "note": "Contemporaneous uses regressors from the same week as the return, with coefficients fitted only on weeks that ended before it: that is what attribution means. Predictive shifts the whole design one week so the regression is asked to forecast, which \u00a75 forbids using and which is measured here so the ban has a number behind it.",
+      "predictive": {
+        "benchmark": "training_window_mean",
+        "dm_p_value": 0.8346,
+        "dm_statistic": 0.2088,
+        "kind": "predictive",
+        "mean_loss_differential": 1.0623e-06,
+        "observations": 917,
+        "r_squared_oos": -0.00218,
+        "reading": "Out-of-sample R-squared is measured against the mean of the training window, not against zero, because a forecaster that says 'the average' is the thing a factor model has to beat. Negative is common and is not a bug: it means the fitted loadings did worse than that average out of sample. The differential is squared error of the model minus squared error of that benchmark, so a negative differential is the model doing better and a large p-value means the difference of either sign is not distinguishable from zero on this sample.",
+        "window_weeks": 156
+      }
+    },
+    "stability": {
+      "factors": [
+        {
+          "factor": "d_real_yield",
+          "first_half_mean": -0.00227,
+          "iqr": 0.003916,
+          "max": 0.006437,
+          "min": -0.009673,
+          "second_half_mean": -0.004815,
+          "selected_in": 194,
+          "sign_changes": 1,
+          "spread_ratio": 0.83,
+          "windows": 230
+        },
+        {
+          "factor": "d_dxy",
+          "first_half_mean": -0.009735,
+          "iqr": 0.001975,
+          "max": -0.003229,
+          "min": -0.026429,
+          "second_half_mean": -0.007044,
+          "selected_in": 230,
+          "sign_changes": 0,
+          "spread_ratio": 0.426,
+          "windows": 230
+        },
+        {
+          "factor": "d_oil",
+          "first_half_mean": 0.003244,
+          "iqr": 0.003421,
+          "max": 0.009904,
+          "min": -0.002261,
+          "second_half_mean": 2.8e-05,
+          "selected_in": 155,
+          "sign_changes": 4,
+          "spread_ratio": 0.993,
+          "windows": 230
+        },
+        {
+          "factor": "d_vix",
+          "first_half_mean": 0.003375,
+          "iqr": 0.003528,
+          "max": 0.016254,
+          "min": -5e-06,
+          "second_half_mean": 0.001385,
+          "selected_in": 136,
+          "sign_changes": 2,
+          "spread_ratio": 0.683,
+          "windows": 230
+        },
+        {
+          "factor": "d_geopolitical_risk",
+          "first_half_mean": -0.000526,
+          "iqr": 0.000548,
+          "max": 0.003363,
+          "min": -0.00448,
+          "second_half_mean": 0.00067,
+          "selected_in": 131,
+          "sign_changes": 4,
+          "spread_ratio": 0.369,
+          "windows": 230
+        },
+        {
+          "factor": "momentum",
+          "first_half_mean": -0.000149,
+          "iqr": 0.001097,
+          "max": 0.003394,
+          "min": -0.005492,
+          "second_half_mean": 0.000526,
+          "selected_in": 110,
+          "sign_changes": 1,
+          "spread_ratio": 0.506,
+          "windows": 230
+        }
+      ],
+      "reading": "A loading that changes sign between adjacent windows is not a loading; it is one regime being read as a property of the asset. spread_ratio compares how far a loading moves across windows with the width of its own full-sample interval.",
+      "window_weeks": 156
+    }
+  },
+  "chain": {
+    "administered_control": {
+      "estimate": {
+        "controls": [
+          "fuel_excise"
+        ],
+        "estimator": "local_projection",
+        "every_horizon_spans_zero": false,
+        "hac_rule": "max(horizon, floor(4 (n/100)^(2/9)))",
+        "link": "crude_to_cpi_administered_control",
+        "note": "The first link with the administered rate held constant, on the months the schedule covers.",
+        "own_lags": 2,
+        "responses": [
+          {
+            "coefficient": 0.009724,
+            "hac_lag": 3,
+            "horizon_months": 0,
+            "interval_95": [
+              -0.00998,
+              0.029427
+            ],
+            "observations": 57,
+            "p_value": 0.3334,
+            "spans_zero": true,
+            "std_error": 0.010053
+          },
+          {
+            "coefficient": -0.033314,
+            "hac_lag": 3,
+            "horizon_months": 1,
+            "interval_95": [
+              -0.060005,
+              -0.006623
+            ],
+            "observations": 56,
+            "p_value": 0.0144,
+            "spans_zero": false,
+            "std_error": 0.013618
+          },
+          {
+            "coefficient": 0.002587,
+            "hac_lag": 3,
+            "horizon_months": 3,
+            "interval_95": [
+              -0.047782,
+              0.052956
+            ],
+            "observations": 54,
+            "p_value": 0.9198,
+            "spans_zero": true,
+            "std_error": 0.025699
+          },
+          {
+            "coefficient": 0.022166,
+            "hac_lag": 6,
+            "horizon_months": 6,
+            "interval_95": [
+              -0.029411,
+              0.073742
+            ],
+            "observations": 51,
+            "p_value": 0.3996,
+            "spans_zero": true,
+            "std_error": 0.026315
+          },
+          {
+            "coefficient": -0.005731,
+            "hac_lag": 12,
+            "horizon_months": 12,
+            "interval_95": [
+              -0.049322,
+              0.03786
+            ],
+            "observations": 45,
+            "p_value": 0.7967,
+            "spans_zero": true,
+            "std_error": 0.022241
+          }
+        ],
+        "variance_estimator": "newey_west_bartlett"
+      },
+      "months_covered": 74,
+      "moves_in_sample": [
+        "2017-11-01",
+        "2022-06-01",
+        "2025-04-01",
+        "2026-04-01"
+      ],
+      "note": "The first link re-estimated with the administered rate held constant, on the months where the schedule knows that rate. It is a separate estimate rather than the headline because the schedule does not cover the whole sample, and running the headline on the covered months alone would trade a control for most of the history without saying so."
+    },
+    "chain": "crude_to_local_price",
+    "compounded": {
+      "band": "joint_moving_block_bootstrap_over_months",
+      "every_horizon_spans_zero": true,
+      "horizons": [
+        {
+          "compounded": -2.47e-06,
+          "draws": 2000,
+          "horizon_months": 0,
+          "interval_95": [
+            -0.00026444,
+            0.00022228
+          ],
+          "link_contributions": [
+            0.00480012,
+            -0.22521078,
+            0.00228635
+          ],
+          "spans_zero": true
+        },
+        {
+          "compounded": 0.00010656,
+          "draws": 2000,
+          "horizon_months": 1,
+          "interval_95": [
+            -0.00018296,
+            0.00061787
+          ],
+          "link_contributions": [
+            0.00399714,
+            2.42520314,
+            0.01099266
+          ],
+          "spans_zero": true
+        },
+        {
+          "compounded": 0.00126082,
+          "draws": 2000,
+          "horizon_months": 3,
+          "interval_95": [
+            -0.00331678,
+            0.00303118
+          ],
+          "link_contributions": [
+            0.01911416,
+            2.74421575,
+            0.02403704
+          ],
+          "spans_zero": true
+        },
+        {
+          "compounded": 0.00268962,
+          "draws": 2000,
+          "horizon_months": 6,
+          "interval_95": [
+            -0.00597161,
+            0.00589739
+          ],
+          "link_contributions": [
+            0.02078701,
+            4.59942231,
+            0.02813165
+          ],
+          "spans_zero": true
+        },
+        {
+          "compounded": -0.00059006,
+          "draws": 2000,
+          "horizon_months": 12,
+          "interval_95": [
+            -0.00666269,
+            0.0082898
+          ],
+          "link_contributions": [
+            -0.00882566,
+            5.52248173,
+            0.01210634
+          ],
+          "spans_zero": true
+        }
+      ],
+      "method": "product_of_link_responses",
+      "note": "The band is not the product of the links' own bands. Multiplying intervals would assume the links are independent, and they are estimated from overlapping windows of one economy. Each replicate resamples months once and re-estimates every link on the same months, so the dependence survives into the product."
+    },
+    "direct": {
+      "note": "Two estimates of the same arrow. The raw one carries every channel from the shock to the local price, including the global price channel the weekly factor loadings already measure. The orthogonalised one holds the quote-currency price constant, so its coefficient is the part running through the local economy alone.",
+      "orthogonalised": {
+        "controls": [
+          "xauusd"
+        ],
+        "estimator": "local_projection",
+        "every_horizon_spans_zero": false,
+        "hac_rule": "max(horizon, floor(4 (n/100)^(2/9)))",
+        "link": "crude_to_local_price_direct_orthogonalised",
+        "note": "The same regression with the quote-currency price held constant, so the coefficient is the local-economy part of the path and does not double count the channel the weekly loadings already carry.",
+        "own_lags": 2,
+        "responses": [
+          {
+            "coefficient": -0.023095,
+            "hac_lag": 4,
+            "horizon_months": 0,
+            "interval_95": [
+              -0.050818,
+              0.004628
+            ],
+            "observations": 173,
+            "p_value": 0.1025,
+            "spans_zero": true,
+            "std_error": 0.014145
+          },
+          {
+            "coefficient": -0.033427,
+            "hac_lag": 4,
+            "horizon_months": 1,
+            "interval_95": [
+              -0.073491,
+              0.006638
+            ],
+            "observations": 172,
+            "p_value": 0.102,
+            "spans_zero": true,
+            "std_error": 0.020442
+          },
+          {
+            "coefficient": -0.066962,
+            "hac_lag": 4,
+            "horizon_months": 3,
+            "interval_95": [
+              -0.143512,
+              0.009588
+            ],
+            "observations": 170,
+            "p_value": 0.0864,
+            "spans_zero": true,
+            "std_error": 0.039057
+          },
+          {
+            "coefficient": -0.131811,
+            "hac_lag": 6,
+            "horizon_months": 6,
+            "interval_95": [
+              -0.234784,
+              -0.028838
+            ],
+            "observations": 167,
+            "p_value": 0.0121,
+            "spans_zero": false,
+            "std_error": 0.052538
+          },
+          {
+            "coefficient": -0.038509,
+            "hac_lag": 12,
+            "horizon_months": 12,
+            "interval_95": [
+              -0.211796,
+              0.134779
+            ],
+            "observations": 161,
+            "p_value": 0.6632,
+            "spans_zero": true,
+            "std_error": 0.088413
+          }
+        ],
+        "variance_estimator": "newey_west_bartlett"
+      },
+      "raw": {
+        "controls": [],
+        "estimator": "local_projection",
+        "every_horizon_spans_zero": false,
+        "hac_rule": "max(horizon, floor(4 (n/100)^(2/9)))",
+        "link": "crude_to_local_price_direct",
+        "note": "The whole path in one regression, every channel included.",
+        "own_lags": 2,
+        "responses": [
+          {
+            "coefficient": -0.027698,
+            "hac_lag": 4,
+            "horizon_months": 0,
+            "interval_95": [
+              -0.076299,
+              0.020902
+            ],
+            "observations": 173,
+            "p_value": 0.264,
+            "spans_zero": true,
+            "std_error": 0.024797
+          },
+          {
+            "coefficient": -0.034927,
+            "hac_lag": 4,
+            "horizon_months": 1,
+            "interval_95": [
+              -0.074808,
+              0.004954
+            ],
+            "observations": 172,
+            "p_value": 0.0861,
+            "spans_zero": true,
+            "std_error": 0.020348
+          },
+          {
+            "coefficient": -0.069983,
+            "hac_lag": 4,
+            "horizon_months": 3,
+            "interval_95": [
+              -0.146946,
+              0.00698
+            ],
+            "observations": 170,
+            "p_value": 0.0747,
+            "spans_zero": true,
+            "std_error": 0.039268
+          },
+          {
+            "coefficient": -0.134011,
+            "hac_lag": 6,
+            "horizon_months": 6,
+            "interval_95": [
+              -0.233278,
+              -0.034744
+            ],
+            "observations": 167,
+            "p_value": 0.0081,
+            "spans_zero": false,
+            "std_error": 0.050647
+          },
+          {
+            "coefficient": -0.042652,
+            "hac_lag": 12,
+            "horizon_months": 12,
+            "interval_95": [
+              -0.21075,
+              0.125446
+            ],
+            "observations": 161,
+            "p_value": 0.619,
+            "spans_zero": true,
+            "std_error": 0.085766
+          }
+        ],
+        "variance_estimator": "newey_west_bartlett"
+      }
+    },
+    "double_counting": "The shock this chain starts from is also a driver in the weekly factor set, so the direct loading and this chain measure overlapping things through different amounts of noise. They are alternative decompositions and are never summed; nothing in this artifact adds a chain response to a factor loading, and there is no total that would invite it.",
+    "first_month": "2012-02-01",
+    "frequency": "MS",
+    "label": "Crude to the rupee price of gold",
+    "last_month": "2026-08-01",
+    "links": [
+      {
+        "controls": [],
+        "estimator": "local_projection",
+        "every_horizon_spans_zero": false,
+        "hac_rule": "max(horizon, floor(4 (n/100)^(2/9)))",
+        "link": "crude_to_cpi",
+        "note": "Crude into the import bill and through to consumer prices. This is the link the fuel-tax buffer sits inside: excise and state VAT are adjusted by hand, in the opposite direction, precisely when crude moves, so an uncontrolled estimate here measures a fiscal decision as if it were a pricing mechanism.",
+        "own_lags": 2,
+        "responses": [
+          {
+            "coefficient": 0.0048,
+            "hac_lag": 5,
+            "horizon_months": 0,
+            "interval_95": [
+              -0.001767,
+              0.011367
+            ],
+            "observations": 300,
+            "p_value": 0.152,
+            "spans_zero": true,
+            "std_error": 0.003351
+          },
+          {
+            "coefficient": 0.003997,
+            "hac_lag": 5,
+            "horizon_months": 1,
+            "interval_95": [
+              -0.003578,
+              0.011573
+            ],
+            "observations": 299,
+            "p_value": 0.3011,
+            "spans_zero": true,
+            "std_error": 0.003865
+          },
+          {
+            "coefficient": 0.019114,
+            "hac_lag": 5,
+            "horizon_months": 3,
+            "interval_95": [
+              0.002504,
+              0.035724
+            ],
+            "observations": 297,
+            "p_value": 0.0241,
+            "spans_zero": false,
+            "std_error": 0.008475
+          },
+          {
+            "coefficient": 0.020787,
+            "hac_lag": 6,
+            "horizon_months": 6,
+            "interval_95": [
+              -0.004483,
+              0.046057
+            ],
+            "observations": 294,
+            "p_value": 0.1069,
+            "spans_zero": true,
+            "std_error": 0.012893
+          },
+          {
+            "coefficient": -0.008826,
+            "hac_lag": 12,
+            "horizon_months": 12,
+            "interval_95": [
+              -0.036709,
+              0.019058
+            ],
+            "observations": 288,
+            "p_value": 0.535,
+            "spans_zero": true,
+            "std_error": 0.014227
+          }
+        ],
+        "variance_estimator": "newey_west_bartlett"
+      },
+      {
+        "controls": [],
+        "estimator": "local_projection",
+        "every_horizon_spans_zero": true,
+        "hac_rule": "max(horizon, floor(4 (n/100)^(2/9)))",
+        "link": "cpi_to_policy",
+        "note": "Inflation into the policy response, measured on the money-market rate rather than on the repo rate itself. That is a deliberate weakening of the claim: the corridor's transmission is what is observable in a free monthly series, and calling it the policy rate would assert a passthrough this repository has not measured.",
+        "own_lags": 2,
+        "responses": [
+          {
+            "coefficient": -0.225211,
+            "hac_lag": 5,
+            "horizon_months": 0,
+            "interval_95": [
+              -2.188315,
+              1.737893
+            ],
+            "observations": 300,
+            "p_value": 0.8221,
+            "spans_zero": true,
+            "std_error": 1.001602
+          },
+          {
+            "coefficient": 2.425203,
+            "hac_lag": 5,
+            "horizon_months": 1,
+            "interval_95": [
+              -0.549469,
+              5.399875
+            ],
+            "observations": 300,
+            "p_value": 0.1101,
+            "spans_zero": true,
+            "std_error": 1.517718
+          },
+          {
+            "coefficient": 2.744216,
+            "hac_lag": 5,
+            "horizon_months": 3,
+            "interval_95": [
+              -4.862624,
+              10.351055
+            ],
+            "observations": 300,
+            "p_value": 0.4795,
+            "spans_zero": true,
+            "std_error": 3.881112
+          },
+          {
+            "coefficient": 4.599422,
+            "hac_lag": 6,
+            "horizon_months": 6,
+            "interval_95": [
+              -2.834851,
+              12.033696
+            ],
+            "observations": 300,
+            "p_value": 0.2253,
+            "spans_zero": true,
+            "std_error": 3.793067
+          },
+          {
+            "coefficient": 5.522482,
+            "hac_lag": 12,
+            "horizon_months": 12,
+            "interval_95": [
+              -4.131669,
+              15.176632
+            ],
+            "observations": 300,
+            "p_value": 0.2622,
+            "spans_zero": true,
+            "std_error": 4.925677
+          }
+        ],
+        "variance_estimator": "newey_west_bartlett"
+      },
+      {
+        "controls": [],
+        "estimator": "local_projection",
+        "every_horizon_spans_zero": false,
+        "hac_rule": "max(horizon, floor(4 (n/100)^(2/9)))",
+        "link": "policy_to_rupee",
+        "note": "The policy response into the exchange rate.",
+        "own_lags": 2,
+        "responses": [
+          {
+            "coefficient": 0.002286,
+            "hac_lag": 4,
+            "horizon_months": 0,
+            "interval_95": [
+              -0.014077,
+              0.018649
+            ],
+            "observations": 267,
+            "p_value": 0.7842,
+            "spans_zero": true,
+            "std_error": 0.008349
+          },
+          {
+            "coefficient": 0.010993,
+            "hac_lag": 4,
+            "horizon_months": 1,
+            "interval_95": [
+              -0.001134,
+              0.023119
+            ],
+            "observations": 267,
+            "p_value": 0.0756,
+            "spans_zero": true,
+            "std_error": 0.006187
+          },
+          {
+            "coefficient": 0.024037,
+            "hac_lag": 4,
+            "horizon_months": 3,
+            "interval_95": [
+              0.001384,
+              0.04669
+            ],
+            "observations": 267,
+            "p_value": 0.0375,
+            "spans_zero": false,
+            "std_error": 0.011558
+          },
+          {
+            "coefficient": 0.028132,
+            "hac_lag": 6,
+            "horizon_months": 6,
+            "interval_95": [
+              -0.001092,
+              0.057355
+            ],
+            "observations": 264,
+            "p_value": 0.0592,
+            "spans_zero": true,
+            "std_error": 0.01491
+          },
+          {
+            "coefficient": 0.012106,
+            "hac_lag": 12,
+            "horizon_months": 12,
+            "interval_95": [
+              -0.011406,
+              0.035619
+            ],
+            "observations": 258,
+            "p_value": 0.3129,
+            "spans_zero": true,
+            "std_error": 0.011997
+          }
+        ],
+        "variance_estimator": "newey_west_bartlett"
+      }
+    ],
+    "mechanical_link": {
+      "asserted_elasticity": 1.0,
+      "available": true,
+      "measured": {
+        "usdinr": 1.0695,
+        "xauusd": 0.9588
+      },
+      "months": 175,
+      "note": "The local price is computed from the quote and the rate by the lens, so these elasticities are one by construction and this is a check on the arithmetic rather than a measurement of the world. A coefficient away from one means the tax stack moved inside the sample, which is a fact about the schedule and not about transmission.",
+      "r_squared": 0.94804
+    },
+    "months": 175,
+    "note": "Four arrows, of which three are estimated and one is arithmetic. The last step from the exchange rate to the rupee price is an identity the lens computes, so it is asserted at one and checked, not fitted."
+  },
+  "chain_unavailable_reason": null,
+  "code": {
+    "commit": "074a63cbacd2bbf577f1b99593f7d3f32fa0fe66",
+    "dirty": true,
+    "engine_version": "0.1.0",
+    "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
+    "ref": "step-4-factors",
+    "source": "git"
+  },
+  "engine_version": "0.1.0",
+  "generated_at": "2026-08-12T11:02:53.182864+00:00",
+  "never_summed": "The chain starts from a driver that is also in the weekly factor set, so the direct loading and the chain are alternative decompositions of one overlapping thing. They are published side by side and are never added. Nothing in this artifact totals a chain response with a factor loading.",
+  "pre_registration": "Stated in the README before this ran and left as written: out-of-sample R-squared low and plausibly indistinguishable from zero, with the predictive form held to be indistinguishable from zero with confidence and the contemporaneous form expected positive and material at 0.2 to 0.45; rolling loading stability poor; and the compounded chain band spanning zero at every horizon.",
+  "reproduce": "uv run aurex factors --asset gold --from 2000-01-01 --to 2026-08-07 --window 156 --draws 2000 --horizons 0,1,3,6,12",
+  "sources": {
+    "dxy": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://fred.stlouisfed.org/series/DTWEXBGS"
+      },
+      "end": "2026-08-07",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:26.294470+00:00",
+      "has_ohlc": false,
+      "rows": 5164,
+      "series_id": "dxy",
+      "source_name": "FRED:DTWEXBGS",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS",
+      "start": "2006-01-02"
+    },
+    "gpr": {
+      "citation": {
+        "cite_as": "Caldara, Dario and Matteo Iacoviello (2022), 'Measuring Geopolitical Risk', American Economic Review, April, 112(4), pp. 1194-1225. Data downloaded from https://www.matteoiacoviello.com/gpr.htm",
+        "licence": "CC BY 4.0",
+        "source_confidence": "primary",
+        "source_url": "https://www.matteoiacoviello.com/gpr.htm"
+      },
+      "end": "2026-08-10",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:28.600221+00:00",
+      "has_ohlc": false,
+      "rows": 9719,
+      "series_id": "gpr",
+      "source_name": "Caldara-Iacoviello:GPRD",
+      "source_url": "https://www.matteoiacoviello.com/gpr_files/data_gpr_daily_recent.xls",
+      "start": "2000-01-01"
+    },
+    "ibja_gold": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "primary",
+        "source_url": "https://www.ibja.co/"
+      },
+      "end": "2026-08-12",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:37.893506+00:00",
+      "has_ohlc": false,
+      "rows": 18,
+      "series_id": "ibja_gold",
+      "source_name": "IBJA:daily-bullion-report",
+      "source_url": "https://www.ibja.co/Upload/IBJA_Bullion Daily Report - 12-08-2026.pdf",
+      "start": "2026-07-20"
+    },
+    "local_cpi": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://fred.stlouisfed.org/series/INDCPIALLMINMEI"
+      },
+      "end": "2025-03-01",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:29.258559+00:00",
+      "has_ohlc": false,
+      "rows": 303,
+      "series_id": "local_cpi",
+      "source_name": "FRED:INDCPIALLMINMEI",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=INDCPIALLMINMEI",
+      "start": "2000-01-01"
+    },
+    "local_policy_rate": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://fred.stlouisfed.org/series/IRSTCI01INM156N"
+      },
+      "end": "2026-05-01",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:30.966902+00:00",
+      "has_ohlc": false,
+      "rows": 317,
+      "series_id": "local_policy_rate",
+      "source_name": "FRED:IRSTCI01INM156N",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IRSTCI01INM156N",
+      "start": "2000-01-01"
+    },
+    "real_yield_10y": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://fred.stlouisfed.org/series/DFII10"
+      },
+      "end": "2026-08-10",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:25.291593+00:00",
+      "has_ohlc": false,
+      "rows": 5905,
+      "series_id": "real_yield_10y",
+      "source_name": "FRED:DFII10",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10",
+      "start": "2003-01-02"
+    },
+    "usdinr": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://finance.yahoo.com/quote/INR=X/history"
+      },
+      "end": "2026-08-12",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:33.405050+00:00",
+      "has_ohlc": true,
+      "rows": 5886,
+      "series_id": "usdinr",
+      "source_name": "yfinance:INR=X",
+      "source_url": "https://finance.yahoo.com/quote/INR=X/history",
+      "start": "2003-12-01"
+    },
+    "vix": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://finance.yahoo.com/quote/^VIX/history"
+      },
+      "end": "2026-08-12",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:24.859381+00:00",
+      "has_ohlc": true,
+      "rows": 6693,
+      "series_id": "vix",
+      "source_name": "yfinance:^VIX",
+      "source_url": "https://finance.yahoo.com/quote/^VIX/history",
+      "start": "2000-01-03"
+    },
+    "wti": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://fred.stlouisfed.org/series/DCOILWTICO"
+      },
+      "end": "2026-08-03",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:27.269493+00:00",
+      "has_ohlc": false,
+      "rows": 6665,
+      "series_id": "wti",
+      "source_name": "FRED:DCOILWTICO",
+      "source_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILWTICO",
+      "start": "2000-01-04"
+    },
+    "xau_futures": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "secondary",
+        "source_url": "https://finance.yahoo.com/quote/GC=F/history"
+      },
+      "end": "2026-08-12",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:33.099380+00:00",
+      "has_ohlc": true,
+      "rows": 6511,
+      "series_id": "xau_futures",
+      "source_name": "yfinance:GC=F",
+      "source_url": "https://finance.yahoo.com/quote/GC=F/history",
+      "start": "2000-08-30"
+    },
+    "xauusd": {
+      "citation": {
+        "cite_as": null,
+        "licence": null,
+        "source_confidence": "primary",
+        "source_url": "https://www.lbma.org.uk/prices-and-data/precious-metal-prices"
+      },
+      "end": "2026-08-11",
+      "fallbacks": [],
+      "fetched_at": "2026-08-12T10:59:32.751635+00:00",
+      "has_ohlc": false,
+      "rows": 6671,
+      "series_id": "xauusd",
+      "source_name": "LBMA:gold_pm:USD",
+      "source_url": "https://prices.lbma.org.uk/json/gold_pm.json",
+      "start": "2000-01-04"
+    }
+  },
+  "what_this_is_not": "Attribution, not a forecast. The loadings decompose a return that has already happened into drivers observed in the same week; the predictive out-of-sample R-squared beside them is what the same factor set achieves when asked to forecast instead, and it is reported so the distinction has a number rather than an assurance behind it."
+}
