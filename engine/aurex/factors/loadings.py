@@ -203,6 +203,42 @@ class OutOfSample:
 
 
 @dataclass(frozen=True, slots=True)
+class Withheld:
+    """The fit with one driver removed, and how far the rest moved without it.
+
+    This is the omitted-variable claim made measurable. A driver is in the set because
+    somebody argued that leaving it out would bias what remains — and that argument is a
+    hypothesis about this sample, not a fact about the world. Refitting without it says
+    how large the bias actually was, and "we checked and it was negligible" is a
+    different statement from "we did not check", which is the only reason to publish a
+    result this boring.
+    """
+
+    factor_id: str
+    #: Largest absolute change in any surviving standardised loading.
+    largest_shift: float
+    #: Drivers whose loading changed sign when this one was removed.
+    sign_flips: tuple[str, ...]
+    #: Contemporaneous out-of-sample R-squared of the reduced set.
+    r_squared_without: float | None
+    #: The same for the full set, repeated so the pair reads without a lookup.
+    r_squared_with: float | None
+
+    def describe(self) -> dict[str, Any]:
+        return {
+            "withheld": self.factor_id,
+            "largest_loading_shift": round(self.largest_shift, 8),
+            "sign_flips": list(self.sign_flips),
+            "r_squared_oos_without": (
+                None if self.r_squared_without is None else round(self.r_squared_without, 5)
+            ),
+            "r_squared_oos_with": (
+                None if self.r_squared_with is None else round(self.r_squared_with, 5)
+            ),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class Attribution:
     """Everything the loadings layer publishes for one asset."""
 
@@ -213,6 +249,7 @@ class Attribution:
     in_sample_r_squared: float
     contemporaneous: OutOfSample | None
     predictive: OutOfSample | None
+    withheld: tuple[Withheld, ...]
     draws: int
     block: int
     window: int
@@ -257,6 +294,20 @@ class Attribution:
                     "week so the regression is asked to forecast, which §5 forbids "
                     "using and which is measured here so the ban has a number behind it."
                 ),
+            },
+            "omitted_variable_check": {
+                "method": "leave_one_required_driver_out",
+                "reading": (
+                    "Each required driver removed in turn, the rest refitted, and the "
+                    "largest resulting move in any surviving loading reported. A driver "
+                    "is required because somebody argued that leaving it out would bias "
+                    "what remains; this is that argument measured on this sample rather "
+                    "than asserted. A negligible shift does not mean the driver was "
+                    "unnecessary — it means the bias it defends against did not "
+                    "materialise here, which is a thing that had to be checked to be "
+                    "known."
+                ),
+                "drivers": [entry.describe() for entry in self.withheld],
             },
             "bootstrap": {
                 "method": "moving_block",
@@ -523,6 +574,56 @@ def _stability_for(
     )
 
 
+def leave_one_out(
+    design: WeeklyDesign,
+    *,
+    full_loadings: np.ndarray,
+    full_r_squared: float | None,
+    window: int,
+    folds: int,
+) -> tuple[Withheld, ...]:
+    """Refit without each required driver in turn, and report what moved.
+
+    Only required drivers. An optional one is already allowed to vanish when its source
+    fails, so the artifact records what happens without it whenever that happens; a
+    required one never vanishes on its own, which is exactly why the counterfactual has
+    to be constructed rather than waited for.
+    """
+    names = design.names
+    required = {spec.id for spec in design.specs if spec.required}
+    matrix, values = design.matrix(), design.values()
+
+    out: list[Withheld] = []
+    for position, name in enumerate(names):
+        if name not in required or matrix.shape[1] < 2:
+            continue
+        keep = [i for i in range(len(names)) if i != position]
+        reduced = matrix[:, keep]
+
+        penalty = choose_penalty(reduced, values, folds=folds)
+        refitted = elasticnet.fit(reduced, values, lam=penalty, l1_ratio=L1_RATIO).coefficients
+
+        shifts = np.abs(refitted - full_loadings[keep])
+        flips = tuple(
+            names[keep[i]]
+            for i in range(len(keep))
+            if np.sign(refitted[i]) != np.sign(full_loadings[keep[i]])
+            and refitted[i] != 0.0
+            and full_loadings[keep[i]] != 0.0
+        )
+        scored = walk_forward(reduced, values, kind="contemporaneous", window=window, folds=folds)
+        out.append(
+            Withheld(
+                factor_id=name,
+                largest_shift=float(shifts.max()) if shifts.size else 0.0,
+                sign_flips=flips,
+                r_squared_without=None if scored is None else scored.r_squared,
+                r_squared_with=full_r_squared,
+            )
+        )
+    return tuple(out)
+
+
 def estimate(
     design: WeeklyDesign,
     *,
@@ -606,14 +707,23 @@ def estimate(
     lagged = design.frame.shift(1)
     joined = pd.concat([design.target.rename("__target__"), lagged], axis=1, sort=False).dropna()
 
+    contemporaneous = walk_forward(
+        matrix, values, kind="contemporaneous", window=window, folds=folds
+    )
+
     return Attribution(
         design=design,
         penalty=penalty,
         loadings=tuple(loadings),
         stability=stability,
         in_sample_r_squared=_r_squared(values, fitted.predict(matrix)),
-        contemporaneous=walk_forward(
-            matrix, values, kind="contemporaneous", window=window, folds=folds
+        contemporaneous=contemporaneous,
+        withheld=leave_one_out(
+            design,
+            full_loadings=fitted.coefficients,
+            full_r_squared=None if contemporaneous is None else contemporaneous.r_squared,
+            window=window,
+            folds=folds,
         ),
         predictive=walk_forward(
             joined.drop(columns="__target__").to_numpy(dtype=float),

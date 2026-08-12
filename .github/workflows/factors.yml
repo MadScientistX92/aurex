@@ -1,0 +1,184 @@
+name: Factors
+
+# Step 4, run by hand. Unlike the shootout it needs no heavy extra and finishes in about
+# a minute, so this job exists for reproducibility rather than for compute: it regenerates
+# public-data/factors.json from a clean checkout with a frozen lockfile, and then holds
+# the README to whatever came back.
+#
+# The one thing this job must never do is publish loadings without the geopolitical-risk
+# regressor. Without it every remaining driver reaches an escalation through a channel
+# that pushes the metal down, so the safe-haven bid lands in the residual and the output
+# is a wrong sign carrying honestly estimated coefficients — which passes every guard
+# against hand-typed views, because nothing was hand-typed. The engine refuses on its own
+# (the driver is declared required, and the design layer raises rather than refitting
+# without it), and the check below asserts the refusal is still wired rather than trusting
+# that it is.
+#
+# The result is committed to public-data/ on the same terms as every other artifact job:
+# this writes public-data/ and nothing else, and fails if it staged anything outside it.
+# A job that could edit prose is a job that can rewrite the pre-registration it was meant
+# to test.
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: "Registered asset id to attribute"
+        type: string
+        default: gold
+      to:
+        description: "Last observation the run may see (YYYY-MM-DD). Empty uses the series' own end."
+        type: string
+        default: ""
+      draws:
+        description: "Bootstrap replicates. Fewer is faster and noisier at the tails."
+        type: string
+        default: "2000"
+      commit:
+        description: "Commit the artifact to public-data/"
+        type: boolean
+        default: true
+
+concurrency:
+  group: factors
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: engine
+
+jobs:
+  factors:
+    name: loadings, their intervals, and the transmission chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+
+      - run: uv sync --frozen
+
+      - name: estimate
+        run: |
+          set -euo pipefail
+          args=(--asset "${{ inputs.asset }}" --draws "${{ inputs.draws }}")
+          if [ -n "${{ inputs.to }}" ]; then
+            args+=(--to "${{ inputs.to }}")
+          fi
+          uv run aurex factors "${args[@]}"
+
+      # Four properties, each with its own way of going quietly wrong.
+      #
+      # The safe-haven regressor must be present and required, or the loadings are the
+      # ones this whole step existed to avoid publishing. The sample must be bounded and
+      # the artifact must say how to reproduce it, as everywhere else. Both forms of the
+      # out-of-sample R-squared must survive — collapsing them into one would make the
+      # pre-registration ungradeable after the fact, in the direction that flatters it.
+      # And no field anywhere may be named like a total, because the chain and the direct
+      # loading measure overlapping things and a total is how they get added.
+      - name: the artifact carries the driver it refuses to publish without
+        working-directory: .
+        run: |
+          uv run --project engine python - <<'PY'
+          import json
+          block = json.load(open("public-data/factors.json"))
+
+          factors = {entry["id"]: entry for entry in block["asset"]["factors"]}
+          tracked = factors.get("d_geopolitical_risk")
+          assert tracked is not None, "the driver set no longer declares the safe-haven channel"
+          assert tracked["required"], (
+              "the safe-haven driver is optional again: a run without it would publish "
+              "loadings that reach 'escalation is bearish' through real yields alone"
+          )
+          fitted = {entry["factor"] for entry in block["attribution"]["loadings"]}
+          assert "d_geopolitical_risk" in fitted, (
+              "the artifact was published without the required driver actually fitted"
+          )
+
+          assert "--to " in block["reproduce"], block["reproduce"]
+          design = block["attribution"]["design"]
+          assert design["last_week"] in block["reproduce"], (
+              "the reproducing command does not bound the sample it was run on"
+          )
+
+          scored = block["attribution"]["out_of_sample"]
+          for kind in ("contemporaneous", "predictive"):
+              assert scored[kind] is not None, f"{kind} R-squared is missing"
+              assert scored[kind]["kind"] == kind
+
+          def keys(node):
+              if isinstance(node, dict):
+                  return [k for key, value in node.items() for k in (key, *keys(value))]
+              if isinstance(node, list):
+                  return [k for item in node for k in keys(item)]
+              return []
+
+          offenders = [k for k in keys(block) if "total" in k or "net_effect" in k]
+          assert not offenders, f"a field named like a total invites the sum: {offenders}"
+
+          print(
+              f"factors OK: {design['observations']} weeks to {design['last_week']}, "
+              f"{len(fitted)} drivers, contemporaneous R2 "
+              f"{scored['contemporaneous']['r_squared_oos']}, predictive "
+              f"{scored['predictive']['r_squared_oos']}"
+          )
+          PY
+
+      # The artifact's internal consistency is checked above; this checks the README
+      # against it. The attribution section quotes a six-row loadings table, a five-row
+      # chain table, two out-of-sample figures and the leave-one-driver-out shift that its
+      # central claim rests on. A re-run that moves any of them fails here rather than
+      # being committed beside prose that still quotes the old ones.
+      - name: the README's attribution figures are this artifact's
+        run: uv run pytest tests/test_readme_factors.py -q
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: factors
+          path: public-data/factors.json
+          if-no-files-found: error
+
+      - name: commit public-data, and only public-data
+        if: inputs.commit
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git config user.name "aurex-factors[bot]"
+          git config user.email "aurex-factors@users.noreply.github.com"
+
+          git add public-data/
+
+          outside=$(git diff --cached --name-only | grep -v '^public-data/' || true)
+          if [ -n "$outside" ]; then
+            echo "the factors job staged files outside public-data/:"
+            echo "$outside"
+            exit 1
+          fi
+
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+
+          git commit \
+            -m "chore(factors): step 4 attribution for ${{ inputs.asset }}" \
+            -m "Run from ${GITHUB_SHA} by workflow_dispatch. The reproducing command and the resolved sample window are in the artifact."
+
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}); rebasing onto the remote"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          done
+          echo "could not push the attribution result after three attempts"
+          exit 1

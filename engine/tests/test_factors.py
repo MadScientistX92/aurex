@@ -416,3 +416,86 @@ class TestTheGuardOnTheAssetAbstraction:
         assert len(built.frame) > 100
         assert built.names, "the synthetic asset must produce a usable design"
         assert loadings_module.estimate(built, draws=50, window=156) is not None
+
+
+class TestTheOmittedVariableCheck:
+    """The counterfactual behind every "this driver must be here" argument."""
+
+    def test_removing_a_driver_that_matters_moves_what_is_left(self) -> None:
+        """Two correlated drivers, one of which carries the signal: removing it must show."""
+        rng = np.random.default_rng(47)
+        n = 700
+        index = pd.date_range("2010-01-01", periods=n, freq="W-FRI", name="date")
+        shared = rng.normal(size=n)
+        first = shared + rng.normal(scale=0.4, size=n)
+        second = shared + rng.normal(scale=0.4, size=n)
+        target = 2.0 * first + rng.normal(scale=0.3, size=n)
+
+        design = WeeklyDesign(
+            target=pd.Series(target, index=index),
+            frame=pd.DataFrame({"first": first, "second": second}, index=index),
+            dropped={},
+            specs=tuple(
+                FactorSpec(id=name, series_id=name, transform="level", description="x")
+                for name in ("first", "second")
+            ),
+        )
+        attribution = loadings_module.estimate(design, draws=50, window=156)
+        withheld = {entry.factor_id: entry for entry in attribution.withheld}
+
+        assert withheld["first"].largest_shift > 0.05, (
+            "dropping the driver that carries the signal must move its correlated twin"
+        )
+        assert withheld["first"].r_squared_without is not None
+        assert withheld["first"].r_squared_without < withheld["first"].r_squared_with  # type: ignore[operator]
+
+    def test_removing_an_irrelevant_driver_moves_almost_nothing(self) -> None:
+        """The negative result this check exists to be able to report honestly."""
+        rng = np.random.default_rng(53)
+        n = 700
+        index = pd.date_range("2010-01-01", periods=n, freq="W-FRI", name="date")
+        first = rng.normal(size=n)
+        noise = rng.normal(size=n)
+        target = 2.0 * first + rng.normal(scale=0.3, size=n)
+
+        design = WeeklyDesign(
+            target=pd.Series(target, index=index),
+            frame=pd.DataFrame({"first": first, "noise": noise}, index=index),
+            dropped={},
+            specs=tuple(
+                FactorSpec(id=name, series_id=name, transform="level", description="x")
+                for name in ("first", "noise")
+            ),
+        )
+        attribution = loadings_module.estimate(design, draws=50, window=156)
+        withheld = {entry.factor_id: entry for entry in attribution.withheld}
+
+        assert withheld["noise"].largest_shift < 0.02
+        assert withheld["noise"].sign_flips == ()
+
+    def test_only_required_drivers_are_withheld(self) -> None:
+        """An optional one already vanishes on its own whenever its source fails."""
+        rng = np.random.default_rng(59)
+        n = 400
+        index = pd.date_range("2010-01-01", periods=n, freq="W-FRI", name="date")
+        frame = pd.DataFrame(
+            {"needed": rng.normal(size=n), "spare": rng.normal(size=n)}, index=index
+        )
+        design = WeeklyDesign(
+            target=pd.Series(rng.normal(size=n), index=index),
+            frame=frame,
+            dropped={},
+            specs=(
+                FactorSpec(id="needed", series_id="a", transform="level", description="x"),
+                FactorSpec(
+                    id="spare",
+                    series_id="b",
+                    transform="level",
+                    required=False,
+                    description="x",
+                ),
+            ),
+        )
+        attribution = loadings_module.estimate(design, draws=50, window=156)
+
+        assert [entry.factor_id for entry in attribution.withheld] == ["needed"]

@@ -500,6 +500,54 @@
         "standardised": -0.000199
       }
     ],
+    "omitted_variable_check": {
+      "drivers": [
+        {
+          "largest_loading_shift": 0.00049655,
+          "r_squared_oos_with": 0.18699,
+          "r_squared_oos_without": 0.16769,
+          "sign_flips": [],
+          "withheld": "d_real_yield"
+        },
+        {
+          "largest_loading_shift": 0.00312949,
+          "r_squared_oos_with": 0.18699,
+          "r_squared_oos_without": 0.09717,
+          "sign_flips": [],
+          "withheld": "d_dxy"
+        },
+        {
+          "largest_loading_shift": 0.00040409,
+          "r_squared_oos_with": 0.18699,
+          "r_squared_oos_without": 0.18548,
+          "sign_flips": [],
+          "withheld": "d_oil"
+        },
+        {
+          "largest_loading_shift": 0.00155123,
+          "r_squared_oos_with": 0.18699,
+          "r_squared_oos_without": 0.22795,
+          "sign_flips": [],
+          "withheld": "d_vix"
+        },
+        {
+          "largest_loading_shift": 1.566e-05,
+          "r_squared_oos_with": 0.18699,
+          "r_squared_oos_without": 0.18998,
+          "sign_flips": [],
+          "withheld": "d_geopolitical_risk"
+        },
+        {
+          "largest_loading_shift": 0.00141933,
+          "r_squared_oos_with": 0.18699,
+          "r_squared_oos_without": 0.19207,
+          "sign_flips": [],
+          "withheld": "momentum"
+        }
+      ],
+      "method": "leave_one_required_driver_out",
+      "reading": "Each required driver removed in turn, the rest refitted, and the largest resulting move in any surviving loading reported. A driver is required because somebody argued that leaving it out would bias what remains; this is that argument measured on this sample rather than asserted. A negligible shift does not mean the driver was unnecessary \u2014 it means the bias it defends against did not materialise here, which is a thing that had to be checked to be known."
+    },
     "out_of_sample": {
       "contemporaneous": {
         "benchmark": "training_window_mean",
@@ -1191,7 +1239,7 @@
   },
   "chain_unavailable_reason": null,
   "code": {
-    "commit": "074a63cbacd2bbf577f1b99593f7d3f32fa0fe66",
+    "commit": "65d80da0e5c75a558b158896afcc65e63e0f1eaa",
     "dirty": true,
     "engine_version": "0.1.0",
     "note": "engine_version is static and identifies nothing on its own; commit is what names the code behind this artifact. dirty=true means tracked files differed from that commit when the run started, so the SHA locates the run but does not fully reproduce it. dirty=null means the run could not tell.",
@@ -1199,7 +1247,7 @@
     "source": "git"
   },
   "engine_version": "0.1.0",
-  "generated_at": "2026-08-12T11:02:53.182864+00:00",
+  "generated_at": "2026-08-12T13:28:37.249960+00:00",
   "never_summed": "The chain starts from a driver that is also in the weekly factor set, so the direct loading and the chain are alternative decompositions of one overlapping thing. They are published side by side and are never added. Nothing in this artifact totals a chain response with a factor loading.",
   "pre_registration": "Stated in the README before this ran and left as written: out-of-sample R-squared low and plausibly indistinguishable from zero, with the predictive form held to be indistinguishable from zero with confidence and the contemporaneous form expected positive and material at 0.2 to 0.45; rolling loading stability poor; and the compounded chain band spanning zero at every horizon.",
   "reproduce": "uv run aurex factors --asset gold --from 2000-01-01 --to 2026-08-07 --window 156 --draws 2000 --horizons 0,1,3,6,12",
