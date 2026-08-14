@@ -1,0 +1,187 @@
+name: Probe LBMA
+
+# THROWAWAY. Delete this file once the mechanism is known — it exists to answer one
+# question and has no place in the repository afterwards.
+#
+# The question: `aurex factors` and four nightly runs failed to resolve `xauusd` with
+# `JSONDecodeError: Expecting value: line 1 column 1 (char 0)` from
+# prices.lbma.org.uk. Because `http.get` raises for non-2xx *before* decoding, the
+# response was 2xx carrying something that is not JSON. Two candidates, needing
+# opposite repairs:
+#
+#   * a Cloudflare challenge page (HTML, 200) — the host will not serve this client
+#     from this network at all, so a second source on a *different host* is required
+#     and GC=F stays excluded on cost-of-carry grounds;
+#   * an empty or truncated body — transient, and a courtesy-delayed retry inside the
+#     loader may be the whole fix, which is far smaller than a second source carrying
+#     its own provenance review.
+#
+# From a residential IP the endpoint answered 12/12 with 913,005 bytes of valid JSON,
+# so the discriminator is not the User-Agent. Runner outcomes put the failure rate near
+# 56% (4 resolved, 5 failed, 2026-08-05 to 08-13), and on 2026-08-13 a runner resolved
+# the fix at 04:05 UTC while another failed on it at 19:12 — same day, same endpoint,
+# opposite results — so this is per-run and not an outage anyone could have waited out.
+# That rate is still inferred from nine runs on nine runners across nine days. This
+# measures it directly: 20 attempts, one runner, one sitting.
+#
+# It writes nothing to the repository. `permissions: contents: read` makes that a
+# property of the token rather than a promise in a comment.
+
+on:
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: "Number of fetches."
+        type: string
+        default: "20"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: engine
+
+jobs:
+  probe:
+    name: what does LBMA actually return to a runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: engine/uv.lock
+
+      - run: uv sync --frozen
+
+      - name: fetch the fix repeatedly and record what comes back
+        env:
+          ATTEMPTS: ${{ inputs.attempts }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import time
+          from datetime import UTC, datetime
+
+          import requests
+
+          from aurex.config import HTTP_COURTESY_DELAY, HTTP_TIMEOUT, USER_AGENT
+          from aurex.data.sources import http
+          from aurex.data.sources.lbma import GOLD_PM_URL
+
+          attempts = int(os.environ["ATTEMPTS"])
+
+          # Deliberately hammering one host, so be more courteous than production
+          # rather than less: the configured delay is a floor here, not a target.
+          delay = max(HTTP_COURTESY_DELAY, 2.0)
+
+          # The request is assembled to match aurex.data.sources.http.get exactly
+          # rather than calling it, because `get` raises for non-2xx and a probe must
+          # record the non-2xx rather than lose it. If these headers drift from that
+          # function the probe stops measuring the thing that failed.
+          headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "gzip, deflate"}
+
+          # Which egress address the runner drew. If failures cluster by IP or ASN,
+          # that is the reputation hypothesis with evidence under it; if a single IP
+          # both succeeds and fails, it is not.
+          egress = None
+          try:
+              egress = requests.get("https://api.ipify.org", timeout=10).text.strip()
+          except Exception as exc:  # noqa: BLE001 - diagnostic only, never fatal
+              egress = f"unknown: {type(exc).__name__}"
+
+          records = []
+          for attempt in range(1, attempts + 1):
+              if attempt > 1:
+                  time.sleep(delay)
+
+              started = time.monotonic()
+              record = {
+                  "attempt": attempt,
+                  "at": datetime.now(UTC).isoformat(),
+                  "egress_ip": egress,
+              }
+              try:
+                  response = requests.get(GOLD_PM_URL, headers=headers, timeout=HTTP_TIMEOUT)
+              except Exception as exc:  # noqa: BLE001 - a transport failure is a result
+                  record |= {
+                      "outcome": "transport-error",
+                      "error": f"{type(exc).__name__}: {exc}",
+                      "elapsed_s": round(time.monotonic() - started, 3),
+                  }
+                  records.append(record)
+                  print(json.dumps(record))
+                  continue
+
+              body = response.content
+              record |= {
+                  "status": response.status_code,
+                  "elapsed_s": round(time.monotonic() - started, 3),
+                  "bytes": len(body),
+                  "sha256": hashlib.sha256(body).hexdigest()[:16],
+                  # The same one-line description a skip record would now carry, so
+                  # this run also confirms that description is worth having.
+                  "describe": http.describe_response(response),
+                  "headers": {
+                      name: value
+                      for name, value in response.headers.items()
+                      if name.lower() in http._DIAGNOSTIC_HEADERS
+                      or name.lower().startswith("cf-")
+                  },
+              }
+
+              if response.status_code >= 400:
+                  record["outcome"] = "http-error"
+              else:
+                  try:
+                      payload = response.json()
+                  except ValueError as exc:
+                      record |= {
+                          "outcome": "non-json",
+                          "error": str(exc),
+                          # The whole point. Enough of the body to name the mechanism.
+                          "body_head": body[:400].decode("utf-8", "replace"),
+                      }
+                  else:
+                      record |= {"outcome": "ok", "rows": len(payload)}
+
+              records.append(record)
+              print(json.dumps(record))
+
+          counts: dict[str, int] = {}
+          for record in records:
+              counts[record["outcome"]] = counts.get(record["outcome"], 0) + 1
+
+          summary = {
+              "url": GOLD_PM_URL,
+              "attempts": attempts,
+              "delay_s": delay,
+              "egress_ip": egress,
+              "user_agent": USER_AGENT,
+              "counts": counts,
+              "failure_rate": round(1 - counts.get("ok", 0) / attempts, 3),
+              "distinct_bodies": len({r.get("sha256") for r in records if r.get("sha256")}),
+              "recorded_at": datetime.now(UTC).isoformat(),
+          }
+
+          with open("lbma-probe.json", "w") as handle:
+              json.dump({"summary": summary, "attempts": records}, handle, indent=2)
+
+          print("\n" + json.dumps(summary, indent=2))
+          PY
+
+      # `if: always()` because a probe that only uploads its findings when nothing went
+      # wrong is not a probe.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lbma-probe
+          path: engine/lbma-probe.json
+          if-no-files-found: error
