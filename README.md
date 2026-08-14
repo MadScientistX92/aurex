@@ -609,6 +609,12 @@ Two details decide whether that rule means anything:
 
 An *explained* gap is an outage the engine noticed and declined to paper over. An *unexplained* one is a night nothing survives from — the job died, never started, or was never scheduled — and it is the materially weaker position. Publishing both under one heading, distinguished by whether an explanation exists, is what stops a silence from reading like a run of unscored forecasts.
 
+**Four skip records state the wrong cause, and they have not been rewritten.** The records for **2026-08-06, 2026-08-08, 2026-08-10 and 2026-08-11** each give their reason as *"price series did not reach the run date within its declared tolerance"*. That is not what happened on any of the four. `xauusd` did not resolve at all — every one of those records carries `"verdict": "unavailable"` with `lag_days: null` and no last observation, because the sole source for the London fix returned a 2xx response whose body was not JSON and there was no cache behind it. The reason line was a fixed string written for every refusal regardless of which verdict caused it; the per-series `verdict` field beside it was correct throughout, which is the only reason this was recoverable at all.
+
+This is corrected in code rather than in the files: the reason is now derived from the verdicts that actually blocked, and unavailability, staleness, emptiness and an undeclared tolerance each read differently. The four records stand as written. Editing them would be editing the past under the same rule that governs an elapsed forecast, and their detail blocks were never wrong — only the sentence summarising them was.
+
+It is named here rather than only in the commit for one reason beyond the record being wrong. A stale series invites a look at its tolerance, and the tolerance is the one thing that must not move here: widening it would have published nothing truer on any of those four nights, and would have retired the signal that the anchor series has a single source which failed five times in eight days. A published cause that points at the wrong repair is worse than a published cause that is merely vague, because a reader can act on it.
+
 **The nightly writes `public-data/` and nothing else.** It never touches this file. A job that edits prose can trip the §0 no-overclaiming guard at 02:00 UTC with nobody watching, so the workflow stages `public-data/` explicitly and fails if anything else is staged, and a test asserts the command itself writes nowhere else.
 
 ### The live log is not the backtest
