@@ -51,7 +51,7 @@ class LbmaGoldLoader:
         self.url = GOLD_PM_URL if self.fix == "PM" else GOLD_AM_URL
 
     def fetch(self, start: date, end: date) -> LoadedSeries:
-        payload = http.get(self.url, check_robots=False).json()
+        payload = http.get_json(self.url, check_robots=False)
         index = _CURRENCY_INDEX[self.currency]
 
         rows: list[tuple[pd.Timestamp, float]] = []

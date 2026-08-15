@@ -355,6 +355,111 @@ class TestHttpPoliteness:
         assert "aurex" in USER_AGENT
 
 
+class TestJsonDecodeDiagnostics:
+    """What came back, when what came back was not JSON.
+
+    A 2xx carrying an HTML challenge page and a 2xx carrying an empty body raise the
+    identical ``JSONDecodeError`` — "Expecting value: line 1 column 1 (char 0)" — and
+    need opposite repairs. The LBMA fetch failed this way five times in eight days and
+    not one of those records can say which it was, because the body was discarded.
+    """
+
+    @responses.activate
+    def test_a_challenge_page_is_distinguishable_from_an_empty_body(self) -> None:
+        from aurex.data.sources import http
+
+        responses.add(
+            responses.GET,
+            "https://example.invalid/challenge",
+            body="<!DOCTYPE html><html><head><title>Just a moment...</title>",
+            status=200,
+            content_type="text/html",
+            headers={"cf-ray": "a2aa1371ee7d3c06-BLR", "cf-mitigated": "challenge"},
+        )
+        responses.add(responses.GET, "https://example.invalid/empty", body="", status=200)
+
+        with pytest.raises(http.NonJsonResponseError) as challenge:
+            http.get_json("https://example.invalid/challenge", check_robots=False)
+        with pytest.raises(http.NonJsonResponseError) as empty:
+            http.get_json("https://example.invalid/empty", check_robots=False)
+
+        assert "DOCTYPE html" in str(challenge.value)
+        assert "cf-mitigated=challenge" in str(challenge.value)
+        assert "cf-ray=a2aa1371ee7d3c06-BLR" in str(challenge.value)
+        assert "0 bytes" in str(empty.value)
+        assert str(challenge.value) != str(empty.value), (
+            "the two failures that need opposite fixes must not read identically"
+        )
+
+    @responses.activate
+    def test_the_excerpt_is_bounded_and_escaped(self) -> None:
+        """It is unknown-encoding text heading for a JSON skip record.
+
+        A raw newline or quote landing mid-record is a second defect on top of the one
+        being recorded, and an unbounded body would put 913KB of HTML in a git commit.
+        """
+        from aurex.data.sources import http
+
+        responses.add(
+            responses.GET,
+            "https://example.invalid/noisy",
+            body='<html>\n"quoted"\n' + "x" * 5_000,
+            status=200,
+        )
+
+        with pytest.raises(http.NonJsonResponseError) as caught:
+            http.get_json("https://example.invalid/noisy", check_robots=False)
+
+        message = str(caught.value)
+        assert len(message) < 600, "the excerpt must fit in a skip record"
+        assert "\n" not in message
+        assert "5016 bytes" in message, "the full size is reported even when excerpted"
+
+    @responses.activate
+    def test_valid_json_is_returned_unchanged(self) -> None:
+        """The guard must not be the reason a healthy fetch fails."""
+        from aurex.data.sources import http
+
+        responses.add(
+            responses.GET,
+            "https://example.invalid/ok",
+            json=[{"d": "2026-07-29", "v": [4000.85, 3009.44, 3511.95]}],
+            status=200,
+        )
+
+        payload = http.get_json("https://example.invalid/ok", check_robots=False)
+        assert payload[0]["v"][0] == 4000.85
+
+    @responses.activate
+    def test_the_lbma_loader_reports_the_body_through_the_chain(self, tmp_path: Path) -> None:
+        """End to end: the description must survive into what a skip record files.
+
+        The chain formats a failure as ``{source}: {type}: {exc}``, so a diagnostic
+        that is not on the exception's own message never reaches the record. This is
+        the exact path that produced the four uninformative skip records.
+        """
+        from aurex.data.base import DataUnavailableError
+        from aurex.data.cache import CacheStore
+        from aurex.data.chain import SourceChain
+
+        responses.add(
+            responses.GET,
+            GOLD_PM_URL,
+            body="<!DOCTYPE html><html><title>Just a moment...</title>",
+            status=200,
+            content_type="text/html",
+        )
+
+        chain = SourceChain("xauusd", (LbmaGoldLoader("xauusd"),), cache=CacheStore(tmp_path))
+        with pytest.raises(DataUnavailableError) as caught:
+            chain.load(START, END)
+
+        message = str(caught.value)
+        assert "NonJsonResponseError" in message
+        assert "DOCTYPE html" in message
+        assert "content-type=text/html" in message
+
+
 def test_fixture_matches_recorded_lbma_shape() -> None:
     """Guards the assumption that v = [USD, GBP, EUR]."""
     record = json.loads('{"d": "2026-07-29", "v": [4000.85, 3009.44, 3511.95]}')

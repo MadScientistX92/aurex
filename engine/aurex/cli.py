@@ -80,7 +80,10 @@ def pipeline(
         when = date.fromisoformat(str(result.artifact["generated_at"])[:10])
         record = write_skip_record(
             when=when,
-            reason="price series did not reach the run date within its declared tolerance",
+            # Derived, never asserted. A fixed string here filed every refusal as a
+            # staleness failure, including the ones where the series never resolved at
+            # all — see ``_REFUSAL_PHRASE``.
+            reason=verdict.refusal_reason(),
             detail=verdict.describe(),
         )
         write_index()

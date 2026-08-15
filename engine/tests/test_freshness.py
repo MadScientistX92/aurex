@@ -22,6 +22,8 @@ from aurex.cli import app
 from aurex.data.base import LoadedSeries, SeriesMeta
 from aurex.data.cache import CacheStore
 from aurex.data.freshness import (
+    _REFUSAL_PHRASE,
+    EMPTY,
     FRESH,
     STALE,
     UNAVAILABLE,
@@ -211,6 +213,79 @@ class TestFailingClosed:
         assert verdict.ages[0].last_observation == date(2026, 7, 28)
 
 
+class TestTheReasonARefusalIsFiledUnder:
+    """The line a reader acts on, and it used to name the wrong cause.
+
+    Four public skip records — 2026-08-06, 08-08, 08-10 and 08-11 — say the price
+    series "did not reach the run date within its declared tolerance" when in fact it
+    never resolved at all. The distinction matters because of what each one licenses:
+    a stale series invites a look at the tolerance, and on those four nights widening
+    the tolerance would have published nothing truer while retiring the signal that
+    the only source for the anchor series had failed five times in eight days.
+    """
+
+    def test_an_unavailable_series_is_not_reported_as_stale(self) -> None:
+        verdict = verdict_for({}, unavailable={"xauusd": "every source declined"})
+
+        reason = verdict.refusal_reason()
+        assert "xauusd" in reason
+        assert "did not resolve" in reason
+        assert "tolerance" not in reason, (
+            "an unavailable series has no lag to compare against a tolerance, and "
+            "naming one points the reader at the repair that must not be made"
+        )
+
+    def test_a_stale_series_is_still_reported_as_stale(self) -> None:
+        """The other half. A reason that never says 'tolerance' is as wrong as one
+        that always does."""
+        verdict = verdict_for({"xauusd": series_ending("2026-07-20")})
+
+        assert verdict.ages[0].verdict == STALE
+        assert "did not reach the run date" in verdict.refusal_reason()
+
+    def test_each_verdict_reads_differently(self) -> None:
+        """Mechanically: four distinct verdicts, four distinct sentences.
+
+        Asserted on the phrases rather than on one worked example, because the bug was
+        that two causes collapsed into one string and nothing noticed.
+        """
+        phrases = {
+            verdict: _REFUSAL_PHRASE[verdict] for verdict in (STALE, UNAVAILABLE, EMPTY, UNDECLARED)
+        }
+        assert len(set(phrases.values())) == len(phrases), phrases
+
+    def test_one_outage_across_several_series_reads_as_one_outage(self) -> None:
+        verdict = verdict_for(
+            {},
+            unavailable={"xauusd": "every source declined", "usdinr": "every source declined"},
+            policies={"xauusd": TOLERANCE, "usdinr": TOLERANCE},
+            blocking=frozenset({"xauusd", "usdinr"}),
+        )
+
+        reason = verdict.refusal_reason()
+        assert reason.count("did not resolve") == 1, reason
+        assert "usdinr, xauusd" in reason
+
+    def test_mixed_causes_are_both_named(self) -> None:
+        verdict = verdict_for(
+            {"usdinr": series_ending("2026-07-20", series_id="usdinr")},
+            unavailable={"xauusd": "every source declined"},
+            policies={"xauusd": TOLERANCE, "usdinr": TOLERANCE},
+            blocking=frozenset({"xauusd", "usdinr"}),
+        )
+
+        reason = verdict.refusal_reason()
+        assert "usdinr: did not reach the run date" in reason
+        assert "xauusd: did not resolve" in reason
+
+    def test_a_publishable_verdict_has_no_refusal_to_explain(self) -> None:
+        verdict = verdict_for({"xauusd": series_ending("2026-08-04")})
+
+        assert verdict.publishable
+        with pytest.raises(ValueError, match="no refusal"):
+            verdict.refusal_reason()
+
+
 class TestTheDeclarationsThemselves:
     def test_every_production_series_declares_a_tolerance(self) -> None:
         """The anti-rot test: a new series cannot ship without a freshness policy.
@@ -298,6 +373,24 @@ class TestTheNightlyExit:
         record = json.loads(skipped[0].read_text())
         assert "tolerance" in record["reason"]
         assert record["detail"]["series"], "the skip record must carry what it measured"
+
+        # Named series and a verdict that matches the detail block. A hardcoded reason
+        # passes the assertion above and fails these two, which is how the four records
+        # of 2026-08-06 through 08-11 came to describe a cause that had not occurred.
+        blocked = [
+            age for age in record["detail"]["series"] if age["blocking"] and age["verdict"] != FRESH
+        ]
+        assert blocked, "this fixture is supposed to block"
+        for age in blocked:
+            assert age["series_id"] in record["reason"], record["reason"]
+            assert _REFUSAL_PHRASE[age["verdict"]] in record["reason"], record["reason"]
+
+        # And only those. This fixture also leaves dxy and wti unresolved, but neither
+        # blocks publication, so neither is a reason the night was skipped. A reason
+        # listing every series that was merely unwell buries the one that refused.
+        for age in record["detail"]["series"]:
+            if not age["blocking"]:
+                assert age["series_id"] not in record["reason"], record["reason"]
 
     def test_a_fresh_run_publishes(
         self, fresh_cache: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

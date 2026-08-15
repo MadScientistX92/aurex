@@ -90,6 +90,24 @@ UNDECLARED = "undeclared"
 UNAVAILABLE = "unavailable"
 EMPTY = "empty"
 
+#: How each verdict reads in the one-line reason a skip record is filed under.
+#:
+#: These are separated for the same reason the verdicts are, and the skip records
+#: written before 2026-08-14 are why it is a mapping rather than a sentence. Every
+#: refusal was filed as "did not reach the run date within its declared tolerance"
+#: regardless of what happened, so four public records describe a series that never
+#: resolved — ``lag_days`` null, no last observation — as one that arrived too late.
+#: That is not merely imprecise: it names the freshness tolerance as the thing that
+#: stood in the way, and widening a tolerance is the one repair that must not be made
+#: here. A record whose stated cause points at the wrong knob is worse than a record
+#: with no cause at all, because it is actionable and the action is damage.
+_REFUSAL_PHRASE: Mapping[str, str] = {
+    STALE: "did not reach the run date within its declared tolerance",
+    UNAVAILABLE: "did not resolve: no source answered and nothing was cached",
+    EMPTY: "resolved but carries no observation",
+    UNDECLARED: "has no declared staleness tolerance, so it cannot be judged fresh",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class SeriesAge:
@@ -135,6 +153,27 @@ class FreshnessVerdict:
     @property
     def publishable(self) -> bool:
         return not self.failures
+
+    def refusal_reason(self) -> str:
+        """Why this run publishes nothing, named by verdict rather than by assumption.
+
+        The reason a skip record is filed under is the line a reader acts on, so it
+        states which series blocked and what was actually wrong with each. Verdicts are
+        grouped rather than concatenated per series: a night where three sources are
+        down should read as one outage, not three.
+        """
+        if self.publishable:
+            raise ValueError("a publishable verdict has no refusal to explain")
+
+        grouped: dict[str, list[str]] = {}
+        for age in self.failures:
+            grouped.setdefault(age.verdict, []).append(age.series_id)
+
+        return "; ".join(
+            f"{', '.join(sorted(series))}: "
+            f"{_REFUSAL_PHRASE.get(verdict, f'refused with verdict {verdict}')}"
+            for verdict, series in sorted(grouped.items())
+        )
 
     def raise_if_stale(self) -> None:
         """Refuse loudly. The nightly job's only correct response to a failure."""
