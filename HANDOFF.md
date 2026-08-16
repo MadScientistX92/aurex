@@ -55,7 +55,7 @@ Concretely, and enforced by tests:
 - **No point forecasts anywhere.** Not in the API, not in the UI, not in the README. A number without an interval or a distribution behind it is a bug.
 - **Every probability is scored.** A forecast that is never scored is marketing.
 - **The null is the driftless random walk.** Any model that does not beat it ships anyway, labelled as not beating it. Negative results are published, not buried.
-- **No overclaiming.** A CI guard greps for banned vocabulary ("beats the market", "institutional-grade", etc.).
+- **No overclaiming.** A CI guard greps user-facing text for a curated list of banned phrases: marketing vocabulary claiming to outperform a benchmark or to carry professional credentials, promises of certain gain or of no downside, and point-forecast language naming a level with no distribution behind it. The list is in `engine/tests/test_no_overclaiming.py`, which is deliberately the only file exempt from its own scan — the phrases are not repeated anywhere else, this line included, because a document that quotes them is a document the guard would have to be widened around rather than widened onto.
 - **Every published figure is mechanically tied to the artifact that produced it.** `tests/test_readme_direction.py` and `tests/test_readme_factors.py` parse the README cell by cell against the JSON and fail the build on disagreement. This mechanism has already caught a real error.
 
 ---
