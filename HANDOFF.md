@@ -116,17 +116,17 @@ The fallback is FRED `DEXINUS`, which carries daily observations but is **publis
 
 `usdinr` declares `max_lag_days=4` (`engine/aurex/assets/gold.py`), and the engine refuses when `(run_date − last_observation).days > 4` (`engine/aurex/data/freshness.py`). The nightly runs at 02:00 UTC, *before* the 20:15 UTC Monday release. So the lag a nightly would actually see is:
 
-| Night (02:00 UTC) | Newest observation available | Lag | Clears 4 days |
-|---|---|---|---|
-| Mon | Friday of the week before last | 10–11 | no |
-| Tue | previous Friday | 4 | yes, exactly at the boundary |
-| Wed | previous Friday | 5 | no |
-| Thu | previous Friday | 6 | no |
-| Fri | previous Friday | 7 | no |
-| Sat | previous Friday | 8 | no |
-| Sun | previous Friday | 9 | no |
+| Night (02:00 UTC) | On-time week (release Mon 20:15 UTC) | Lag | Holiday week (release slips to Tue) | Lag |
+|---|---|---|---|---|
+| Mon | Friday of the week before last | 10 | Friday of the week before last | 10 |
+| Tue | previous Friday | **4 — clears** | still Friday of the week before last | 11 |
+| Wed | previous Friday | 5 | previous Friday | 5 |
+| Thu | previous Friday | 6 | previous Friday | 6 |
+| Fri | previous Friday | 7 | previous Friday | 7 |
+| Sat | previous Friday | 8 | previous Friday | 8 |
+| Sun | previous Friday | 9 | previous Friday | 9 |
 
-**One night in seven, and only when the Monday release was on time** — 9 of the 11 release weeks in the measured window. On the other six nights, if Yahoo `INR=X` fails, the chain resolves `DEXINUS` successfully and the freshness guard then correctly refuses it, so the run skips exactly as if there were no fallback at all. The redundancy is real in the source chain and absent in the freshness budget: the tolerance was derived for a daily-published FX series, which the primary is and the fallback is not.
+**≈12% of nights, not one in seven.** An on-time week clears on exactly one night, Tuesday, at the boundary. A week whose release slips to Tuesday clears on **no night at all**: the Tuesday run happens before that day's release and sees a lag of 11, and by Wednesday the newly released data is already 5 days old. Nine of the eleven release weeks measured were on time, so the rate is **9 clearing nights in 77 ≈ 12%**. On every other night, if Yahoo `INR=X` fails, the chain resolves `DEXINUS` successfully and the freshness guard then correctly refuses it, so the run skips exactly as if there were no fallback at all. The redundancy is real in the source chain and absent in the freshness budget: the tolerance was derived for a daily-published FX series, which the primary is and the fallback is not.
 
 **Do not fix this by moving the tolerance.** The number is right for what it guards. The honest repairs are a fallback that publishes daily, or a declared acceptance that `usdinr` is single-sourced in practice.
 
