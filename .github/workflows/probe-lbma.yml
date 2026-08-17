@@ -3,61 +3,48 @@ name: Probe LBMA
 # THROWAWAY. Delete this file once a second source is chosen — it exists to answer
 # questions, not to be maintained.
 #
-# WHAT THE FIRST RUN SETTLED (run 31906804255, 20 attempts, one runner). The failure is
-# not a truncated body. LBMA answers a runner with HTTP 200 carrying a complete ~12KB
-# Cloudflare-fronted interstitial whose own remedy is a JavaScript reload five seconds
-# later carrying the state it just set. `aurex.data.sources.http.get` calls the
-# module-level `requests.get`, which builds and discards a Session per call, so nothing
-# it is handed is ever sent back. A courtesy-delayed retry cannot satisfy that page on
-# any attempt number and is rejected as a repair. The repair is a second source on a
-# different host.
+# SETTLED BY EARLIER ROUNDS, not re-measured here:
+#   * LBMA answers a runner with HTTP 200 carrying a complete ~12KB Cloudflare
+#     interstitial (run 31906804255, 20/20, 20 distinct bodies). Its remedy is a JS
+#     reload, and `http.get` builds and discards a Session per call, so retry is dead.
+#   * The same URL answered a different runner 5/5 with 913KB of valid JSON
+#     (run 31974956815). The failure is per-egress, not per-day.
+#   * FRED's LBMA fix was removed with all ICE Benchmark Administration data on
+#     2022-01-31. fxratesapi is rejected: weekend carry-forward, ≈ −0.34% against the
+#     PM fix, wrong fixing time, 366-day history wall. stooq.com and fsapi.gold.org
+#     serve `User-agent: * / Disallow: /`.
 #
-# WHAT THIS RUN ASKS. Which hosts will serve a cookie-less, honestly-identified client
-# from a runner, and what each one's last observation is when they do. Four fetched
-# arms, five attempts each, one sitting:
+# THIS ROUND asks whether the *administrator* of the benchmark publishes it anywhere a
+# cookie-less client can read, and whether a central bank redistributes a usable gold
+# price. Two arms fetched, five attempts each:
 #
-#   * lbma_gold_pm      — the control, the same URL and instrumentation as the settled
-#                         run, so this sitting is comparable to that one rather than
-#                         being a fresh set of numbers about a different day;
-#   * fred_lbma_gold_pm — the FRED redistribution of the LBMA PM fix. Reconnaissance
-#                         from a residential IP says FRED 404s it and the series page
-#                         redirects to the St. Louis Fed's announcement that ICE
-#                         Benchmark Administration data was removed from FRED on
-#                         2022-01-31. The arm is kept because "we checked" and "we
-#                         assumed it was gone" are not the same claim;
-#   * fred_dexinus      — a live FRED series Aurex already loads, present only so the
-#                         arm above can be read. A 404 beside a 200 on the same host is
-#                         a removed series; two 404s would be FRED refusing runners, and
-#                         one arm cannot tell those apart;
-#   * fxratesapi_xau    — the non-FRED, non-Yahoo candidate. Why this one: of the hosts
-#                         reachable without an API key, stooq.com and fsapi.gold.org
-#                         (World Gold Council) both carry `User-agent: * / Disallow: /`,
-#                         which bars Aurex before any transport question is asked;
-#                         data.nasdaq.com answers 403 from an Imperva edge;
-#                         exchangerate.host, Polygon, Twelve Data and Tiingo require a
-#                         key, which the nightly job has no secrets for by design; and
-#                         gold-api.com and the Swissquote public feed serve a snapshot
-#                         with no history. fxratesapi answers a cookie-less client with
-#                         daily JSON and has no robots.txt to bar us. Its known
-#                         limitation is history, not transport: the free timeseries
-#                         endpoint refuses a start date more than 366 days back, and the
-#                         nightly runs on a machine with no cache, so this arm measures
-#                         whether the host serves a runner at all — not that it could
-#                         backfill 2015.
+#   * lbma_gold_pm  — the control, unchanged, so every round is comparable to the last.
+#   * bundesbank_gold_frankfurt — BBEX3.D.XAU.DEM.EA.AC.C01. Found through the
+#     Bundesbank's own SDMX directory rather than guessed: /rest/metadata/dataflow/BBK
+#     lists BBEX3 as the exchange-rate-and-precious-metal flow, and the flow's bulk CSV
+#     export has exactly three columns whose name contains "Gold", all the same series
+#     at three frequencies. It is the Frankfurt Stock Exchange fixing in D-marks per
+#     kilo and it stops at the end of 1998. The arm is kept because a measured
+#     "discontinued in 1998" is a fact and a remembered one is not.
 #
-# Two more hosts are recorded robots-only: their robots.txt is fetched and the verdict
-# written down, and their data paths are never requested. A probe that ignores a
-# Disallow to find out what is behind it has answered a question nobody may act on.
+# ICE Benchmark Administration is NOT fetched, because after looking there is nothing
+# to fetch. IBA administers the LBMA Gold Price and publishes no unauthenticated
+# endpoint for it: ice.com/iba/lbma-gold-silver-price says the settings "are available
+# under licence from IBA (including for valuation and pricing activities and for use in
+# transactions)" and points prospective licensees at iba-licensing@ice.com;
+# developer.ice.com's LBMA Gold Price catalogue entry lists delivery over ICE Connect,
+# ICE Data API, ICE Data Files and ICE Global Network, all commercial, with intraday
+# data at four hours' delay and delayed data at midnight London. LBMA moved its own
+# historic benchmark tables to the members' portal in the week commencing 2025-11-24,
+# keeping "the most recent daily auction price … and chart data" public. The public
+# route to this benchmark is therefore the control arm, and that is the finding.
 #
-# GC=F stays excluded on cost-of-carry grounds. Yahoo is not tested here.
+# Each arm carries two kinds of field, never mixed: **measured** — transport, last
+# observation, lag against the tolerance read out of the asset, history depth, weekday
+# coverage, robots verdict — and **declared** — fixing time and licence terms, each
+# with the URL it was read from. A declared field is a citation, not a measurement.
 #
-# The arms mirroring production loaders (LBMA, FRED) do not honour robots.txt, because
-# those loaders pass `check_robots=False` and a probe that behaves differently from the
-# thing that failed is measuring something else. The new host is only fetched if its
-# robots.txt permits it.
-#
-# It writes nothing to the repository. `permissions: contents: read` makes that a
-# property of the token rather than a promise in a comment.
+# GC=F stays excluded. Yahoo is not tested here. It writes nothing to the repository.
 
 on:
   workflow_dispatch:
@@ -76,7 +63,7 @@ defaults:
 
 jobs:
   probe:
-    name: what do the candidate hosts return to a runner
+    name: does the administrator or a central bank publish this at all
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -96,125 +83,127 @@ jobs:
         run: |
           set -euo pipefail
           uv run python - <<'PY'
-          import csv
           import hashlib
-          import io
           import json
           import os
+          import re
           import time
-          from datetime import UTC, date, datetime, timedelta
+          from collections import Counter
+          from datetime import UTC, date, datetime
 
           import requests
 
           from aurex.assets import get as get_asset
           from aurex.config import HTTP_COURTESY_DELAY, HTTP_TIMEOUT, USER_AGENT
           from aurex.data.sources import http
-          from aurex.data.sources.fred import CSV_ENDPOINT
           from aurex.data.sources.lbma import GOLD_PM_URL
 
           attempts = int(os.environ["ATTEMPTS"])
 
-          # Deliberately hammering several hosts, so be more courteous than production
-          # rather than less: the configured delay is a floor here, not a target.
+          # Hammering somebody else's host, so be more courteous than production rather
+          # than less: the configured delay is a floor here, not a target.
           delay = max(HTTP_COURTESY_DELAY, 2.0)
 
           # The tolerance the nightly refuses on, read from the asset rather than
-          # recalled, so the lag column in any write-up is this repository's number.
+          # recalled, so the lag column is this repository's number.
           chain = get_asset("gold").price_sources()["xauusd"]
           tolerance = chain.freshness.describe() if chain.freshness else None
 
           today = datetime.now(UTC).date()
+          _ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-          # --- parsers ------------------------------------------------------------
-          # Each returns the last observation date the body actually carries, or None
-          # with a reason. A body that parses but ends in 2022 is a different failure
-          # from one that does not parse, and the tabulation needs to tell them apart.
+          # --- parsers, each returning every observation date the body carries -------
 
-          def last_lbma(body: bytes) -> tuple[str | None, int | None, str | None]:
-              payload = json.loads(body)
-              dates = [row["d"] for row in payload if row.get("d")]
-              return (max(dates) if dates else None), len(payload), None
+          def dates_lbma(body: bytes) -> list[str]:
+              return [row["d"] for row in json.loads(body) if row.get("d")]
 
-          def last_fred_csv(body: bytes) -> tuple[str | None, int | None, str | None]:
-              rows = list(csv.reader(io.StringIO(body.decode("utf-8", "replace"))))
-              if len(rows) < 2:
-                  return None, len(rows), "csv has no observations"
-              # FRED marks non-trading days with "."; the last *observation* is the
-              # last row carrying a number, which is not always the last row.
-              dated = [r for r in rows[1:] if len(r) >= 2 and r[1] not in (".", "")]
-              if not dated:
-                  return None, len(rows) - 1, "every value is a FRED missing marker"
-              return dated[-1][0], len(rows) - 1, None
+          def dates_bundesbank(body: bytes) -> list[str]:
+              """Bundesbank CSV: a metadata preamble, then `date,value[,flag]` rows.
 
-          def last_fxratesapi(body: bytes) -> tuple[str | None, int | None, str | None]:
-              payload = json.loads(body)
-              if not payload.get("success", True):
-                  return None, None, f"api reported failure: {payload.get('error')}"
-              rates = payload.get("rates") or {}
-              if not rates:
-                  return None, 0, "no rates in payload"
-              # Keys are ISO timestamps; the date part is the observation date.
-              return max(rates)[:10], len(rates), None
+              Rows carrying "." are the Bundesbank's missing marker and are not
+              observations — counting them would put the last observation on a day the
+              series does not actually cover.
+              """
+              out = []
+              for line in body.decode("utf-8-sig", "replace").splitlines():
+                  parts = line.split(",")
+                  if len(parts) >= 2 and _ISO.match(parts[0].strip('"')) and parts[1] not in (".", ""):
+                      out.append(parts[0].strip('"'))
+              return out
 
-          # --- arms ---------------------------------------------------------------
-
-          fx_start = (today - timedelta(days=30)).isoformat()
           arms = [
               {
                   "name": "lbma_gold_pm",
-                  "role": "control — the settled run's arm, unchanged",
+                  "role": "control — the same URL every round has used",
                   "url": GOLD_PM_URL,
-                  "parse": last_lbma,
+                  "parse": dates_lbma,
                   "honour_robots": False,
+                  "declared": {
+                      "fixing_time": "15:00 London (LBMA Gold Price PM auction)",
+                      "fixing_time_source": "https://www.lbma.org.uk/prices-and-data/lbma-gold-price",
+                      "licence": (
+                          "Administered by ICE Benchmark Administration; benchmark settings "
+                          "available under licence from IBA. LBMA moved historic tables to "
+                          "its members' portal in the week commencing 2025-11-24, keeping "
+                          "the most recent daily auction price and chart data public. The "
+                          "status of this JSON feed under those terms is unresolved and is "
+                          "the subject of an outgoing enquiry."
+                      ),
+                      "licence_source": "https://www.lbma.org.uk/articles/lbma-benchmark-prices-data-tables-are-moving",
+                  },
               },
               {
-                  "name": "fred_lbma_gold_pm",
-                  "role": "candidate — FRED's redistribution of the LBMA PM fix",
-                  "series_id": "GOLDPMGBD228NLBM",
-                  "url": f"{CSV_ENDPOINT}?id=GOLDPMGBD228NLBM",
-                  "parse": last_fred_csv,
-                  "honour_robots": False,
-              },
-              {
-                  "name": "fred_dexinus",
-                  "role": "control — a live FRED series Aurex already loads",
-                  "series_id": "DEXINUS",
-                  "url": f"{CSV_ENDPOINT}?id=DEXINUS",
-                  "parse": last_fred_csv,
-                  "honour_robots": False,
-              },
-              {
-                  "name": "fxratesapi_xau",
-                  "role": "candidate — non-FRED, non-Yahoo host",
+                  "name": "bundesbank_gold_frankfurt",
+                  "role": "candidate — the only gold price series in the Bundesbank's directory",
                   "url": (
-                      "https://api.fxratesapi.com/timeseries"
-                      f"?start_date={fx_start}&end_date={today.isoformat()}"
-                      "&base=USD&currencies=XAU"
+                      "https://api.statistiken.bundesbank.de/rest/data/BBEX3/"
+                      "D.XAU.DEM.EA.AC.C01?format=csv&lang=en"
                   ),
-                  "parse": last_fxratesapi,
+                  "parse": dates_bundesbank,
                   "honour_robots": True,
+                  "declared": {
+                      "series_key": "BBEX3.D.XAU.DEM.EA.AC.C01",
+                      "series_title": (
+                          "Gold price in Frankfurt am Main / Frankfurt Stock Exchange fixing "
+                          "/ 1 kg of fine gold = DM ... / up to the end of 1998"
+                      ),
+                      "how_found": (
+                          "/rest/metadata/dataflow/BBK → BBEX3; then the flow's bulk CSV "
+                          "export, whose only 'Gold' columns are this series at D, M and A."
+                      ),
+                      "fixing_time": "Frankfurt Stock Exchange fixing; quote is DM per kg of fine gold",
+                      "fixing_time_source": "https://api.statistiken.bundesbank.de/rest/data/BBEX3/D.XAU.DEM.EA.AC.C01?format=csv&lang=en",
+                      "licence": (
+                          "Bundesbank statistics are free to use with attribution; the series "
+                          "itself is discontinued, so the licence is moot."
+                      ),
+                      "licence_source": "https://www.bundesbank.de/en/statistics/time-series-databases",
+                  },
               },
           ]
 
-          # Considered and not fetched. Recorded here rather than in a comment so the
+          # Looked at and not fetched, recorded here rather than in a comment so the
           # artifact carries the reason the candidate list is as short as it is.
-          robots_only = [
+          not_fetched = [
               {
-                  "name": "stooq_xauusd",
-                  "url": "https://stooq.com/q/d/l/?s=xauusd&i=d",
-                  "note": "free daily XAUUSD with full history; the obvious candidate",
-              },
-              {
-                  "name": "wgc_fsapi",
-                  "url": "https://fsapi.gold.org/api/goldprice/v11/chart/price/USD/2015-01-01/2026-08-17",
-                  "note": "World Gold Council chart feed; also downsampled to ~491 points",
+                  "name": "ice_benchmark_administration",
+                  "why": (
+                      "The administrator of the LBMA Gold Price publishes no "
+                      "unauthenticated endpoint. Delivery is ICE Connect / ICE Data API / "
+                      "ICE Data Files / ICE Global Network, all licensed; intraday data at "
+                      "four hours' delay, delayed data at midnight London."
+                  ),
+                  "sources": [
+                      "https://www.ice.com/iba/lbma-gold-silver-price",
+                      "https://developer.ice.com/fixed-income-data-services/catalog/lbma-gold-price",
+                      "https://www.lbma.org.uk/articles/lbma-benchmark-prices-data-tables-are-moving",
+                  ],
+                  "contact": "iba-licensing@ice.com",
               },
           ]
 
-          # The request is assembled to match aurex.data.sources.http.get exactly rather
-          # than calling it, because `get` raises for non-2xx and a probe must record the
-          # non-2xx rather than lose it. If these headers drift from that function the
-          # probe stops measuring the thing that failed.
+          # Assembled to match aurex.data.sources.http.get exactly rather than calling
+          # it, because `get` raises for non-2xx and a probe must record the non-2xx.
           headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "gzip, deflate"}
 
           def egress_now() -> str:
@@ -223,13 +212,11 @@ jobs:
               except Exception as exc:  # noqa: BLE001 - diagnostic only, never fatal
                   return f"unknown: {type(exc).__name__}"
 
-          # Which egress address the runner drew. Taken at both ends: if the address
-          # changes mid-sitting, every per-IP reading in the artifact is about two IPs.
           egress_start = egress_now()
 
           def robots_verdict(url: str) -> dict[str, object]:
-              """What robots.txt says, and what the raw file was, without acting on it."""
-              record: dict[str, object] = {"url": url}
+              """What robots.txt says. Now read with Aurex's own client, not urllib."""
+              record: dict[str, object] = {}
               try:
                   record["allows"] = http.robots_allows(url)
               except Exception as exc:  # noqa: BLE001
@@ -245,6 +232,25 @@ jobs:
                   record["robots_error"] = f"{type(exc).__name__}: {exc}"
               return record
 
+          def shape(dates: list[str]) -> dict[str, object]:
+              """History depth and weekday coverage, from the observations themselves."""
+              parsed = sorted({date.fromisoformat(d) for d in dates})
+              if not parsed:
+                  return {"observations": 0}
+              recent = parsed[-260:]
+              weekdays = Counter(d.strftime("%a") for d in recent)
+              return {
+                  "observations": len(parsed),
+                  "first_observation": parsed[0].isoformat(),
+                  "last_observation": parsed[-1].isoformat(),
+                  "history_years": round((parsed[-1] - parsed[0]).days / 365.25, 1),
+                  # Measured, not assumed: a series that quotes weekends is a different
+                  # kind of series from one that prints on London business days, and
+                  # weekend rows are how a stale quote satisfies a freshness guard.
+                  "weekday_counts_last_260_observations": dict(sorted(weekdays.items())),
+                  "quotes_weekends": bool(weekdays["Sat"] or weekdays["Sun"]),
+              }
+
           records: list[dict[str, object]] = []
           per_arm: dict[str, dict[str, object]] = {}
 
@@ -253,10 +259,9 @@ jobs:
               summary: dict[str, object] = {
                   "role": arm["role"],
                   "url": arm["url"],
+                  "declared": arm["declared"],
                   "robots": robots,
                   "counts": {},
-                  "last_observations": [],
-                  "distinct_bodies": 0,
               }
               per_arm[arm["name"]] = summary
 
@@ -297,7 +302,6 @@ jobs:
                       "elapsed_s": round(time.monotonic() - started, 3),
                       "bytes": len(body),
                       "sha256": digest,
-                      # The same one-line description a skip record would now carry.
                       "describe": http.describe_response(response),
                       "headers": {
                           name: value
@@ -305,9 +309,8 @@ jobs:
                           if name.lower() in http._DIAGNOSTIC_HEADERS
                           or name.lower().startswith("cf-")
                       },
-                      # Names only, never values. This is the §1 answer to "could a
-                      # retry work": whatever state the responder hands out here is
-                      # dropped when this response object goes out of scope, because
+                      # Names only, never values. Whatever state a responder hands out
+                      # is dropped when this response goes out of scope, because
                       # http.get builds a Session per call and keeps no jar.
                       "set_cookie_names": sorted(response.cookies.keys()),
                       "body_head": repr(body[:200]),
@@ -317,42 +320,57 @@ jobs:
                       record["outcome"] = "http-error"
                   else:
                       try:
-                          last, rows, why = arm["parse"](body)
+                          dates = arm["parse"](body)
                       except Exception as exc:  # noqa: BLE001 - unparseable is a result
                           record |= {
                               "outcome": "unparseable",
                               "error": f"{type(exc).__name__}: {exc}",
                           }
                       else:
-                          record |= {
-                              "outcome": "ok" if last else "parsed-but-empty",
-                              "rows": rows,
-                              "last_observation": last,
-                              "parse_note": why,
-                          }
+                          measured = shape(dates)
+                          last = measured.get("last_observation")
+                          record |= {"outcome": "ok" if last else "parsed-but-empty"} | measured
                           if last:
-                              lag = (today - date.fromisoformat(last)).days
+                              lag = (today - date.fromisoformat(str(last))).days
                               record["lag_days"] = lag
                               if tolerance:
                                   record["within_tolerance"] = lag <= tolerance["max_lag_days"]
 
                   records.append(record)
-                  print(json.dumps(record))
+                  # The shape block repeats identically on every attempt; print the
+                  # transport line and keep the file as the full record.
+                  print(json.dumps({k: v for k, v in record.items() if k != "body_head"})[:600])
 
               counts: dict[str, int] = {}
-              observed: list[str] = []
               for entry in records:
-                  if entry["arm"] != arm["name"]:
-                      continue
-                  outcome = str(entry.get("outcome"))
-                  counts[outcome] = counts.get(outcome, 0) + 1
-                  if entry.get("last_observation"):
-                      observed.append(str(entry["last_observation"]))
+                  if entry["arm"] == arm["name"]:
+                      counts[str(entry.get("outcome"))] = counts.get(str(entry.get("outcome")), 0) + 1
+              latest = next(
+                  (e for e in reversed(records) if e["arm"] == arm["name"] and e.get("last_observation")),
+                  None,
+              )
               summary |= {
                   "counts": counts,
                   "failure_rate": round(1 - counts.get("ok", 0) / attempts, 3),
                   "distinct_bodies": len(hashes),
-                  "last_observations": sorted(set(observed)),
+                  "measured": (
+                      {
+                          key: latest[key]
+                          for key in (
+                              "observations",
+                              "first_observation",
+                              "last_observation",
+                              "history_years",
+                              "weekday_counts_last_260_observations",
+                              "quotes_weekends",
+                              "lag_days",
+                              "within_tolerance",
+                          )
+                          if key in latest
+                      }
+                      if latest
+                      else None
+                  ),
               }
 
           artifact = {
@@ -368,9 +386,7 @@ jobs:
                   "recorded_at": datetime.now(UTC).isoformat(),
               },
               "arms": per_arm,
-              "considered_not_fetched": [
-                  entry | robots_verdict(entry["url"]) for entry in robots_only
-              ],
+              "considered_not_fetched": not_fetched,
               "attempts": records,
           }
 
