@@ -611,6 +611,7 @@ def direction(
     from aurex.data.schedules import load_policy_breaks
     from aurex.pipeline import DEFAULT_LOOKBACK_DAYS, _price_column, resolve_series
     from aurex.score import TerminalAbove, WalkForwardRequest
+    from aurex.score.progress import ElapsedProgress
 
     asset = get(asset_id)
     start_date = date.fromisoformat(since)
@@ -663,6 +664,11 @@ def direction(
         # make the event worth grading, and the event is why the run is uncentred.
         demean=False,
         events=(event,),
+        # On a hosted runner this loop is a shade under six hours and the platform kills
+        # a job at exactly six, so the run needs to be able to say — in its first ten
+        # minutes — whether it is going to finish. It goes to stderr so --dry-run's JSON
+        # on stdout stays parseable.
+        progress=ElapsedProgress(label="direction"),
     )
 
     block = describe_direction(
@@ -672,6 +678,17 @@ def direction(
         "engine_version": __version__,
         "code": code_provenance().describe(),
         "source": price.meta.to_dict(),
+        # Where the prices came from, as distinct from who published them. A run that
+        # resolved offline read a cache, and a cache has an end date that is not
+        # today's — §6: "if a run runs from a cache, the artifact must name the cache's
+        # end date". `source.end` already carries it; this says which store it came out
+        # of and that no network was touched, so a reader can tell a cache-backed run
+        # from a live one without inferring it from the dates.
+        "resolution": {
+            "offline": offline,
+            "cache_dir": str(config.CACHE_DIR),
+            "series_end": price.meta.end.isoformat() if price.meta.end else None,
+        },
         "reproduce": _direction_command(
             asset_id=asset.id,
             since=start_date.isoformat(),

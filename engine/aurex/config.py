@@ -21,8 +21,15 @@ PUBLIC_DATA_DIR: Final[Path] = REPO_ROOT / "public-data"
 GRAMS_PER_TROY_OUNCE: Final[float] = 31.1034768
 
 #: Identify Aurex honestly to every server we touch, with a contact route.
+#:
+#: The URL must be the repository that actually exists. It said
+#: ``github.com/aurex-engine/aurex`` until 2026-08-17, which is a 404 — and neither is
+#: the org — so every request Aurex has ever made carried a contact route a server
+#: operator could not follow. That is worse than declaring no route at all: a
+#: dead link claims accountability the client was not offering. Checked against the
+#: `origin` remote, which is `https://github.com/MadScientistX92/aurex.git`.
 USER_AGENT: Final[str] = (
-    "aurex-research/0.1 (+https://github.com/aurex-engine/aurex; open-source gold research)"
+    "aurex-research/0.1 (+https://github.com/MadScientistX92/aurex; open-source gold research)"
 )
 
 #: Per-request timeout, seconds. Nightly job must fail fast rather than hang.

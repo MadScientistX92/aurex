@@ -1,39 +1,52 @@
 name: Probe LBMA
 
-# THROWAWAY. Delete this file once the mechanism is known — it exists to answer one
-# question and has no place in the repository afterwards.
+# THROWAWAY. Delete this file once a second source is chosen — it exists to answer
+# questions, not to be maintained.
 #
-# The question: `aurex factors` and four nightly runs failed to resolve `xauusd` with
-# `JSONDecodeError: Expecting value: line 1 column 1 (char 0)` from
-# prices.lbma.org.uk. Because `http.get` raises for non-2xx *before* decoding, the
-# response was 2xx carrying something that is not JSON. Two candidates, needing
-# opposite repairs:
+# SETTLED BY EARLIER ROUNDS, not re-measured here: retry is mechanically dead (200 with a
+# complete ~12KB Cloudflare interstitial, 20/20, 20 distinct bodies, run 31906804255);
+# the failure follows the egress IP and not the colo (round 3 passed 5/5 from IAD, the
+# same colo that failed 20/20); FRED's LBMA fix was removed 2022-01-31; ICE publishes no
+# unauthenticated endpoint; the Bundesbank's only gold series ended 1998-12-30; stooq and
+# fsapi.gold.org serve `Disallow: /`; fxratesapi is rejected on the data.
 #
-#   * a Cloudflare challenge page (HTML, 200) — the host will not serve this client
-#     from this network at all, so a second source on a *different host* is required
-#     and GC=F stays excluded on cost-of-carry grounds;
-#   * an empty or truncated body — transient, and a courtesy-delayed retry inside the
-#     loader may be the whole fix, which is far smaller than a second source carrying
-#     its own provenance review.
+# ROUND 4 asks about Yahoo — `XAUUSD=X` as a spot second source, and `INR=X`, which is
+# the *primary* of a blocking series and whose runner failure rate had never been
+# measured. **Neither is fetched, and the reason is the finding.** `yfinance` fetches
+# from `query1.finance.yahoo.com` / `query2.finance.yahoo.com`, and both hosts serve
+# exactly:
 #
-# From a residential IP the endpoint answered 12/12 with 913,005 bytes of valid JSON,
-# so the discriminator is not the User-Agent. Runner outcomes put the failure rate near
-# 56% (4 resolved, 5 failed, 2026-08-05 to 08-13), and on 2026-08-13 a runner resolved
-# the fix at 04:05 UTC while another failed on it at 19:12 — same day, same endpoint,
-# opposite results — so this is per-run and not an outage anyone could have waited out.
-# That rate is still inferred from nine runs on nine runners across nine days. This
-# measures it directly: 20 attempts, one runner, one sitting.
+#     User-agent: *
+#     Disallow: /
 #
-# It writes nothing to the repository. `permissions: contents: read` makes that a
-# property of the token rather than a promise in a comment.
+# 26 bytes, a blanket refusal, confirmed with Aurex's own client after the robots guard
+# was corrected. Round 3's probe declined to fetch stooq for the same reason and said so
+# in a comment: "a probe that ignores a Disallow to find out what is behind it has
+# answered a question nobody may act on." That applies here even though — especially
+# though — the host in question is one this repository already fetches from nightly.
+# `YahooLoader` delegates transport to `yfinance`, which never consults robots.txt, so
+# `usdinr`, `xau_futures` and `vix` have been resolving against a blanket Disallow for
+# the whole build. Recording that is worth more than five more requests confirming it.
+#
+# What replaces the measurement, and is better than it: the repository already holds
+# eleven nights of runner evidence about `INR=X`. Every published artifact records which
+# loader resolved each series and what it fell back through, and every skip record
+# carries the same for the night it refused. This job reads them off the checkout — no
+# new traffic — and counts. Five synthetic attempts would have been a worse sample than
+# eleven real nightly runs.
+#
+# The one arm still fetched is LBMA, unchanged, so every round stays comparable.
+#
+# GC=F stays excluded on cost-of-carry grounds; that exclusion is about the instrument
+# and is untouched by anything here. It writes nothing to the repository.
 
 on:
   workflow_dispatch:
     inputs:
       attempts:
-        description: "Number of fetches."
+        description: "Fetches per arm."
         type: string
-        default: "20"
+        default: "5"
 
 permissions:
   contents: read
@@ -44,7 +57,7 @@ defaults:
 
 jobs:
   probe:
-    name: what does LBMA actually return to a runner
+    name: what the record already says, and one control arm
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -58,55 +71,80 @@ jobs:
 
       - run: uv sync --frozen
 
-      - name: fetch the fix repeatedly and record what comes back
+      - name: fetch the control, read the record, and record what is refused
         env:
           ATTEMPTS: ${{ inputs.attempts }}
         run: |
           set -euo pipefail
           uv run python - <<'PY'
+          import glob
           import hashlib
           import json
           import os
           import time
-          from datetime import UTC, datetime
+          from collections import Counter
+          from datetime import UTC, date, datetime
 
           import requests
 
-          from aurex.config import HTTP_COURTESY_DELAY, HTTP_TIMEOUT, USER_AGENT
+          from aurex.assets import get as get_asset
+          from aurex.config import HTTP_COURTESY_DELAY, HTTP_TIMEOUT, REPO_ROOT, USER_AGENT
           from aurex.data.sources import http
           from aurex.data.sources.lbma import GOLD_PM_URL
 
           attempts = int(os.environ["ATTEMPTS"])
-
-          # Deliberately hammering one host, so be more courteous than production
-          # rather than less: the configured delay is a floor here, not a target.
           delay = max(HTTP_COURTESY_DELAY, 2.0)
 
-          # The request is assembled to match aurex.data.sources.http.get exactly
-          # rather than calling it, because `get` raises for non-2xx and a probe must
-          # record the non-2xx rather than lose it. If these headers drift from that
-          # function the probe stops measuring the thing that failed.
+          chains = get_asset("gold").price_sources()
+          tolerance = {
+              sid: chain.freshness.describe()
+              for sid, chain in chains.items()
+              if chain.freshness
+          }
+          today = datetime.now(UTC).date()
+
           headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "gzip, deflate"}
 
-          # Which egress address the runner drew. If failures cluster by IP or ASN,
-          # that is the reputation hypothesis with evidence under it; if a single IP
-          # both succeeds and fails, it is not.
-          egress = None
-          try:
-              egress = requests.get("https://api.ipify.org", timeout=10).text.strip()
-          except Exception as exc:  # noqa: BLE001 - diagnostic only, never fatal
-              egress = f"unknown: {type(exc).__name__}"
+          def egress_now() -> str:
+              try:
+                  return requests.get("https://api.ipify.org", timeout=10).text.strip()
+              except Exception as exc:  # noqa: BLE001 - diagnostic only, never fatal
+                  return f"unknown: {type(exc).__name__}"
 
-          records = []
+          egress_start = egress_now()
+
+          def robots_verdict(url: str) -> dict[str, object]:
+              """What robots.txt says, read with Aurex's client rather than urllib's."""
+              record: dict[str, object] = {"url": url}
+              try:
+                  record["allows"] = http.robots_allows(url)
+              except Exception as exc:  # noqa: BLE001
+                  record["allows"] = f"error: {type(exc).__name__}: {exc}"
+              origin = "/".join(url.split("/")[:3])
+              try:
+                  response = requests.get(f"{origin}/robots.txt", headers=headers, timeout=15)
+                  record |= {
+                      "robots_status": response.status_code,
+                      "robots_bytes": len(response.content),
+                      "robots_body": response.content[:400].decode("utf-8", "replace"),
+                  }
+              except Exception as exc:  # noqa: BLE001
+                  record["robots_error"] = f"{type(exc).__name__}: {exc}"
+              return record
+
+          # ---------------------------------------------------------------- control arm
+
+          records: list[dict[str, object]] = []
+          hashes: set[str] = set()
           for attempt in range(1, attempts + 1):
-              if attempt > 1:
-                  time.sleep(delay)
-
+              time.sleep(delay)
               started = time.monotonic()
-              record = {
+              record: dict[str, object] = {
+                  "arm": "lbma_gold_pm",
                   "attempt": attempt,
                   "at": datetime.now(UTC).isoformat(),
-                  "egress_ip": egress,
+                  "url": GOLD_PM_URL,
+                  "egress_ip": egress_start,
               }
               try:
                   response = requests.get(GOLD_PM_URL, headers=headers, timeout=HTTP_TIMEOUT)
@@ -121,13 +159,13 @@ jobs:
                   continue
 
               body = response.content
+              digest = hashlib.sha256(body).hexdigest()
+              hashes.add(digest)
               record |= {
                   "status": response.status_code,
                   "elapsed_s": round(time.monotonic() - started, 3),
                   "bytes": len(body),
-                  "sha256": hashlib.sha256(body).hexdigest()[:16],
-                  # The same one-line description a skip record would now carry, so
-                  # this run also confirms that description is worth having.
+                  "sha256": digest,
                   "describe": http.describe_response(response),
                   "headers": {
                       name: value
@@ -135,46 +173,178 @@ jobs:
                       if name.lower() in http._DIAGNOSTIC_HEADERS
                       or name.lower().startswith("cf-")
                   },
+                  "set_cookie_names": sorted(response.cookies.keys()),
+                  "body_head": repr(body[:200]),
               }
-
               if response.status_code >= 400:
                   record["outcome"] = "http-error"
               else:
                   try:
-                      payload = response.json()
-                  except ValueError as exc:
-                      record |= {
-                          "outcome": "non-json",
-                          "error": str(exc),
-                          # The whole point. Enough of the body to name the mechanism.
-                          "body_head": body[:400].decode("utf-8", "replace"),
-                      }
+                      payload = json.loads(body)
+                      dates = sorted({row["d"] for row in payload if row.get("d")})
+                  except Exception as exc:  # noqa: BLE001
+                      record |= {"outcome": "unparseable", "error": f"{type(exc).__name__}: {exc}"}
                   else:
-                      record |= {"outcome": "ok", "rows": len(payload)}
-
+                      last = dates[-1] if dates else None
+                      weekdays = Counter(
+                          date.fromisoformat(d).strftime("%a") for d in dates[-260:]
+                      )
+                      record |= {
+                          "outcome": "ok" if last else "parsed-but-empty",
+                          "observations": len(dates),
+                          "first_observation": dates[0] if dates else None,
+                          "last_observation": last,
+                          "weekday_counts_last_260_observations": dict(sorted(weekdays.items())),
+                          "quotes_weekends": bool(weekdays["Sat"] or weekdays["Sun"]),
+                      }
+                      if last:
+                          lag = (today - date.fromisoformat(last)).days
+                          record["lag_days"] = lag
+                          record["within_tolerance"] = lag <= tolerance["xauusd"]["max_lag_days"]
               records.append(record)
-              print(json.dumps(record))
+              print(json.dumps({k: v for k, v in record.items() if k != "body_head"})[:600])
 
-          counts: dict[str, int] = {}
-          for record in records:
-              counts[record["outcome"]] = counts.get(record["outcome"], 0) + 1
+          counts: Counter[str] = Counter(str(r.get("outcome")) for r in records)
 
-          summary = {
-              "url": GOLD_PM_URL,
-              "attempts": attempts,
-              "delay_s": delay,
-              "egress_ip": egress,
-              "user_agent": USER_AGENT,
-              "counts": counts,
-              "failure_rate": round(1 - counts.get("ok", 0) / attempts, 3),
-              "distinct_bodies": len({r.get("sha256") for r in records if r.get("sha256")}),
-              "recorded_at": datetime.now(UTC).isoformat(),
+          # ------------------------------------------------- refused, and why, in full
+
+          refused = [
+              {
+                  "name": "yahoo_xauusd_spot",
+                  "intended_url": "https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD=X",
+                  "why_not_fetched": (
+                      "The host serves a blanket `User-agent: * / Disallow: /`. Spot gold "
+                      "would have been the best remaining second-source candidate and the "
+                      "GC=F cost-of-carry exclusion does not apply to it, so this is a "
+                      "candidate lost to the site's stated wishes rather than to its data."
+                  ),
+              },
+              {
+                  "name": "yahoo_inr_primary",
+                  "intended_url": "https://query1.finance.yahoo.com/v8/finance/chart/INR=X",
+                  "why_not_fetched": (
+                      "Same host, same blanket Disallow — and this is the *primary* of a "
+                      "blocking series, reached through `yfinance`, which never consults "
+                      "robots.txt. The nightly has therefore been fetching against that "
+                      "refusal for the whole build. Measured from the repository's own "
+                      "record below instead of by adding five more of the same requests."
+                  ),
+              },
+          ]
+          for entry in refused:
+              entry["robots"] = robots_verdict(entry["intended_url"])
+
+          # ------------------------------- what eleven nights of runners already recorded
+
+          def resolution_record() -> dict[str, object]:
+              """Which loader actually resolved each series, per night, from the artifacts.
+
+              Published artifacts carry `sources[series].source_name` and the `fallbacks`
+              it stepped through; skip records carry the same series detail for the night
+              they refused. Together they are every nightly run this repository has made,
+              which is a larger and more honest sample than any number of attempts fired
+              from one runner in one sitting.
+              """
+              by_series: dict[str, Counter[str]] = {}
+              nights: list[dict[str, object]] = []
+
+              for path in sorted(glob.glob(str(REPO_ROOT / "public-data/forecasts/2*.json"))):
+                  block = json.loads(open(path).read())
+                  night = {"night": os.path.basename(path)[:-5], "published": True, "series": {}}
+                  for sid, meta in (block.get("sources") or {}).items():
+                      by_series.setdefault(sid, Counter())[meta["source_name"]] += 1
+                      night["series"][sid] = {
+                          "resolved_by": meta["source_name"],
+                          "fell_back_through": meta.get("fallbacks") or [],
+                          "end": meta.get("end"),
+                      }
+                  for sid, why in (block.get("unavailable") or {}).items():
+                      by_series.setdefault(sid, Counter())["UNAVAILABLE"] += 1
+                      night["series"][sid] = {"resolved_by": None, "why": str(why)[:200]}
+                  nights.append(night)
+
+              for path in sorted(
+                  glob.glob(str(REPO_ROOT / "public-data/forecasts/skipped/*.json"))
+              ):
+                  block = json.loads(open(path).read())
+                  detail = block.get("detail") or {}
+                  rows = detail.get("series") if isinstance(detail, dict) else None
+                  night = {
+                      "night": os.path.basename(path)[:-5],
+                      "published": False,
+                      "reason": block.get("reason"),
+                      "series": {},
+                  }
+                  for row in rows or []:
+                      sid = row.get("series_id")
+                      if not sid:
+                          continue
+                      # A skip record states the verdict, not the loader. "Resolved" here
+                      # means the series reached the guard with an observation date at
+                      # all; "unavailable" means no source produced one.
+                      resolved = row.get("last_observation") is not None
+                      by_series.setdefault(sid, Counter())[
+                          "resolved (skip night)" if resolved else "UNAVAILABLE"
+                      ] += 1
+                      night["series"][sid] = {
+                          "verdict": row.get("verdict"),
+                          "last_observation": row.get("last_observation"),
+                          "lag_days": row.get("lag_days"),
+                          "detail": str(row.get("detail"))[:200],
+                      }
+                  nights.append(night)
+
+              return {
+                  "nights_examined": len(nights),
+                  "by_series": {sid: dict(counter) for sid, counter in sorted(by_series.items())},
+                  "nights": sorted(nights, key=lambda n: str(n["night"])),
+              }
+
+          artifact = {
+              "summary": {
+                  "round": 4,
+                  "attempts_per_arm": attempts,
+                  "delay_s": delay,
+                  "user_agent": USER_AGENT,
+                  "timeout_s": HTTP_TIMEOUT,
+                  "egress_ip_start": egress_start,
+                  "egress_ip_end": egress_now(),
+                  "run_date_utc": today.isoformat(),
+                  "freshness_tolerances": tolerance,
+                  "recorded_at": datetime.now(UTC).isoformat(),
+              },
+              "arms": {
+                  "lbma_gold_pm": {
+                      "role": "control — the same URL every round has used",
+                      "url": GOLD_PM_URL,
+                      "robots": robots_verdict(GOLD_PM_URL),
+                      "counts": dict(counts),
+                      "failure_rate": round(1 - counts["ok"] / attempts, 3),
+                      "distinct_bodies": len(hashes),
+                  }
+              },
+              "refused_on_robots": refused,
+              "repository_record": resolution_record(),
+              "attempts": records,
           }
 
           with open("lbma-probe.json", "w") as handle:
-              json.dump({"summary": summary, "attempts": records}, handle, indent=2)
+              json.dump(artifact, handle, indent=2)
 
-          print("\n" + json.dumps(summary, indent=2))
+          print(
+              "\n"
+              + json.dumps(
+                  {
+                      "summary": artifact["summary"],
+                      "arms": artifact["arms"],
+                      "refused_on_robots": [
+                          {"name": e["name"], "allows": e["robots"].get("allows")} for e in refused
+                      ],
+                      "repository_record": artifact["repository_record"]["by_series"],
+                  },
+                  indent=2,
+              )
+          )
           PY
 
       # `if: always()` because a probe that only uploads its findings when nothing went

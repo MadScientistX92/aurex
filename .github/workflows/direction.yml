@@ -21,6 +21,38 @@ name: Direction
 # shootout: this job writes public-data/ and nothing else, and fails if it staged
 # anything outside it. A job that could edit prose is a job that can rewrite the
 # pre-registration it was meant to test.
+#
+# WHY THIS RUN MAY BE OFFLINE, AND WHY IT IS NOT BY DEFAULT. `aurex direction` applies
+# **no** freshness guard: it calls `resolve_series` (aurex/cli.py:619) → `_resolve` →
+# `chain.load` (aurex/pipeline.py:182, 199), and `assess()` is reached only from
+# `pipeline.run` (aurex/pipeline.py:98) and `aurex pipeline` (aurex/cli.py:91). Neither is
+# on this path. That is §6's test for when a cache is honest: this run makes no claim about
+# today's price, so a series ending weeks ago grades exactly as well as a live one and
+# dissolves nothing — the same argument that makes a cache right for `factors.yml` and
+# wrong for `nightly.yml`, where the guard exists precisely to refuse the stale copy a
+# cache would supply.
+#
+# So a cache is *permitted* here, and it is the better input when one exists: it drops the
+# LBMA dependency, which fails roughly half the time from a runner. But `cache_dir`
+# defaulted to `tests/fixtures/bench-cache`, a path that **has never existed in this
+# repository** — so from the day the offline hunk landed until 2026-08-17 this job would
+# have exited in its first minute, and never did, because the only run it ever had used the
+# pre-offline version from `main`. A default naming a file nobody committed is not a
+# default; it is a job that cannot run.
+#
+# The repair keeps both paths rather than dropping either. `cache_dir` now defaults to
+# empty and means **resolve live**, which is what the one successful run actually did
+# (32044823578, 3h14m, `--step 10`). Name a cache and the run goes offline against it, with
+# the pre-flight below refusing one that does not cover the requested window rather than
+# silently grading a shorter sample. Committing a cache that would restore the offline
+# default is a separate decision and needs the LBMA history question settled first.
+#
+# Either way the artifact must say what it read. §6: a run reproducible only from a cache
+# nobody can see is the `--to` problem wearing a different hat. The emitted block carries
+# `resolution.offline`, `resolution.cache_dir` and `resolution.series_end`, and the guard
+# step checks them **against the mode the run was dispatched in** — a live run that came
+# back claiming `offline: true`, or a cache-backed run claiming `false`, is a run whose
+# provenance does not describe it.
 
 on:
   workflow_dispatch:
@@ -29,6 +61,14 @@ on:
         description: "Registered asset id to grade"
         type: string
         default: gold
+      cache_dir:
+        description: "Cache to resolve from, e.g. tests/fixtures/seed-cache. Empty resolves live."
+        type: string
+        default: ""
+      from:
+        description: "First forecast date (YYYY-MM-DD). A named cache must cover it."
+        type: string
+        default: "2015-01-01"
       to:
         description: "Last observation the run may see (YYYY-MM-DD). Empty uses the series' own end."
         type: string
@@ -85,10 +125,102 @@ jobs:
                   print(f"{name}: NOT INSTALLED")
           PY
 
-      - name: grade direction
+      # The cache is the entire input to this run, so its coverage is checked before
+      # two hours of compute rather than discovered in the artifact afterwards. A cache
+      # that starts after the requested `--from` does not fail — it silently grades a
+      # shorter sample, and a resolution computed on fourteen months of prices would be
+      # published under the same field names as one computed on eleven years.
+      - name: the cache covers the window this run claims to grade
+        if: inputs.cache_dir != ''
+        env:
+          AUREX_CACHE_DIR: ${{ inputs.cache_dir }}
+        run: |
+          uv run python - <<'PY'
+          import json
+          import os
+          import sys
+          from datetime import date
+          from pathlib import Path
+
+          from aurex.assets import get
+
+          asset = get("${{ inputs.asset }}")
+          root = Path(os.environ["AUREX_CACHE_DIR"])
+          wanted = date.fromisoformat("${{ inputs.from }}")
+
+          meta_path = root / f"{asset.price_series_id}.meta.json"
+          if not meta_path.exists():
+              sys.exit(
+                  f"no cached {asset.price_series_id} at {root}: this job resolves "
+                  f"offline and has nothing to read"
+              )
+
+          meta = json.loads(meta_path.read_text())
+          start, end = date.fromisoformat(meta["start"]), date.fromisoformat(meta["end"])
+          print(f"cache {root}: {meta['rows']} rows, {start} to {end}")
+
+          if start > wanted:
+              sys.exit(
+                  f"the cache starts {start}, after the requested --from {wanted}. "
+                  f"This run would grade {start}..{end} and publish it under the same "
+                  f"field names as the full sample. Extend the cache or move --from."
+              )
+
+          # min_observations for the volatility models, which refuse rather than fit on
+          # a short history. Checked here so the refusal is one line at the top of the
+          # log instead of a per-model skip buried two hours in.
+          span = (end - start).days
+          need = asset.vol_defaults.min_observations
+          if span < need * 1.4:
+              sys.exit(
+                  f"the cache spans {span} calendar days; the volatility models need "
+                  f"{need} observations before they will fit"
+              )
+          PY
+
+      # `if-no-files-found: error` on the upload below protected nothing while the
+      # committed copy was still sitting in the checkout. `aurex direction` writes
+      # public-data/direction.json once, at the end, so run 31983796753 — cancelled at
+      # 94% — uploaded the *repository's* file under this run's name, byte-identical to
+      # the one on main (sha256 f1a34f34…). An artifact named `direction` from a run
+      # that computed nothing is indistinguishable from one that computed everything
+      # unless you hash it, which is §1's signature failure: an absence that reads as
+      # confidence. Deleting it first is what gives the guard something real to fail on.
+      #
+      # The existence check is not ceremony. A mistyped path would make the deletion a
+      # silent no-op and quietly restore the decoy, so a path this step cannot find is
+      # an error here rather than a surprise in the artifact — the upload step names the
+      # same file, and exactly one of the two can be right. The hash is printed because
+      # it is the decoy's fingerprint: an uploaded artifact that ever matches it again
+      # came from the checkout and not from this run.
+      - name: delete the committed artifact so a failed run cannot upload it
+        working-directory: .
         run: |
           set -euo pipefail
-          args=(--asset "${{ inputs.asset }}" --step "${{ inputs.step }}")
+          target=public-data/direction.json
+          if [ ! -f "$target" ]; then
+            echo "$target is not in this checkout, so there is nothing to delete and"
+            echo "the path is probably wrong — the upload step below names the same file."
+            exit 1
+          fi
+          echo "the copy this run must not be allowed to pass off as its own:"
+          sha256sum "$target"
+          rm "$target"
+          test ! -e "$target"
+          echo "deleted $target; only this run can put it back"
+
+      - name: grade direction
+        env:
+          AUREX_CACHE_DIR: ${{ inputs.cache_dir }}
+        run: |
+          set -euo pipefail
+          args=(--asset "${{ inputs.asset }}" --from "${{ inputs.from }}" --step "${{ inputs.step }}")
+          # Offline exactly when a cache was named. Passing --offline without one resolves
+          # nothing and fails with "no cached xauusd", which is a worse way to say "you did
+          # not give me any data" than simply going to the source.
+          if [ -n "${{ inputs.cache_dir }}" ]; then
+            args+=(--offline)
+          fi
           if [ -n "${{ inputs.to }}" ]; then
             args+=(--to "${{ inputs.to }}")
           fi
@@ -108,13 +240,41 @@ jobs:
       # bin is not a measurement and must not be published as one.
       - name: the artifact bounds its sample, names its null, and can measure what it claims
         working-directory: .
+        env:
+          EXPECT_OFFLINE: ${{ inputs.cache_dir != '' }}
         run: |
           uv run --project engine python - <<'PY'
           import json
+          import os
+
           block = json.load(open("public-data/direction.json"))
           sample = block["sample"]
           assert sample["resolved"]["to"], "the run recorded no resolved end date"
           assert "--to" in block["reproduce"], block["reproduce"]
+
+          # §6: an artifact must say what it read. Checked against the mode this job was
+          # dispatched in rather than against a fixed expectation, because the job now
+          # does both: a named cache means offline, an empty one means live. Asserting
+          # one of those unconditionally is how the workflow spent a fortnight unable to
+          # run at all without anyone finding out.
+          expect_offline = os.environ["EXPECT_OFFLINE"] == "true"
+          resolution = block["resolution"]
+          assert resolution["offline"] is expect_offline, (
+              f"dispatched with cache_dir {'set' if expect_offline else 'empty'}, so this "
+              f"run should have resolved {'offline' if expect_offline else 'live'}, and "
+              f"the artifact says offline={resolution['offline']}. Provenance that does "
+              f"not describe the run is worse than none."
+          )
+          assert resolution["cache_dir"], "the run did not record which store it read"
+          assert resolution["series_end"], "the run did not record the series' end date"
+          assert resolution["series_end"] == block["source"]["end"], (
+              f"the recorded end {resolution['series_end']} disagrees with the "
+              f"series metadata {block['source']['end']}"
+          )
+          assert sample["resolved"]["to"] <= resolution["series_end"], (
+              f"the sample ends {sample['resolved']['to']}, after the series' last "
+              f"observation {resolution['series_end']}"
+          )
 
           null = block["benchmark"]["label"]
           assert null == "random_walk_drift_matched", (
