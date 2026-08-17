@@ -5,7 +5,7 @@ import { Notice } from "@/components/Notice";
 import { PitHistogram } from "@/components/PitHistogram";
 import { ReliabilityChart } from "@/components/ReliabilityChart";
 import { SkillChart } from "@/components/SkillChart";
-import { calibrations, forecastIndex, liveLog } from "@/lib/data";
+import { calibrations, forecastIndex, groupIdenticalEvents, liveLog } from "@/lib/data";
 import { num, pValue, sessions, signedPct } from "@/lib/format";
 
 export const metadata = {
@@ -179,12 +179,21 @@ export default function TrackRecordPage() {
                 </p>
                 {horizons.slice(0, 1).map((horizon) => (
                   <div key={horizon.horizon_sessions}>
-                    {horizon.events.map((event) => (
+                    {groupIdenticalEvents(horizon.events).map(({ event, labels }) => (
                       <div className="panel" key={event.id}>
                         <h3 style={{ marginTop: 0 }}>{event.definition}</h3>
                         <p className="hint">
                           At {sessions(horizon.horizon_sessions)}, over{" "}
                           {event.observations} forecasts.
+                          {labels.length > 1 && (
+                            <>
+                              {" "}
+                              Priced by {labels.length} routes whose breakeven hurdles
+                              coincide on this friction table — {labels.join(", ")} — so
+                              they are one scored event and are shown once. They separate
+                              again the moment any of those frictions moves.
+                            </>
+                          )}
                         </p>
                         <ReliabilityChart event={event} />
                       </div>

@@ -321,13 +321,22 @@ function NotBuilt() {
   return (
     <section>
       <h2>Not built yet</h2>
-      <Notice title="Drivers and Scenarios need step 4, and are omitted rather than stubbed.">
+      <Notice title="Drivers and Scenarios wait on the scenario engine, and are omitted rather than stubbed.">
         <p>
-          Factor attribution — elastic-net loadings on the macro drivers each asset
-          declares — and the scenario engine that propagates them both depend on work
-          that does not exist. An empty tab would imply otherwise, so there is no tab.
-          When the loadings are estimated and carry confidence intervals worth
-          publishing, the views will appear with them.
+          Factor attribution is built. The elastic-net loadings on the macro drivers each
+          asset declares are estimated, carry bootstrap intervals, and are published as an
+          artifact with the leave-one-driver-out check that the central claim rests on —
+          including the result that removing the safe-haven control moves the largest
+          surviving loading by less than a fifth of a basis point, which is the kind of
+          negative finding this project exists to publish.
+        </p>
+        <p>
+          What is missing is the engine that propagates a shock through those loadings and
+          returns a distribution rather than a number. Both views need it: Drivers without
+          it is a table of coefficients with no way to ask what they imply, and Scenarios
+          is nothing else. A tab that showed loadings and could not answer the question the
+          tab&rsquo;s name promises would be worse than no tab, so there is no tab. When
+          the scenario work lands, both appear together.
         </p>
       </Notice>
     </section>

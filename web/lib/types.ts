@@ -145,6 +145,13 @@ export interface Significance {
 export interface EventBlock {
   id: string;
   definition: string;
+  /**
+   * Which route priced this hurdle, for the events that come from one. Absent on the
+   * events that belong to no route — direction and the touch levels. Carried so the
+   * dashboard can name the routes that share an identical hurdle rather than drawing
+   * the same reliability panel once per route; see `groupIdenticalEvents`.
+   */
+  label?: string;
   observations: number;
   positive_events: number;
   base_rate: number;

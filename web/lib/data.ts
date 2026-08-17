@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type {
   AssetBlock,
   CalibrationArtifact,
+  EventBlock,
   ForecastIndex,
   LatestArtifact,
   LensBlock,
@@ -125,4 +126,60 @@ export function horizonKeys(block: LensBlock): number[] {
     .map((key) => Number.parseInt(key, 10))
     .filter((value) => Number.isFinite(value))
     .sort((a, b) => a - b);
+}
+
+/**
+ * Events whose published numbers are identical, collapsed into one panel each.
+ *
+ * The track-record page renders a reliability panel per scored event, and three of them
+ * were the same panel. Three routes in different jurisdictions carry breakeven hurdles
+ * that coincide — 1.05102, a gross move of 5.10% — so the engine correctly scores three
+ * events, and correctly gets three identical answers, and the reader correctly wonders
+ * why the same chart is on the page three times. Nothing is wrong with the artifact: the
+ * hurdles genuinely coincide on this friction table, and if one jurisdiction's duty moves
+ * they will separate again on their own.
+ *
+ * So this collapses **only what is genuinely the same**, and the rule is deliberately
+ * blunt: two events group when every published field except `id` and `label` is equal.
+ * Not "same definition" — a definition string rounds the multiple to six figures, so two
+ * hurdles differing in the seventh would print identically and score differently, and
+ * grouping on the text would hide a real difference behind a display convention. Any
+ * disagreement in any number, including one that only appears in a bin count, and they
+ * render separately. The failure this avoids is the one §1 warns about: a page that looks
+ * tidier because it dropped something.
+ *
+ * The labels travel with the group so the page can say *which* routes share the hurdle.
+ * That is the interesting fact, and it was the thing the three identical panels were
+ * accidentally hiding.
+ */
+export interface EventGroup {
+  /** The scored event. Any member of the group would do; they are equal by construction. */
+  event: EventBlock;
+  /** Every route label that produced this identical scoring, in a stable order. */
+  labels: string[];
+}
+
+function scoringKey(event: EventBlock): string {
+  const entries = Object.entries(event as unknown as Record<string, unknown>)
+    .filter(([key]) => key !== "id" && key !== "label")
+    .sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
+}
+
+export function groupIdenticalEvents(events: EventBlock[]): EventGroup[] {
+  const groups = new Map<string, EventGroup>();
+  for (const event of events) {
+    const key = scoringKey(event);
+    const existing = groups.get(key);
+    const label = event.label;
+    if (existing) {
+      if (label) existing.labels.push(label);
+      continue;
+    }
+    groups.set(key, { event, labels: label ? [label] : [] });
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    labels: [...group.labels].sort((a, b) => a.localeCompare(b)),
+  }));
 }
