@@ -120,6 +120,13 @@ export default function CalculatorPage() {
           code={artifact.code}
           generatedAt={artifact.generated_at}
           disclaimer={artifact.disclaimer}
+          also={[
+            {
+              label: "The breakeven table",
+              code: routeBook.code,
+              generatedAt: routeBook.generated_at,
+            },
+          ]}
         />
       </main>
     </>

@@ -275,6 +275,12 @@ export interface RouteCell {
 
 export interface RoutesArtifact {
   generated_at: string;
+  /**
+   * Declared because the artifact has always carried it and the type did not, so the
+   * calculator could not name the provenance of the table it renders even though the
+   * provenance was sitting in the file.
+   */
+  code?: CodeProvenance;
   horizons: number[];
   cells: RouteCell[];
   jurisdictions: { code: string; label: string; [key: string]: unknown }[];
