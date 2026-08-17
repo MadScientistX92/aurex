@@ -160,6 +160,37 @@ jobs:
               )
           PY
 
+      # `if-no-files-found: error` on the upload below protected nothing while the
+      # committed copy was still sitting in the checkout. `aurex direction` writes
+      # public-data/direction.json once, at the end, so run 31983796753 — cancelled at
+      # 94% — uploaded the *repository's* file under this run's name, byte-identical to
+      # the one on main (sha256 f1a34f34…). An artifact named `direction` from a run
+      # that computed nothing is indistinguishable from one that computed everything
+      # unless you hash it, which is §1's signature failure: an absence that reads as
+      # confidence. Deleting it first is what gives the guard something real to fail on.
+      #
+      # The existence check is not ceremony. A mistyped path would make the deletion a
+      # silent no-op and quietly restore the decoy, so a path this step cannot find is
+      # an error here rather than a surprise in the artifact — the upload step names the
+      # same file, and exactly one of the two can be right. The hash is printed because
+      # it is the decoy's fingerprint: an uploaded artifact that ever matches it again
+      # came from the checkout and not from this run.
+      - name: delete the committed artifact so a failed run cannot upload it
+        working-directory: .
+        run: |
+          set -euo pipefail
+          target=public-data/direction.json
+          if [ ! -f "$target" ]; then
+            echo "$target is not in this checkout, so there is nothing to delete and"
+            echo "the path is probably wrong — the upload step below names the same file."
+            exit 1
+          fi
+          echo "the copy this run must not be allowed to pass off as its own:"
+          sha256sum "$target"
+          rm "$target"
+          test ! -e "$target"
+          echo "deleted $target; only this run can put it back"
+
       - name: grade direction
         env:
           AUREX_CACHE_DIR: ${{ inputs.cache_dir }}

@@ -87,6 +87,28 @@ jobs:
                   print(f"{name}: NOT INSTALLED")
           PY
 
+      # Same repair as direction.yml, and for the same reason: `aurex bench` writes
+      # public-data/benchmarks.json once at the end, so until this step existed a run
+      # that died anywhere before that uploaded the repository's committed copy under
+      # this run's name, with `if-no-files-found: error` reporting success on a file it
+      # had not produced. Deleted before the compute so the guard has something real to
+      # fail on. The path check catches a typo that would silently restore the decoy.
+      - name: delete the committed artifact so a failed run cannot upload it
+        working-directory: .
+        run: |
+          set -euo pipefail
+          target=public-data/benchmarks.json
+          if [ ! -f "$target" ]; then
+            echo "$target is not in this checkout, so there is nothing to delete and"
+            echo "the path is probably wrong — the upload step below names the same file."
+            exit 1
+          fi
+          echo "the copy this run must not be allowed to pass off as its own:"
+          sha256sum "$target"
+          rm "$target"
+          test ! -e "$target"
+          echo "deleted $target; only this run can put it back"
+
       - name: run the shootout
         run: |
           set -euo pipefail
