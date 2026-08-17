@@ -611,6 +611,7 @@ def direction(
     from aurex.data.schedules import load_policy_breaks
     from aurex.pipeline import DEFAULT_LOOKBACK_DAYS, _price_column, resolve_series
     from aurex.score import TerminalAbove, WalkForwardRequest
+    from aurex.score.progress import ElapsedProgress
 
     asset = get(asset_id)
     start_date = date.fromisoformat(since)
@@ -663,6 +664,11 @@ def direction(
         # make the event worth grading, and the event is why the run is uncentred.
         demean=False,
         events=(event,),
+        # On a hosted runner this loop is a shade under six hours and the platform kills
+        # a job at exactly six, so the run needs to be able to say — in its first ten
+        # minutes — whether it is going to finish. It goes to stderr so --dry-run's JSON
+        # on stdout stays parseable.
+        progress=ElapsedProgress(label="direction"),
     )
 
     block = describe_direction(

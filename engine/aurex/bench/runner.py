@@ -42,6 +42,7 @@ from aurex.assets.base import Asset
 from aurex.dist.fhs import DEMEAN_BY_DEFAULT
 from aurex.score.events import BinaryEvent
 from aurex.score.forecasters import AsOfForecaster, ModelForecaster, RandomWalkForecaster
+from aurex.score.progress import ProgressReporter
 from aurex.score.reliability import reliability_curve
 from aurex.score.sampling import Sampling
 from aurex.score.shootout import (
@@ -220,6 +221,7 @@ def run_shootout(
     include: tuple[str, ...] = CHALLENGERS,
     demean: bool = DEMEAN_BY_DEFAULT,
     events: tuple[BinaryEvent, ...] = (),
+    progress: ProgressReporter | None = None,
 ) -> ShootoutRun:
     """One walk-forward carrying every model in the set.
 
@@ -228,6 +230,10 @@ def run_shootout(
     model here is compared on would only add noise. The direction run passes
     :class:`~aurex.score.events.TerminalAbove` and ``demean=False`` together, and the two
     belong together — direction graded on centred forecasts grades the drift policy.
+
+    ``progress`` is passed straight to the harness and defaults to ``None``. This is the
+    run that takes six hours on a hosted runner, so it is also the one where a caller most
+    needs to know how far along it is — see :mod:`aurex.score.progress`.
     """
     defaults = asset.vol_defaults
     ask = request or WalkForwardRequest(
@@ -251,6 +257,7 @@ def run_shootout(
         request=ask,
         events=events,
         extra_baselines=extras,
+        progress=progress,
     )
     return ShootoutRun(result=result, competitors=(subject, *extras))
 

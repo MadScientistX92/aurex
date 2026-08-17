@@ -64,6 +64,7 @@ from aurex.score.distribution import (
 from aurex.score.drift import DriftDisplacement, HorizonDisplacement, displacement
 from aurex.score.events import BinaryEvent, RealisedPath, TerminalAbove, default_events
 from aurex.score.forecasters import AsOfForecaster
+from aurex.score.progress import ProgressReporter
 from aurex.score.reliability import DEFAULT_BINS, ReliabilityCurve, reliability_curve
 from aurex.score.sampling import Sampling
 from aurex.score.significance import (
@@ -589,12 +590,18 @@ def walk_forward(
     request: WalkForwardRequest | None = None,
     events: tuple[BinaryEvent, ...] | None = None,
     extra_baselines: tuple[AsOfForecaster, ...] = (),
+    progress: ProgressReporter | None = None,
 ) -> WalkForwardResult:
     """Score ``subject`` against ``baseline`` over the history in ``prices``.
 
     ``baseline`` stays required and singular: a run must carry §0's null. Further nulls
     go in ``extra_baselines`` and are reported beside it rather than instead of it, so
     adding one can never remove the comparison the project committed to.
+
+    ``progress`` defaults to ``None`` and nothing here prints without one — see
+    :mod:`aurex.score.progress`. A six-model run on eleven years of history takes hours
+    per horizon set, and the only thing that distinguishes it from a hung process is a
+    line saying which window it is on.
     """
     ask = request or WalkForwardRequest()
     graded = events if events is not None else default_events(ask.reference_moves)
@@ -633,13 +640,36 @@ def walk_forward(
     # the price series would be the same arithmetic done 580 times over.
     log_returns = np.diff(np.log(values)) if values.size > 1 else np.zeros(0, dtype=float)
 
-    for position in range(first, total, ask.step):
+    # The plan, before any of it is executed, so a reporter can say 12/290 rather than
+    # 12. The loop below stops at the first date whose *shortest* horizon would run past
+    # the end of the sample, so that — not ``total`` — is where the planned positions
+    # end, and the count has to be derived the same way the loop derives its exit or the
+    # denominator would be wrong by however many windows fall off the end.
+    planned = range(first, max(first, total - min(ask.horizons)), ask.step)
+    if progress is not None:
+        progress.planned(
+            windows=len(planned),
+            first_as_of=(
+                clean.index[planned[0]].date().isoformat() if len(planned) else "no window"
+            ),
+            last_as_of=(
+                clean.index[planned[-1]].date().isoformat() if len(planned) else "no window"
+            ),
+            step=ask.step,
+            horizons=ask.horizons,
+            observations=total,
+        )
+
+    for index, position in enumerate(range(first, total, ask.step), start=1):
         as_of = clean.index[position]
         usable = tuple(h for h in ask.horizons if position + h < total)
         if not usable:
             break
 
         history = clean.iloc[: position + 1]
+        # The seed the runner's log exposed by accident, reported deliberately: it
+        # advances by ``step`` times _SEED_STRIDE per window, which is what made a
+        # dependency's "Seed set to N" line legible as a counter at all.
         seed = ask.seed + position * _SEED_STRIDE
 
         try:
@@ -655,6 +685,10 @@ def walk_forward(
             }
         except InsufficientDataError as exc:
             skipped.append(Skipped(as_of=as_of, horizon=None, reason=str(exc)))
+            if progress is not None:
+                progress.window(
+                    index=index, as_of=as_of.date().isoformat(), seed=seed, skipped=True
+                )
             continue
 
         anchor = float(values[position])
@@ -684,6 +718,12 @@ def walk_forward(
                     sigma_expanding=sigma_expanding,
                 )
             )
+
+        if progress is not None:
+            progress.window(index=index, as_of=as_of.date().isoformat(), seed=seed, skipped=False)
+
+    if progress is not None:
+        progress.finished(scored=len(records), skipped=len(skipped))
 
     # Over the scored window rather than the whole history: this is the benchmark the
     # published tail comparison used, and it is the volatility of the sample the events
