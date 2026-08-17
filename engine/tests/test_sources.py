@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 from datetime import date
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import pandas as pd
 import pytest
+import requests
 import responses
 
 from aurex.data.base import LoadedSeries, Loader, SourceCitation
@@ -353,6 +354,99 @@ class TestHttpPoliteness:
         http.get("https://example.invalid/x", check_robots=False)
         assert responses.calls[0].request.headers["User-Agent"] == USER_AGENT
         assert "aurex" in USER_AGENT
+
+
+class TestRobotsIsReadAsAurex:
+    """The robots check must obey the file the origin serves *Aurex*.
+
+    It did not. ``RobotFileParser.read()`` fetches through ``urllib``, which sends
+    ``Python-urllib/3.x``; an origin that answers that client differently decides what
+    Aurex believes it is permitted to do. Measured on 2026-08-17: stooq.com serves
+    ``User-agent: * / Disallow: /`` to Aurex's client and 404 to urllib's, and
+    ``read()`` maps a 404 to "allow everything" — so the guard returned True for a path
+    the site forbids. These tests are written against ``responses``, which can only
+    intercept ``requests``: if the fetch ever moves back to ``urllib`` they stop seeing
+    the call at all and fail on the unmatched-request assertion rather than passing
+    vacuously.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _forget_cached_verdicts(self) -> None:
+        from aurex.data.sources import http
+
+        http._robots_cache.clear()
+
+    @responses.activate
+    def test_robots_txt_is_fetched_with_aurexs_user_agent(self) -> None:
+        from aurex.config import USER_AGENT
+        from aurex.data.sources import http
+
+        responses.add(
+            responses.GET,
+            "https://example.invalid/robots.txt",
+            body="User-agent: *\nDisallow: /\n",
+            status=200,
+        )
+
+        assert http.robots_allows("https://example.invalid/data.json") is False
+        assert len(responses.calls) == 1, "robots.txt was not fetched through requests"
+        assert responses.calls[0].request.headers["User-Agent"] == USER_AGENT
+
+    @responses.activate
+    def test_a_404_served_to_another_client_does_not_become_permission(self) -> None:
+        """The stooq case, which is the reason this function was rewritten.
+
+        The origin discriminates by User-Agent: Aurex is served the real file, anyone
+        else a 404. Fetching as Aurex means the ``Disallow`` is seen and honoured;
+        fetching as urllib means a 404, which the parser reads as allow-all.
+        """
+        from aurex.config import USER_AGENT
+        from aurex.data.sources import http
+
+        def by_user_agent(request: Any) -> tuple[int, dict[str, str], str]:
+            if request.headers.get("User-Agent") == USER_AGENT:
+                return 200, {}, "User-agent: Googlebot\nAllow: /\n\nUser-agent: *\nDisallow: /\n"
+            return 404, {}, "Not found"
+
+        responses.add_callback(
+            responses.GET,
+            "https://discriminating.invalid/robots.txt",
+            callback=by_user_agent,
+            content_type="text/plain",
+        )
+
+        assert http.robots_allows("https://discriminating.invalid/q/d/l/?s=xauusd") is False
+
+    @responses.activate
+    def test_a_404_for_everyone_is_not_a_prohibition(self) -> None:
+        from aurex.data.sources import http
+
+        responses.add(
+            responses.GET, "https://nofile.invalid/robots.txt", body="Not found", status=404
+        )
+
+        assert http.robots_allows("https://nofile.invalid/data.json") is True
+
+    @responses.activate
+    def test_a_401_is_read_as_a_refusal(self) -> None:
+        """prices.lbma.org.uk answers 401 here, which is why its loader steps around it."""
+        from aurex.data.sources import http
+
+        responses.add(responses.GET, "https://walled.invalid/robots.txt", body="", status=401)
+
+        assert http.robots_allows("https://walled.invalid/json/gold_pm.json") is False
+
+    @responses.activate
+    def test_an_unreachable_robots_txt_fails_open(self) -> None:
+        from aurex.data.sources import http
+
+        responses.add(
+            responses.GET,
+            "https://broken.invalid/robots.txt",
+            body=requests.ConnectionError("no route to host"),
+        )
+
+        assert http.robots_allows("https://broken.invalid/data.json") is True
 
 
 class TestJsonDecodeDiagnostics:

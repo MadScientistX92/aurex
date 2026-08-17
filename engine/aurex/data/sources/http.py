@@ -35,11 +35,62 @@ def _throttle(host: str) -> None:
         _last_request_at[host] = now
 
 
-def robots_allows(url: str) -> bool:
-    """Check ``robots.txt`` for this URL.
+def _read_robots(origin: str) -> RobotFileParser | None:
+    """Fetch and parse ``origin``'s ``robots.txt`` with *Aurex's* client.
 
-    Fails open on an unreachable ``robots.txt`` — a missing file is not a
-    prohibition — but fails closed if the file exists and disallows the path.
+    ``RobotFileParser.read()`` is not used, and that is the whole point of this
+    function. It fetches through ``urllib``, which sends ``Python-urllib/3.x`` and none
+    of Aurex's headers, so the file it parses is the file the origin serves *that*
+    client rather than the one it serves this one. Measured on 2026-08-17: stooq.com
+    returns ``User-agent: * / Disallow: /`` to Aurex's client and **404** to urllib's,
+    and the parser maps a 404 to "allow everything" — so the check returned True for a
+    path the site forbids. A guard that fails open silently is the shape §1 warns
+    about, and here it fails open against somebody else's stated wishes.
+
+    Returns the parser to consult, or ``None`` for "there are no rules to apply".
+    """
+    url = f"{origin}/robots.txt"
+    _throttle(urlparse(origin).netloc)
+    try:
+        response = requests.get(
+            url,
+            headers={"User-Agent": USER_AGENT, "Accept-Encoding": "gzip, deflate"},
+            timeout=HTTP_TIMEOUT,
+        )
+    except requests.RequestException:
+        # Unreachable. Not a prohibition, and unchanged from the previous behaviour.
+        return None
+
+    if response.status_code in (401, 403):
+        # The file exists and we are not allowed to read it. Read that as a refusal
+        # rather than as silence: this is the one 4xx that says something about us
+        # rather than about the file. prices.lbma.org.uk answers 401 here, so this is
+        # the branch its loader steps around with ``check_robots=False``.
+        parser = RobotFileParser()
+        parser.set_url(url)
+        parser.disallow_all = True
+        return parser
+
+    if not response.ok:
+        # Any other 4xx is a missing file, and a 5xx is a broken one. Neither is a
+        # prohibition. Also unchanged.
+        return None
+
+    parser = RobotFileParser()
+    parser.set_url(url)
+    # `errors="replace"` because a malformed byte in somebody's robots.txt must not
+    # decide whether Aurex fetches: an exception here would land in the caller's
+    # "unreachable, so allow" branch, which is the wrong direction to guess in.
+    parser.parse(response.content.decode("utf-8", "replace").splitlines())
+    return parser
+
+
+def robots_allows(url: str) -> bool:
+    """Check ``robots.txt`` for this URL, reading it as Aurex rather than as urllib.
+
+    Fails open on an unreachable or absent ``robots.txt`` — a missing file is not a
+    prohibition — but fails closed if the file exists and disallows the path, and on a
+    401 or 403, which says the file exists and is not ours to read.
     """
     parsed = urlparse(url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
@@ -49,20 +100,11 @@ def robots_allows(url: str) -> bool:
         parser = _robots_cache.get(origin)
 
     if not seen:
-        # A cached value of None means "we looked and could not read it", which is
-        # why presence in the dict is checked rather than truthiness.
-        fetched: RobotFileParser | None = RobotFileParser()
-        assert fetched is not None
-        fetched.set_url(f"{origin}/robots.txt")
-        try:
-            fetched.read()
-        except Exception:
-            # An unreachable or malformed robots.txt is not a prohibition, so fail
-            # open. A robots.txt that loads and disallows is honoured below.
-            fetched = None
+        # A cached value of None means "we looked and there was nothing to apply",
+        # which is why presence in the dict is checked rather than truthiness.
+        parser = _read_robots(origin)
         with _lock:
-            _robots_cache[origin] = fetched
-        parser = fetched
+            _robots_cache[origin] = parser
 
     if parser is None:
         return True
