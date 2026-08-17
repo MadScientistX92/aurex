@@ -66,9 +66,15 @@ def _read_robots(origin: str) -> RobotFileParser | None:
         # rather than as silence: this is the one 4xx that says something about us
         # rather than about the file. prices.lbma.org.uk answers 401 here, so this is
         # the branch its loader steps around with ``check_robots=False``.
+        #
+        # Expressed as a synthesised total disallow rather than by setting
+        # ``parser.disallow_all``: that attribute exists at runtime but not in typeshed,
+        # so ``mypy --strict`` rejects it, and reaching for a private-in-practice
+        # attribute to say something robots.txt has its own syntax for is the wrong
+        # trade. Same behaviour, public API, and it reads as what it means.
         parser = RobotFileParser()
         parser.set_url(url)
-        parser.disallow_all = True
+        parser.parse(["User-agent: *", "Disallow: /"])
         return parser
 
     if not response.ok:
