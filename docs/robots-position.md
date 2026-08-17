@@ -1,15 +1,23 @@
 # Does `robots.txt` bind Aurex?
 
 **Status: decision brief. The decision is not made here and must not be inferred from the
-ordering below.** Written 2026-08-17. Every fact in it was already recorded somewhere in
-this repository before this page existed; nothing here was fetched to write it, and the two
-hosts that publish a blanket `Disallow` were not contacted.
+ordering below.** Written 2026-08-17, revised the same day. Every fact in it was already
+recorded in this repository, with **one exception made deliberately**: `fred.stlouisfed.org`
+was fetched once, because Position A could not be costed without it and reading a
+`robots.txt` is the request every position permits (§1a). The two hosts that publish a
+blanket `Disallow` were not contacted, and nothing behind a `Disallow` was fetched.
 
 The question is forced rather than academic. `xauusd` — the anchor every published price
 and every simulated path is built from — is fetched from a host whose `robots.txt` answers
 401, and `usdinr`, which is *blocking*, is fetched from a host that publishes a blanket
 refusal. Whatever answer is given here, something changes: either the nightly stops, or
 this project states in writing that it fetches against a stated `Disallow`.
+
+**Three options are costed, not two.** §2–§4 are the two readings of `robots.txt`. **§4a**
+is a third and separate one — workflow-level retry — which answers the *other* refusal, the
+Cloudflare interstitial, and is costed here because it raises the same question about
+proceeding past a machine-readable "no". It is **not implemented**, and this document does
+not recommend it.
 
 ---
 
@@ -22,7 +30,29 @@ this project states in writing that it fetches against a stated `Disallow`.
 | `stooq.com` | `User-agent: *` / `Disallow: /` to Aurex's client, **404 to `urllib`'s** | 2026-08-17 | `data/sources/http.py` `_read_robots`; `tests/test_sources.py::TestRobotsIsReadAsAurex` |
 | `fsapi.gold.org` (World Gold Council) | `User-agent: *` / `Disallow: /` | round 2 | HANDOFF §5; `probe-lbma.yml` round-2 header |
 | `prices.lbma.org.uk` | **HTTP 401.** RFC 9309 §2.3.1.3 and Aurex's own corrected checker both read that as a complete disallow | 2026-08-17 | `docs/lbma-enquiry.md` §0; `http.py` 401/403 branch |
-| `fred.stlouisfed.org` | **never measured** | — | — |
+| `fred.stlouisfed.org` | **Permits everything Aurex fetches.** `User-agent: *` gets `Crawl-delay: 1` and six specific `Disallow`s — `/graph/graph-landing.php`, `/graph/image.php`, `/graph/fredgraph.png`, `/searchresults`, `/fred-glance-widget.php`, `/seriesBeta`. None matches `/graph/fredgraph.csv`. | 2026-08-17, with Aurex's own client, one request | §1a below |
+
+### 1a. FRED, measured
+
+The one gap that stopped Position A being costable is closed. `https://fred.stlouisfed.org/robots.txt`, fetched once on 2026-08-17 with Aurex's own client and `User-Agent`: **HTTP 200, `text/plain`, 960 bytes, `Server: Apache`.** Four groups — `GPTBot`, `ChatGPT-User` and `Google-Extended` are each held to `Crawl-delay: 2592000` (one crawl a month), and then:
+
+```
+# Allows all robots to visit all files.
+User-agent: *
+Crawl-delay: 1
+Disallow: /graph/graph-landing.php
+Disallow: /graph/image.php
+Disallow: /graph/fredgraph.png
+Disallow: /searchresults
+Disallow: /fred-glance-widget.php
+Disallow: /seriesBeta
+```
+
+Aurex matches `*`. `robots_allows()` returns **True** for every path involved: `/graph/fredgraph.csv?id=DEXINUS` (what `FredLoader` actually fetches), the same for `VIXCLS`, the bare CSV endpoint, `/series/<code>` (cited as `source_url`, never fetched) and the site root.
+
+**The line FRED drew is deliberate, not incidental.** `/graph/fredgraph.png` is disallowed and `/graph/fredgraph.csv` is not — same endpoint family, one extension apart. The rendered image is barred; the underlying data is not. This is a publisher who thought about it and permitted exactly the thing Aurex reads, which is a stronger fact than a blanket `Allow` would have been.
+
+**One honest caveat about the delay.** `Crawl-delay: 1` is what FRED asks of `*`, and `HTTP_COURTESY_DELAY` is 1.0 second per host, so Aurex complies — **by coincidence**. Nothing in the codebase parses `Crawl-delay`; a host asking for more would not be honoured. That is a small, separate gap, and it is now the only unmeasured thing in this table.
 
 And the part that decides the whole question, which is not about any host:
 
@@ -31,7 +61,7 @@ And the part that decides the whole question, which is not about any host:
 | `IbjaReportLoader` | `ibja_gold` | **Yes** — plain `http.get`, guard consulted |
 | `GprDailyLoader` | `gpr` | **Yes** — plain `http.get`, guard consulted |
 | `LbmaGoldLoader` | `xauusd` | No — `check_robots=False` (`lbma.py:54`), documented, against the 401 |
-| `FredLoader` | `real_yield_10y`, `dxy`, `wti`, `local_cpi`, `local_policy_rate`; and the `usdinr` and `vix` fallbacks | No — `check_robots=False` (`fred.py:53`), **no recorded reason anywhere** |
+| `FredLoader` | `real_yield_10y`, `dxy`, `wti`, `local_cpi`, `local_policy_rate`; and the `usdinr` and `vix` fallbacks | No — `check_robots=False` (`fred.py:53`), **no recorded reason anywhere**. Now known to be *unnecessary*: the guard would pass (§1a), so the flag can come out with no change in behaviour |
 | `YahooLoader` | `usdinr`, `xau_futures`, `vix` primaries | **Structurally cannot** — `yahoo.py` never imports `http`; it calls `yf.download`, and `yfinance` does not consult `robots.txt` |
 
 So of the eleven series this project loads, the guard governs **two**. Six are fetched
@@ -88,15 +118,19 @@ read as a demand signal). Position A removes its remaining, legitimate use.
 **Degrades — `vix`.** The `^VIX` primary goes; `VIXCLS` at FRED survives, subject to the
 same unmeasured FRED question.
 
-**Unknown, and it is the widest exposure — everything reached through FRED.**
-`real_yield_10y`, `dxy`, `wti`, `local_cpi` and `local_policy_rate` are FRED-only, and both
-surviving fallbacks above are FRED. All seven are fetched with the guard switched off and
-nobody has read `fred.stlouisfed.org/robots.txt`. If it permits us, Position A costs the
-prices and keeps the factor set; if it does not, Position A also takes out step 4's
-attribution and the transmission chain, leaving `gpr` and `ibja_gold` — the two series the
-guard already clears — as the only things this project could still load. **The FRED question
-has to be measured before Position A can be costed at all**, and measuring it is one request
-Position A itself permits.
+**Survives, and this is now measured rather than assumed — everything reached through FRED
+is permitted.** `real_yield_10y`, `dxy`, `wti`, `local_cpi` and `local_policy_rate` are
+FRED-only, and both surviving fallbacks above are FRED. That was the widest exposure in this
+document and the reason Position A could not be costed; §1a closes it. **Position A costs
+the prices and keeps the entire factor set.** Step 4's attribution, the transmission chain,
+the `DEXINUS` and `VIXCLS` fallbacks and the geopolitical-risk control all survive it
+untouched, and `FredLoader`'s `check_robots=False` turns out to be hiding nothing — the
+guard would pass, so the flag can be removed with no change in behaviour whatsoever.
+
+So the cost of Position A is now bounded and specific rather than open-ended: **`xauusd`,
+`xau_futures` and the `usdinr`/`vix` primaries.** Everything else this project loads is
+already compliant. That is a much smaller bill than this document could state a day ago —
+and it is still a fatal one, because the first item on it is the anchor.
 
 **Reopens — nothing.** No candidate becomes available under the stricter rule. Position A
 strictly shrinks the source landscape, and §5's finding that the landscape is already thin
@@ -147,7 +181,76 @@ independently of robots. It reopens and stays rejected.
 
 ---
 
-## 5. The asymmetry, plainly
+## 4a. A third option: workflow-level retry — costed here, **not implemented**
+
+The two positions above are about `robots.txt`. This one is about the *other* refusal —
+Cloudflare's interstitial at `prices.lbma.org.uk` — and it belongs in this document because
+it is the same question wearing different clothes: an operator has said something in a
+machine-readable way, and we are deciding whether to proceed anyway.
+
+**The mechanism, and why only this kind of retry could work.** An in-process retry is
+already known to be dead: the interstitial's only remedy is a JavaScript reload after five
+seconds, and `http.get` calls the module-level `requests.get`, which builds and discards a
+`Session` per call, so no state survives to be sent back. What the record does show is that
+the failure follows the **egress address**, and that the address is drawn per job and fixed
+within one. Read off the four probe artifacts rather than the run summaries:
+
+| Probe run | Date | Egress address | LBMA arm | Distinct addresses *within* the job |
+|---|---|---|---|---|
+| 31906804255 | 2026-08-15 | `52.188.198.99` | **0 of 20** | 1 |
+| 31974956815 | 2026-08-16 | `135.232.208.115` | 5 of 5 | 1 |
+| 31981226755 | 2026-08-17 | `68.154.54.35` | 5 of 5 | 1 |
+| 31984657960 | 2026-08-17 | `172.172.87.80` | 5 of 5 | 1 |
+
+Four sittings, four addresses, one dead and three clean. Every attempt record in every job
+carries the same address as its siblings, so "fixed within a job" is measured and not
+assumed — and the two sittings on 2026-08-17 drew **different** addresses, which is what
+makes it per-job rather than per-day. So the only retry that could change anything is one
+that gets a **new runner**, i.e. a job-level or workflow-level retry.
+
+**It would not be a guaranteed fix, either.** Failure rates from the record: 5 of 9 nightlies
+(2026-08-05 to 08-13) and 1 of 4 probe sittings — 46% pooled, and the two disagree enough
+that neither should be quoted alone. At *p* = 0.56 a three-job retry still fails 18% of the
+time; at *p* = 0.25, 1.6%. It converts a coin-flip into a long shot, not into a source.
+
+**What it is, said plainly. Re-rolling egress addresses until one is not challenged is
+evasion.** It does not solve the challenge — nothing here executes the JavaScript — it
+looks for a door that is not being watched. The data behind that door is public and
+unauthenticated and we are not forging anything, and that is exactly the argument that would
+be available for Yahoo too. **This belongs on the same ledger as the Yahoo question**: in
+both cases a host has stated a boundary in a way software can read, and in both cases the
+proposal is to proceed because proceeding is technically easy and the data is otherwise out
+of reach. A project whose most credible asset is its negative results does not get to hold
+two standards, one for the refusal that is expensive to honour and one for the refusal that
+is cheap.
+
+**If it is adopted, it must be disclosed in the LBMA letter before that letter is sent.**
+`docs/lbma-enquiry.md` currently discloses the `robots.txt` 401 and asks whether it is
+policy or an artifact. A retry policy of this kind makes that paragraph materially harder —
+it would have to say that we re-run the job until we draw an address their edge does not
+challenge — and a letter that asks about one boundary while silently working around a second
+is worse than no letter. The disclosure is the price of the option, not an optional extra.
+
+**And if it is adopted, two things follow that are worth wanting.**
+
+1. **`xauusd` no longer needs a second source.** §5's open problem — the anchor series with a
+   source chain of length one — closes by making the one source reliable enough rather than
+   by finding another. Note what it does *not* fix: `usdinr`'s fallback is still nominal
+   (that is a Yahoo/`DEXINUS` problem and untouched by any of this), and the robots question
+   is still open, because this option answers a different refusal.
+2. **The second-source search becomes a publishable negative result rather than an
+   unfinished task.** The landscape is already mapped and the map is the finding: FRED
+   dropped the LBMA fix with all IBA data on 2022-01-31; ICE publishes no unauthenticated
+   endpoint and licenses delivery; LBMA moved its historic tables to the members' portal in
+   the week of 2025-11-24; the Bundesbank's only gold series ends 1998-12-30; stooq and
+   `fsapi.gold.org` serve `Disallow: /`; fxratesapi fails on the data, not the transport;
+   `GC=F` is excluded on cost-of-carry. **"The world's benchmark gold price has no second
+   public source a cookie-less client can read"** is a real result about public data
+   availability, and this project's whole method is that a negative result published with
+   the arithmetic behind it beats an open TODO.
+
+**Not implemented, and nothing in this repository has been changed to enable it.** This
+section exists so the option is costed beside the other two, with its price named.
 
 **We rejected stooq on grounds we depend on at Yahoo.**
 
@@ -170,8 +273,12 @@ Two further asymmetries in the same shape, both smaller and both real:
   justified, and it has never been applied to Yahoo, because it cannot reach it.
 - `FredLoader` passes `check_robots=False` with **no recorded reason**, and it is the widest
   bypass in the codebase — five series' primary route and two more on fallback. The LBMA
-  bypass at least has a documented one. Whatever position is taken, that flag needs either a
-  reason or removal.
+  bypass at least has a documented one. Now that §1a has measured the host, this one is the
+  easiest thing in this document to settle: FRED permits every path we fetch, so the flag
+  buys nothing and removing it changes no behaviour. **A bypass that was never needed is
+  still worth removing** — it is indistinguishable, from the outside, from one that is
+  load-bearing, and it is the reason this document had to spend a day not knowing whether
+  Position A cost five series or none.
 
 Naming this is not a reason to prefer Position B. A position taken because it retroactively
 excuses what the code already does is not a position, and Position A's cost — the anchor
@@ -201,6 +308,15 @@ Under **Position B**:
 > not a `Disallow` fetched deliberately. `check_robots=False` carries the recorded reason
 > at the call site or comes out.
 
+And if **§4a's retry** is adopted, on top of whichever position:
+
+> **Retrying for a different egress address is evasion, and is disclosed wherever the
+> source is described.** Not in a comment — in the artifact's provenance, in the README's
+> data-sources section, and in the enquiry to the administrator before it is sent. A retry
+> policy adopted and not disclosed is the failure; adopted and disclosed is a position.
+> And the retry is bounded and counted: a job that needed four attempts records four, so
+> the rate is visible rather than smoothed away by the loop that hides it.
+
 Either way, one more constraint is needed that belongs to neither position:
 
 > **A source's robots status is measured before it is excluded, and re-measured with
@@ -211,8 +327,11 @@ Either way, one more constraint is needed that belongs to neither position:
 
 ## 7. Open questions either position has to answer
 
-1. **What does `fred.stlouisfed.org/robots.txt` say?** Two fallbacks depend on it and
-   nobody has looked. Position A's survivors are unknown until this is measured.
+1. ~~**What does `fred.stlouisfed.org/robots.txt` say?**~~ **Answered 2026-08-17 — see §1a.**
+   It permits every path `FredLoader` fetches, so all seven FRED-reached series survive
+   Position A and `check_robots=False` there is unnecessary rather than load-bearing. The
+   residue is smaller and separate: nothing in the codebase parses `Crawl-delay`, and Aurex
+   complies with FRED's by coincidence.
 2. **Is LBMA's 401 policy or a Cloudflare artifact?** `docs/lbma-enquiry.md` asks. Under
    Position A the answer decides whether the engine can run at all; under Position B it
    decides how the disclosure paragraph is written.
