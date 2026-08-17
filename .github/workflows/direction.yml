@@ -22,20 +22,37 @@ name: Direction
 # anything outside it. A job that could edit prose is a job that can rewrite the
 # pre-registration it was meant to test.
 #
-# WHY THIS RUN IS OFFLINE. `aurex direction` applies **no** freshness guard: it calls
-# `resolve_series` (aurex/cli.py:619) → `_resolve` → `chain.load` (aurex/pipeline.py:182,
-# 199), and `assess()` is reached only from `pipeline.run` (aurex/pipeline.py:98) and
-# `aurex pipeline` (aurex/cli.py:91). Neither is on this path. That is §6's test for
-# when a cache is honest: this run makes no claim about today's price, so a series
-# ending weeks ago grades exactly as well as a live one and dissolves nothing — the
-# same argument that makes a cache right for `factors.yml` and wrong for `nightly.yml`,
-# where the guard exists precisely to refuse the stale copy a cache would supply.
+# WHY THIS RUN MAY BE OFFLINE, AND WHY IT IS NOT BY DEFAULT. `aurex direction` applies
+# **no** freshness guard: it calls `resolve_series` (aurex/cli.py:619) → `_resolve` →
+# `chain.load` (aurex/pipeline.py:182, 199), and `assess()` is reached only from
+# `pipeline.run` (aurex/pipeline.py:98) and `aurex pipeline` (aurex/cli.py:91). Neither is
+# on this path. That is §6's test for when a cache is honest: this run makes no claim about
+# today's price, so a series ending weeks ago grades exactly as well as a live one and
+# dissolves nothing — the same argument that makes a cache right for `factors.yml` and
+# wrong for `nightly.yml`, where the guard exists precisely to refuse the stale copy a
+# cache would supply.
 #
-# The price is that the artifact must say what it read. §6: a run reproducible only
-# from a cache nobody can see is the `--to` problem wearing a different hat. So the
-# emitted block carries `resolution.cache_dir` and `resolution.series_end`, the
-# pre-flight step below refuses a cache that does not cover the requested window rather
-# than silently grading a shorter sample, and the guard step checks both.
+# So a cache is *permitted* here, and it is the better input when one exists: it drops the
+# LBMA dependency, which fails roughly half the time from a runner. But `cache_dir`
+# defaulted to `tests/fixtures/bench-cache`, a path that **has never existed in this
+# repository** — so from the day the offline hunk landed until 2026-08-17 this job would
+# have exited in its first minute, and never did, because the only run it ever had used the
+# pre-offline version from `main`. A default naming a file nobody committed is not a
+# default; it is a job that cannot run.
+#
+# The repair keeps both paths rather than dropping either. `cache_dir` now defaults to
+# empty and means **resolve live**, which is what the one successful run actually did
+# (32044823578, 3h14m, `--step 10`). Name a cache and the run goes offline against it, with
+# the pre-flight below refusing one that does not cover the requested window rather than
+# silently grading a shorter sample. Committing a cache that would restore the offline
+# default is a separate decision and needs the LBMA history question settled first.
+#
+# Either way the artifact must say what it read. §6: a run reproducible only from a cache
+# nobody can see is the `--to` problem wearing a different hat. The emitted block carries
+# `resolution.offline`, `resolution.cache_dir` and `resolution.series_end`, and the guard
+# step checks them **against the mode the run was dispatched in** — a live run that came
+# back claiming `offline: true`, or a cache-backed run claiming `false`, is a run whose
+# provenance does not describe it.
 
 on:
   workflow_dispatch:
@@ -45,11 +62,11 @@ on:
         type: string
         default: gold
       cache_dir:
-        description: "Cache to resolve from. The run is offline; this is the only data it sees."
+        description: "Cache to resolve from, e.g. tests/fixtures/seed-cache. Empty resolves live."
         type: string
-        default: tests/fixtures/bench-cache
+        default: ""
       from:
-        description: "First forecast date (YYYY-MM-DD). The cache must cover it."
+        description: "First forecast date (YYYY-MM-DD). A named cache must cover it."
         type: string
         default: "2015-01-01"
       to:
@@ -114,6 +131,7 @@ jobs:
       # shorter sample, and a resolution computed on fourteen months of prices would be
       # published under the same field names as one computed on eleven years.
       - name: the cache covers the window this run claims to grade
+        if: inputs.cache_dir != ''
         env:
           AUREX_CACHE_DIR: ${{ inputs.cache_dir }}
         run: |
@@ -197,9 +215,12 @@ jobs:
         run: |
           set -euo pipefail
           args=(--asset "${{ inputs.asset }}" --from "${{ inputs.from }}" --step "${{ inputs.step }}")
-          # Offline is not a fallback here, it is the design: see the header. A network
-          # resolution would reintroduce the LBMA dependency this run does not need.
-          args+=(--offline)
+          # Offline exactly when a cache was named. Passing --offline without one resolves
+          # nothing and fails with "no cached xauusd", which is a worse way to say "you did
+          # not give me any data" than simply going to the source.
+          if [ -n "${{ inputs.cache_dir }}" ]; then
+            args+=(--offline)
+          fi
           if [ -n "${{ inputs.to }}" ]; then
             args+=(--to "${{ inputs.to }}")
           fi
@@ -219,29 +240,39 @@ jobs:
       # bin is not a measurement and must not be published as one.
       - name: the artifact bounds its sample, names its null, and can measure what it claims
         working-directory: .
+        env:
+          EXPECT_OFFLINE: ${{ inputs.cache_dir != '' }}
         run: |
           uv run --project engine python - <<'PY'
           import json
+          import os
+
           block = json.load(open("public-data/direction.json"))
           sample = block["sample"]
           assert sample["resolved"]["to"], "the run recorded no resolved end date"
           assert "--to" in block["reproduce"], block["reproduce"]
 
-          # §6: a cache-backed artifact must name the cache and its end date, or the
-          # numbers are reproducible only by whoever happens to hold the same files.
+          # §6: an artifact must say what it read. Checked against the mode this job was
+          # dispatched in rather than against a fixed expectation, because the job now
+          # does both: a named cache means offline, an empty one means live. Asserting
+          # one of those unconditionally is how the workflow spent a fortnight unable to
+          # run at all without anyone finding out.
+          expect_offline = os.environ["EXPECT_OFFLINE"] == "true"
           resolution = block["resolution"]
-          assert resolution["offline"] is True, (
-              "this job is the offline one: a live resolution here means it silently "
-              "reacquired the network dependency it was built to drop"
+          assert resolution["offline"] is expect_offline, (
+              f"dispatched with cache_dir {'set' if expect_offline else 'empty'}, so this "
+              f"run should have resolved {'offline' if expect_offline else 'live'}, and "
+              f"the artifact says offline={resolution['offline']}. Provenance that does "
+              f"not describe the run is worse than none."
           )
-          assert resolution["cache_dir"], "the run did not record which cache it read"
-          assert resolution["series_end"], "the run did not record the cache's end date"
+          assert resolution["cache_dir"], "the run did not record which store it read"
+          assert resolution["series_end"], "the run did not record the series' end date"
           assert resolution["series_end"] == block["source"]["end"], (
-              f"the recorded cache end {resolution['series_end']} disagrees with the "
+              f"the recorded end {resolution['series_end']} disagrees with the "
               f"series metadata {block['source']['end']}"
           )
           assert sample["resolved"]["to"] <= resolution["series_end"], (
-              f"the sample ends {sample['resolved']['to']}, after the cache's last "
+              f"the sample ends {sample['resolved']['to']}, after the series' last "
               f"observation {resolution['series_end']}"
           )
 
