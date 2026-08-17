@@ -5,8 +5,15 @@ maintainer reading it first and filling in the two placeholders.
 
 ## Why this is being sent at all
 
-Two things changed the picture:
+Three things changed the picture:
 
+0. **`prices.lbma.org.uk/robots.txt` answers HTTP 401.** RFC 9309 §2.3.1.3 and Aurex's own
+   robots checker — corrected on 2026-08-17 to read the file with Aurex's client rather
+   than urllib's — both read 401 as a complete disallow. `LbmaGoldLoader` passes
+   `check_robots=False`, so the nightly fetches past it. That flag was set before anyone
+   here understood what the 401 meant, and it is not a position to keep by default. The
+   draft below discloses it in the first substantive paragraph, not the last, and asks
+   whether the 401 is policy or a Cloudflare artifact, because we genuinely cannot tell.
 1. LBMA moved its historic benchmark price tables to the members' portal in the week
    commencing **2025-11-24**, keeping "the most recent daily auction price … and chart
    data" public
@@ -43,9 +50,20 @@ Two things changed the picture:
 > results it publishes are mostly negative ones.
 >
 > It reads the London PM fix from `https://prices.lbma.org.uk/json/gold_pm.json`. I want
-> to check that we are doing this by the route you would prefer, for two reasons.
+> to check that we are doing this by the route you would prefer, for three reasons, and
+> the first is one I should put before anything else.
 >
-> First, the access itself. The job runs **once per night** and makes **one** request for
+> First, and I would rather tell you than have you find it: **`https://prices.lbma.org.uk/robots.txt`
+> returns HTTP 401, which RFC 9309 and our own corrected robots checker both read as a
+> complete disallow, and our loader fetches the JSON anyway because it passes
+> `check_robots=False` for this host.** That flag predates our understanding of the 401
+> and it is not a position I want to hold by default, so I am asking directly: is the 401
+> deliberate policy — in which case tell me and I will stop — or is it an artifact of the
+> Cloudflare configuration in front of the host rather than a decision anyone made? We
+> cannot tell which from the outside, and the two answers mean opposite things about
+> whether we should be there at all.
+>
+> Second, the access itself. The job runs **once per night** and makes **one** request for
 > that single file — no polling, no crawling, no other endpoint on the host. Every request
 > identifies itself honestly as
 > `aurex-research/0.1 (+https://github.com/MadScientistX92/aurex; open-source gold research)`,
@@ -53,7 +71,7 @@ Two things changed the picture:
 > different endpoint, a lower frequency, a registered client, or an outright "please stop"
 > — would suit you better, I would rather be told than guess.
 >
-> Second, the terms. I saw that the historic benchmark price tables moved to the Members'
+> Third, the terms. I saw that the historic benchmark price tables moved to the Members'
 > Portal from the week commencing 24 November 2025, with the latest daily auction price
 > and chart data remaining public. I am not clear whether the JSON file above falls under
 > that change, and I would rather ask than assume the reading that happens to suit me. If
