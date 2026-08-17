@@ -672,6 +672,17 @@ def direction(
         "engine_version": __version__,
         "code": code_provenance().describe(),
         "source": price.meta.to_dict(),
+        # Where the prices came from, as distinct from who published them. A run that
+        # resolved offline read a cache, and a cache has an end date that is not
+        # today's — §6: "if a run runs from a cache, the artifact must name the cache's
+        # end date". `source.end` already carries it; this says which store it came out
+        # of and that no network was touched, so a reader can tell a cache-backed run
+        # from a live one without inferring it from the dates.
+        "resolution": {
+            "offline": offline,
+            "cache_dir": str(config.CACHE_DIR),
+            "series_end": price.meta.end.isoformat() if price.meta.end else None,
+        },
         "reproduce": _direction_command(
             asset_id=asset.id,
             since=start_date.isoformat(),

@@ -21,6 +21,21 @@ name: Direction
 # shootout: this job writes public-data/ and nothing else, and fails if it staged
 # anything outside it. A job that could edit prose is a job that can rewrite the
 # pre-registration it was meant to test.
+#
+# WHY THIS RUN IS OFFLINE. `aurex direction` applies **no** freshness guard: it calls
+# `resolve_series` (aurex/cli.py:619) → `_resolve` → `chain.load` (aurex/pipeline.py:182,
+# 199), and `assess()` is reached only from `pipeline.run` (aurex/pipeline.py:98) and
+# `aurex pipeline` (aurex/cli.py:91). Neither is on this path. That is §6's test for
+# when a cache is honest: this run makes no claim about today's price, so a series
+# ending weeks ago grades exactly as well as a live one and dissolves nothing — the
+# same argument that makes a cache right for `factors.yml` and wrong for `nightly.yml`,
+# where the guard exists precisely to refuse the stale copy a cache would supply.
+#
+# The price is that the artifact must say what it read. §6: a run reproducible only
+# from a cache nobody can see is the `--to` problem wearing a different hat. So the
+# emitted block carries `resolution.cache_dir` and `resolution.series_end`, the
+# pre-flight step below refuses a cache that does not cover the requested window rather
+# than silently grading a shorter sample, and the guard step checks both.
 
 on:
   workflow_dispatch:
@@ -29,6 +44,14 @@ on:
         description: "Registered asset id to grade"
         type: string
         default: gold
+      cache_dir:
+        description: "Cache to resolve from. The run is offline; this is the only data it sees."
+        type: string
+        default: tests/fixtures/bench-cache
+      from:
+        description: "First forecast date (YYYY-MM-DD). The cache must cover it."
+        type: string
+        default: "2015-01-01"
       to:
         description: "Last observation the run may see (YYYY-MM-DD). Empty uses the series' own end."
         type: string
@@ -85,10 +108,67 @@ jobs:
                   print(f"{name}: NOT INSTALLED")
           PY
 
+      # The cache is the entire input to this run, so its coverage is checked before
+      # two hours of compute rather than discovered in the artifact afterwards. A cache
+      # that starts after the requested `--from` does not fail — it silently grades a
+      # shorter sample, and a resolution computed on fourteen months of prices would be
+      # published under the same field names as one computed on eleven years.
+      - name: the cache covers the window this run claims to grade
+        env:
+          AUREX_CACHE_DIR: ${{ inputs.cache_dir }}
+        run: |
+          uv run python - <<'PY'
+          import json
+          import os
+          import sys
+          from datetime import date
+          from pathlib import Path
+
+          from aurex.assets import get
+
+          asset = get("${{ inputs.asset }}")
+          root = Path(os.environ["AUREX_CACHE_DIR"])
+          wanted = date.fromisoformat("${{ inputs.from }}")
+
+          meta_path = root / f"{asset.price_series_id}.meta.json"
+          if not meta_path.exists():
+              sys.exit(
+                  f"no cached {asset.price_series_id} at {root}: this job resolves "
+                  f"offline and has nothing to read"
+              )
+
+          meta = json.loads(meta_path.read_text())
+          start, end = date.fromisoformat(meta["start"]), date.fromisoformat(meta["end"])
+          print(f"cache {root}: {meta['rows']} rows, {start} to {end}")
+
+          if start > wanted:
+              sys.exit(
+                  f"the cache starts {start}, after the requested --from {wanted}. "
+                  f"This run would grade {start}..{end} and publish it under the same "
+                  f"field names as the full sample. Extend the cache or move --from."
+              )
+
+          # min_observations for the volatility models, which refuse rather than fit on
+          # a short history. Checked here so the refusal is one line at the top of the
+          # log instead of a per-model skip buried two hours in.
+          span = (end - start).days
+          need = asset.vol_defaults.min_observations
+          if span < need * 1.4:
+              sys.exit(
+                  f"the cache spans {span} calendar days; the volatility models need "
+                  f"{need} observations before they will fit"
+              )
+          PY
+
       - name: grade direction
+        env:
+          AUREX_CACHE_DIR: ${{ inputs.cache_dir }}
         run: |
           set -euo pipefail
-          args=(--asset "${{ inputs.asset }}" --step "${{ inputs.step }}")
+          args=(--asset "${{ inputs.asset }}" --from "${{ inputs.from }}" --step "${{ inputs.step }}")
+          # Offline is not a fallback here, it is the design: see the header. A network
+          # resolution would reintroduce the LBMA dependency this run does not need.
+          args+=(--offline)
           if [ -n "${{ inputs.to }}" ]; then
             args+=(--to "${{ inputs.to }}")
           fi
@@ -115,6 +195,24 @@ jobs:
           sample = block["sample"]
           assert sample["resolved"]["to"], "the run recorded no resolved end date"
           assert "--to" in block["reproduce"], block["reproduce"]
+
+          # §6: a cache-backed artifact must name the cache and its end date, or the
+          # numbers are reproducible only by whoever happens to hold the same files.
+          resolution = block["resolution"]
+          assert resolution["offline"] is True, (
+              "this job is the offline one: a live resolution here means it silently "
+              "reacquired the network dependency it was built to drop"
+          )
+          assert resolution["cache_dir"], "the run did not record which cache it read"
+          assert resolution["series_end"], "the run did not record the cache's end date"
+          assert resolution["series_end"] == block["source"]["end"], (
+              f"the recorded cache end {resolution['series_end']} disagrees with the "
+              f"series metadata {block['source']['end']}"
+          )
+          assert sample["resolved"]["to"] <= resolution["series_end"], (
+              f"the sample ends {sample['resolved']['to']}, after the cache's last "
+              f"observation {resolution['series_end']}"
+          )
 
           null = block["benchmark"]["label"]
           assert null == "random_walk_drift_matched", (
