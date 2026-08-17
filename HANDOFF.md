@@ -100,15 +100,35 @@ Concretely, and enforced by tests:
 
 ## 5. The open problem — start here
 
-`xauusd`, the anchor price series that every published price and every simulated path is built from, **has a source chain of length one**: `LbmaGoldLoader`. Compare `usdinr`, which carries Yahoo plus a FRED fallback. The one blocking series with no second source is the one everything depends on.
+`xauusd`, the anchor price series that every published price and every simulated path is built from, **has a source chain of length one**: `LbmaGoldLoader`. `usdinr` looks better — Yahoo plus a FRED fallback — but that redundancy has since been measured and is nominal; see below. The one blocking series with no second source is the one everything depends on, and the one that appears to have a second source has one that cannot arrive in time.
 
 From GitHub runners it fails roughly **56% of the time** (4 resolved, 5 failed, 2026-08-05 to 08-13) with a 2xx response whose body is not JSON. From a residential IP it answered 12/12. On **2026-08-13 a runner resolved it at 04:05 UTC and another failed on it at 19:12** — same endpoint, same day — so this is per-run, not an outage anyone could wait out.
 
-Two candidate mechanisms needing **opposite** repairs:
-- **Cloudflare challenge page** → the host will not serve this client from that network; a second source on a **different host** is required.
-- **Empty or truncated body** → transient; a courtesy-delayed retry inside the loader may be the whole fix, which is far smaller.
+**Mechanism, settled.** Probe run 31906804255: 20/20 attempts returned HTTP 200 carrying a complete ~12KB Cloudflare interstitial ("One moment, please…", `cf-edge-cache: no-cache`), 20 distinct bodies, none converting. Not a truncated body. Its only remedy is a JavaScript reload after five seconds, and `http.get` calls the module-level `requests.get`, which builds and discards a `Session` per call — so no state survives to be sent back and **a courtesy-delayed retry is mechanically dead**. Probe run 31974956815 then answered 5/5 clean from a different runner IP, which fixes the shape of the problem: per-egress, not per-day. The repair is a second source on a different host.
 
-The evidence to distinguish them was being discarded — `http.get` raised for non-2xx *before* decoding, so `JSONDecodeError: Expecting value: line 1 column 1` was emitted identically by both. That is now fixed.
+**The candidate landscape is thin, and that is a finding rather than a gap in the search.** FRED's LBMA fix was removed with all ICE Benchmark Administration data on 2022-01-31. ICE, which administers the benchmark, publishes no unauthenticated endpoint at all — delivery is ICE Connect / Data API / Data Files / Global Network, under licence, contact `iba-licensing@ice.com` — and LBMA moved its own historic tables to the members' portal in the week commencing 2025-11-24, keeping only the latest daily auction price and chart data public. The Bundesbank's directory holds exactly one gold price series, `BBEX3.D.XAU.DEM.EA.AC.C01`, the Frankfurt fixing in D-marks per kilo, last observation **1998-12-30**. stooq.com and fsapi.gold.org publish `User-agent: * / Disallow: /`. fxratesapi serves a runner but is rejected on the data: weekend carry-forward that would satisfy the freshness guard with a repeated Friday quote, ≈ −0.34% against the PM fix, wrong fixing time, and a 366-day history wall. **The status of the LBMA JSON feed under the portal move is itself unresolved, and an enquiry to LBMA is drafted at `docs/lbma-enquiry.md`.**
+
+### The second single-source fragility: `usdinr`'s fallback is nominal
+
+Measured 2026-08-17, and the reason it matters is that `usdinr` is *blocking* — the rupee lens converts through it, so a nightly that cannot resolve it publishes nothing.
+
+The fallback is FRED `DEXINUS`, which carries daily observations but is **published weekly**. Evidence, not inference: 76 consecutive ALFRED vintages (2026-06-02 → 2026-08-16, no errors) show the newest available observation changing on exactly 11 dates, every one a Monday except 2026-06-02, which followed a Monday holiday — and each release reaches only the **preceding Friday**. The Federal Reserve's own H.10 schedule says the same: released "On Mondays at 4:15 p.m.", next business day if Monday is a holiday, covering "the previous business week".
+
+`usdinr` declares `max_lag_days=4` (`engine/aurex/assets/gold.py`), and the engine refuses when `(run_date − last_observation).days > 4` (`engine/aurex/data/freshness.py`). The nightly runs at 02:00 UTC, *before* the 20:15 UTC Monday release. So the lag a nightly would actually see is:
+
+| Night (02:00 UTC) | Newest observation available | Lag | Clears 4 days |
+|---|---|---|---|
+| Mon | Friday of the week before last | 10–11 | no |
+| Tue | previous Friday | 4 | yes, exactly at the boundary |
+| Wed | previous Friday | 5 | no |
+| Thu | previous Friday | 6 | no |
+| Fri | previous Friday | 7 | no |
+| Sat | previous Friday | 8 | no |
+| Sun | previous Friday | 9 | no |
+
+**One night in seven, and only when the Monday release was on time** — 9 of the 11 release weeks in the measured window. On the other six nights, if Yahoo `INR=X` fails, the chain resolves `DEXINUS` successfully and the freshness guard then correctly refuses it, so the run skips exactly as if there were no fallback at all. The redundancy is real in the source chain and absent in the freshness budget: the tolerance was derived for a daily-published FX series, which the primary is and the fallback is not.
+
+**Do not fix this by moving the tolerance.** The number is right for what it guards. The honest repairs are a fallback that publishes daily, or a declared acceptance that `usdinr` is single-sourced in practice.
 
 ### Current branch: `fix-skip-reason-and-probe-lbma` (pushed, **not merged**)
 
