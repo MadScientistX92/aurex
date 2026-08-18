@@ -63,6 +63,13 @@ Three things changed the picture:
 > cannot tell which from the outside, and the two answers mean opposite things about
 > whether we should be there at all.
 >
+> I should say what our own position is, so that this reads as a question and not a
+> courtesy: **Aurex honours an explicit `Disallow` wherever a host publishes one — two
+> candidate sources have been dropped on that ground alone and three series we already
+> depend on are being re-sourced because of it — and we treat your 401 as *unresolved*
+> rather than as permission, which is why the single nightly fetch continues, disclosed
+> here, only until you answer.**
+>
 > Second, the access itself. The job runs **once per night** and makes **one** request for
 > that single file — no polling, no crawling, no other endpoint on the host. Every request
 > identifies itself honestly as

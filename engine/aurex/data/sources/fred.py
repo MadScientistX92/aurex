@@ -50,7 +50,17 @@ class FredLoader:
         return f"{CSV_ENDPOINT}?id={self.fred_code}"
 
     def fetch(self, start: date, end: date) -> LoadedSeries:
-        response = http.get(self.url, check_robots=False)
+        # The robots guard runs here like anywhere else. It used to be bypassed with
+        # ``check_robots=False`` and no reason recorded at the call site — the widest
+        # bypass in the codebase, covering five series' primary route and two more on
+        # fallback. Measured 2026-08-17 with Aurex's own client:
+        # ``fred.stlouisfed.org/robots.txt`` gives ``User-agent: *`` a ``Crawl-delay: 1``
+        # and six specific ``Disallow``s, none of which matches ``/graph/fredgraph.csv``
+        # — ``/graph/fredgraph.png`` is barred and the CSV beside it is not, which is a
+        # line somebody drew deliberately. So the flag was buying nothing, and a bypass
+        # that is unnecessary is indistinguishable from the outside from one that is
+        # load-bearing.
+        response = http.get(self.url)
         frame = pd.read_csv(io.StringIO(response.text))
 
         if frame.shape[1] < 2:

@@ -1,7 +1,8 @@
 # Does `robots.txt` bind Aurex?
 
-**Status: decision brief. The decision is not made here and must not be inferred from the
-ordering below.** Written 2026-08-17, revised the same day. Every fact in it was already
+**Status: decided 2026-08-19. The decision is §0; everything else in this document is the
+costing that produced it and is left exactly as it was written, including the sentences the
+decision overrules.** Written 2026-08-17 as a decision brief, revised the same day. Every fact in it was already
 recorded in this repository, with **one exception made deliberately**: `fred.stlouisfed.org`
 was fetched once, because Position A could not be costed without it and reading a
 `robots.txt` is the request every position permits (§1a). The two hosts that publish a
@@ -21,6 +22,82 @@ not recommend it.
 
 ---
 
+## 0. The decision, 2026-08-19
+
+**An explicit `Disallow` is honoured. An ambiguous refusal is unknown, and unknown is not
+permission.**
+
+Neither position as §2 frames them. The costing was built around crawling versus
+retrieval, and that turned out not to be the line that decides anything here: what
+separates the two hosts this project actually depends on is not what we do with the file
+but **how clearly its operator said anything at all.**
+
+**Where a host serves a `robots.txt` that names a path Aurex fetches, that binds Aurex.**
+It binds whether or not the fetch is a crawl, whether or not one document per night is
+modest, and whether or not the data is unobtainable anywhere else. The three things that
+follow are not softened:
+
+- `stooq.com` and `fsapi.gold.org` **stay excluded**, on the `Disallow` and on nothing
+  else. §4 calls stooq "the substantive prize" and names it the only recorded candidate
+  that could answer both single-source fragilities at once. That prize is not claimed. The
+  four measurements §4 lists as unrun against it stay unrun, because a probe that ignores a
+  `Disallow` to find out what is behind it has answered a question nobody may act on.
+- `query1.finance.yahoo.com` and `query2.finance.yahoo.com` serve the same 26-byte file, so
+  `usdinr` (**blocking**), `xau_futures` and `vix` are **in breach of this decision from the
+  day it is written**, and will stay in breach until they are re-sourced or dropped. That is
+  a deadline, not a footnote, and it is recorded in HANDOFF §6 as one. The asymmetry §5 of
+  this document names — stooq struck for the file Yahoo serves us nightly — is resolved in
+  the strict direction, which is the only direction that resolves it: both are out.
+- The mechanism that let Yahoo through, `yfinance` never consulting `robots.txt`, is not a
+  defence. A rule that reaches only the requests that happen to go through `http.get` is a
+  rule about a function boundary.
+
+**Where a host answers 401 or 403 on `robots.txt` itself, nothing has been stated to us.**
+That is a different fact from a `Disallow`, and collapsing the two in either direction is
+the error. Read as refusal, it stops every published price on an inference nobody has
+verified — the file behind a CDN that also serves this host's interstitial is at least as
+likely an edge artifact as a policy. Read as permission, it is the convenient reading of a
+silence, which is what this document exists to refuse. So it is read as **unresolved**, and
+an unresolved question is handled by asking it:
+
+1. **Disclose** it wherever the source is described — the loader's call site, this
+   document, and the enquiry itself.
+2. **Ask the administrator directly.** `docs/lbma-enquiry.md` is that letter.
+3. **Continue the single nightly fetch while the enquiry is open**, unchanged in rate,
+   pattern or identification. Continuing is not a finding in our favour and must never be
+   described as one.
+4. **Stop the day they say stop** — and stop on an explicit `Disallow` appearing at that
+   host, without waiting for a reply.
+
+`prices.lbma.org.uk` is the only host in this state. `LbmaGoldLoader`'s `check_robots=False`
+therefore names one open question rather than granting a general bypass, and it must not be
+copied to a host that publishes an explicit `Disallow`.
+
+**No re-rolling of egress addresses, under any position.** §4a stays costed and **unbuilt**.
+Disclosure cannot cure it, because the thing disclosed would be that we re-run a job until
+we draw an address the host's edge does not challenge — which is looking for a door that is
+not being watched. It is the same convenient reading of a machine-readable "no" that the
+paragraph above refuses, and a project cannot hold one standard for the refusal that is
+expensive to honour and another for the one that is cheap.
+
+**What this costs, stated once and not softened.** No second source for `xauusd` reopens.
+`usdinr`'s only compliant fallback is FRED's weekly-published `DEXINUS`, which the freshness
+guard correctly refuses on about 88% of nights, so the rupee lens is single-sourced in
+practice and will stay that way until a compliant daily FX source is found. `xau_futures`
+going takes measured OHLC with it, and HAR-RV is omitted rather than fed squared returns, so
+the shootout and the direction run become five-model runs. Those are the terms. They were
+costed in §3 before the decision and none of them is a reason to reopen it.
+
+**What changed in the code on the day of the decision.** `FredLoader`'s `check_robots=False`
+came out — measured unnecessary in §1a, and a bypass that is unnecessary is
+indistinguishable from the outside from one that is load-bearing. `LbmaGoldLoader`'s stayed
+and was re-documented as the one open question above. Nothing else. In particular no loader
+was added, removed or re-pointed: the Yahoo breach is named, not yet repaired, because the
+replacement candidates are still being measured and a series dropped before its replacement
+is measured is a nightly that publishes nothing while we find out.
+
+---
+
 ## 1. What is measured, and where it is written down
 
 | Host | What its `robots.txt` says | Measured | Recorded in |
@@ -30,6 +107,10 @@ not recommend it.
 | `stooq.com` | `User-agent: *` / `Disallow: /` to Aurex's client, **404 to `urllib`'s** | 2026-08-17 | `data/sources/http.py` `_read_robots`; `tests/test_sources.py::TestRobotsIsReadAsAurex` |
 | `fsapi.gold.org` (World Gold Council) | `User-agent: *` / `Disallow: /` | round 2 | HANDOFF §5; `probe-lbma.yml` round-2 header |
 | `prices.lbma.org.uk` | **HTTP 401.** RFC 9309 §2.3.1.3 and Aurex's own corrected checker both read that as a complete disallow | 2026-08-17 | `docs/lbma-enquiry.md` §0; `http.py` 401/403 branch |
+| `www.rbi.org.in` | **HTTP 418** with a WAF block page ("Unauthorised Access", 626 bytes, a support ID). Aurex's guard returns **True** for it — only 401 and 403 are read as withheld, so an ambiguous status reads as permission | 2026-08-19, with Aurex's own client | HANDOFF §6, second bullet; probe round 5 |
+| `data.rbi.org.in` | 404, no file. Nothing to apply | 2026-08-19 | probe round 5 |
+| `www.fbil.org.in` | **Not measured — read timeout at 20s, repeatedly**, while the data endpoints on the same host answered in 144ms. The guard fails open on an unreachable file, so it would fetch; under §0 that is an unmeasured host, not a permitted one | 2026-08-19 | probe round 5 |
+| `www.ecb.europa.eu` | Served, 1,141 bytes, and **specific**: `Disallow`s for translated `_content.*.html` pages, some video and asset directories, none matching `/stats/eurofxref/`. Also **`Crawl-delay: 5`**, which nothing in this codebase parses and `HTTP_COURTESY_DELAY` (1.0s) does not meet | 2026-08-19, with Aurex's own client | probe round 5; HANDOFF §5 |
 | `fred.stlouisfed.org` | **Permits everything Aurex fetches.** `User-agent: *` gets `Crawl-delay: 1` and six specific `Disallow`s — `/graph/graph-landing.php`, `/graph/image.php`, `/graph/fredgraph.png`, `/searchresults`, `/fred-glance-widget.php`, `/seriesBeta`. None matches `/graph/fredgraph.csv`. | 2026-08-17, with Aurex's own client, one request | §1a below |
 
 ### 1a. FRED, measured
@@ -332,12 +413,19 @@ Either way, one more constraint is needed that belongs to neither position:
    Position A and `check_robots=False` there is unnecessary rather than load-bearing. The
    residue is smaller and separate: nothing in the codebase parses `Crawl-delay`, and Aurex
    complies with FRED's by coincidence.
-2. **Is LBMA's 401 policy or a Cloudflare artifact?** `docs/lbma-enquiry.md` asks. Under
-   Position A the answer decides whether the engine can run at all; under Position B it
-   decides how the disclosure paragraph is written.
-3. **Does the stooq exclusion get withdrawn, and by whom?** It is recorded in a throwaway
-   workflow. If Position B is taken, the withdrawal has to land somewhere that outlives
-   the probe.
-4. **Do the four fxratesapi tests get run against stooq before anything depends on it?**
-   Weekend carry-forward, PM-fix agreement, fixing time, history depth, runner
-   reachability. A source that clears robots and fails those is not a second source.
+2. **Is LBMA's 401 policy or a Cloudflare artifact?** **Still open, and it is now the only
+   question in this document whose answer changes what Aurex does.** `docs/lbma-enquiry.md`
+   asks it. §0 says how it is handled while unanswered — disclose, ask, keep the single
+   nightly fetch, stop when told — so the engine runs meanwhile and the reader is told on
+   what footing.
+3. ~~**Does the stooq exclusion get withdrawn, and by whom?**~~ **Answered by §0: it is not
+   withdrawn.** It now rests on a stated position recorded here rather than on a line in a
+   throwaway workflow, which is what the question was actually asking for.
+4. ~~**Do the four fxratesapi tests get run against stooq?**~~ **Moot under §0** — the tests
+   are not run because the source is not a candidate. The question survives in a different
+   form for every *new* candidate: weekend carry-forward, PM-fix agreement, fixing time,
+   history depth and runner reachability are what separate a transport that answers from a
+   source, and a candidate that clears robots and fails those is not a second source.
+5. **What replaces the three Yahoo series, and by when?** New, and it is the open item §0
+   creates. `usdinr` is blocking, so the deadline it carries is the sharpest one in this
+   repository.

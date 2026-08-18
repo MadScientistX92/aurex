@@ -51,6 +51,16 @@ class LbmaGoldLoader:
         self.url = GOLD_PM_URL if self.fix == "PM" else GOLD_AM_URL
 
     def fetch(self, start: date, end: date) -> LoadedSeries:
+        # One open question, not a general permission. ``prices.lbma.org.uk`` answers
+        # **HTTP 401** for ``/robots.txt``, which Aurex's own checker reads as a total
+        # disallow (RFC 9309 §2.3.1.3). What it does not say is whether that is the
+        # LBMA's policy or an artifact of the Cloudflare edge that also serves this
+        # host's interstitial — a 401 on a file that is normally world-readable is
+        # ambiguous, and ambiguity is not consent. ``docs/lbma-enquiry.md`` asks them
+        # directly; until they answer, the single nightly fetch continues and is
+        # disclosed rather than quietly stopped or quietly excused. See
+        # ``docs/robots-position.md``: an explicit ``Disallow`` is honoured, and this
+        # flag must not be copied to any host that publishes one.
         payload = http.get_json(self.url, check_robots=False)
         index = _CURRENCY_INDEX[self.currency]
 

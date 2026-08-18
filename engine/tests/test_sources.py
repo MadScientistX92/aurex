@@ -64,6 +64,33 @@ class TestFred:
         with pytest.raises(ValueError, match="unexpected CSV shape"):
             FredLoader("x", "DFII10").fetch(START, END)
 
+    @responses.activate
+    def test_the_robots_guard_runs_on_the_fred_route(self) -> None:
+        """It did not, and nothing anywhere said why.
+
+        ``check_robots=False`` sat at this call site with no recorded reason, covering
+        five series' primary route and the ``usdinr`` and ``vix`` fallbacks — the widest
+        bypass in the codebase. Measuring the host settled it: FRED permits every path
+        this loader fetches, so the flag was buying nothing. This asserts the guard is
+        actually consulted rather than that the host happens to allow us, by serving a
+        ``Disallow`` and requiring the fetch to refuse: a re-added bypass would sail
+        through it, which is the point.
+        """
+        from aurex.data.sources import http
+
+        http._robots_cache.clear()
+        responses.add(
+            responses.GET,
+            "https://fred.stlouisfed.org/robots.txt",
+            body="User-agent: *\nDisallow: /\n",
+            status=200,
+        )
+        responses.add(responses.GET, CSV_ENDPOINT, body=self.FRED_CSV, status=200)
+
+        with pytest.raises(PermissionError, match=r"robots\.txt"):
+            FredLoader("real_yield_10y", "DFII10").fetch(START, END)
+        http._robots_cache.clear()
+
 
 class TestLbma:
     PAYLOAD: ClassVar[list[dict[str, object]]] = [
