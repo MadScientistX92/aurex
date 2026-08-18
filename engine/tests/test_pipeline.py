@@ -194,9 +194,34 @@ class TestMisconfigurationFailsLoudly:
     def test_a_lens_with_no_overlapping_dates_reports_an_empty_block(
         self, cache: CacheStore
     ) -> None:
-        """Price and rate that never traded on the same day produce no prices at all."""
-        cache.write(make_series("xauusd", start="2026-06-01", periods=20, value=4_000.0))
-        cache.write(make_series("usdinr", start="2020-01-01", periods=20, value=96.5))
+        """Price and rate that never traded on the same day produce no prices at all.
+
+        The rate sits on Saturdays *inside* the requested window rather than in a
+        different year, which is where this fixture used to put it. Since
+        :meth:`SourceChain.load` clips to the window on every path, a cached copy
+        holding nothing in ``[start, end]`` is now refused outright — so the old
+        fixture stopped exercising the lens and started exercising the chain, and
+        passed for the wrong reason. Non-overlap has to be arranged within the window
+        for this to still be a test about the lens.
+        """
+        index = pd.bdate_range(START, periods=20, name="date")
+        cache.write(make_series("xauusd", start=str(START), periods=len(index), value=4_000.0))
+        weekends = pd.date_range(START, periods=6, freq="W-SAT", name="date")
+        cache.write(
+            LoadedSeries(
+                frame=pd.DataFrame({"close": np.full(len(weekends), 96.5)}, index=weekends),
+                meta=SeriesMeta(
+                    series_id="usdinr",
+                    source_name="test:source",
+                    source_url="https://example.invalid/series",
+                    citation=TEST_CITATION,
+                    fetched_at=pd.Timestamp("2026-07-31", tz="UTC").to_pydatetime(),
+                    rows=len(weekends),
+                    start=weekends[0].date(),
+                    end=weekends[-1].date(),
+                ),
+            )
+        )
 
         block = gold_block(cache)["lenses"]["INR"]
         assert block["latest"] is None
