@@ -6,14 +6,14 @@
     "what_this_is": "Forecasts this engine published to a public git repository before the outcome existed, scored after it did. This is not the walk-forward backtest and is never pooled with it: the backtest simulates what the engine would have said, and this records what it did say.",
     "why_separate": "Pooling would make this sample look testable years earlier than it is, by diluting it with observations that carry a weaker guarantee. The counts are reported apart so a reader can see exactly how much of the evidence is of which kind."
   },
-  "generated_at": "2026-08-21T02:58:11.089506+00:00",
+  "generated_at": "2026-08-22T02:50:05.409418+00:00",
   "horizons": [
     {
       "censored": 2,
       "horizon_sessions": 5,
       "independent_observations": 2,
-      "mean_pit": 0.69638,
-      "observations": 10,
+      "mean_pit": 0.77811,
+      "observations": 16,
       "test_note": "2 independent windows against a threshold of 30 fixed in advance: no test is possible yet, and none is reported.",
       "test_possible": false
     }
@@ -228,8 +228,134 @@
       },
       "realised": 4482.95,
       "realised_on": "2026-08-20"
+    },
+    {
+      "anchor": 159542.5578,
+      "as_of": "2026-08-14",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "87163cb2764045b8b6d6c5281ed4d62d6d3ebf52",
+      "horizon_sessions": 5,
+      "lens": "INR",
+      "log_return": 0.045547,
+      "pit": 0.8963043511364508,
+      "published_on": "2026-08-15",
+      "quantiles": {
+        "q05": 151133.8962,
+        "q25": 156228.1475,
+        "q50": 159528.8944,
+        "q75": 163015.8263,
+        "q95": 168431.1199
+      },
+      "realised": 166977.2314,
+      "realised_on": "2026-08-21"
+    },
+    {
+      "anchor": 4390.7,
+      "as_of": "2026-08-14",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "87163cb2764045b8b6d6c5281ed4d62d6d3ebf52",
+      "horizon_sessions": 5,
+      "lens": "USD",
+      "log_return": 0.042669,
+      "pit": 0.878526040960947,
+      "published_on": "2026-08-15",
+      "quantiles": {
+        "q05": 4150.367,
+        "q25": 4296.1698,
+        "q50": 4392.7686,
+        "q75": 4486.7714,
+        "q95": 4635.1127
+      },
+      "realised": 4582.1,
+      "realised_on": "2026-08-21"
+    },
+    {
+      "anchor": 159567.6381,
+      "as_of": "2026-08-14",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "aa841808baeedc0df5482b01d43bf58d57a78f89",
+      "horizon_sessions": 5,
+      "lens": "INR",
+      "log_return": 0.04539,
+      "pit": 0.8941645013659973,
+      "published_on": "2026-08-16",
+      "quantiles": {
+        "q05": 151100.5152,
+        "q25": 156249.2494,
+        "q50": 159558.5032,
+        "q75": 163009.4946,
+        "q95": 168513.952
+      },
+      "realised": 166977.2314,
+      "realised_on": "2026-08-21"
+    },
+    {
+      "anchor": 4390.7,
+      "as_of": "2026-08-14",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "aa841808baeedc0df5482b01d43bf58d57a78f89",
+      "horizon_sessions": 5,
+      "lens": "USD",
+      "log_return": 0.042669,
+      "pit": 0.878526040960947,
+      "published_on": "2026-08-16",
+      "quantiles": {
+        "q05": 4150.367,
+        "q25": 4296.1698,
+        "q50": 4392.7686,
+        "q75": 4486.7714,
+        "q95": 4635.1127
+      },
+      "realised": 4582.1,
+      "realised_on": "2026-08-21"
+    },
+    {
+      "anchor": 159542.5578,
+      "as_of": "2026-08-14",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "901d0c87f2422ec4e5a02058dd84160245bc7baa",
+      "horizon_sessions": 5,
+      "lens": "INR",
+      "log_return": 0.045547,
+      "pit": 0.8951882496401067,
+      "published_on": "2026-08-17",
+      "quantiles": {
+        "q05": 151083.4671,
+        "q25": 156224.7245,
+        "q50": 159533.5497,
+        "q75": 162978.3234,
+        "q95": 168486.9069
+      },
+      "realised": 166977.2314,
+      "realised_on": "2026-08-21"
+    },
+    {
+      "anchor": 4390.7,
+      "as_of": "2026-08-14",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "901d0c87f2422ec4e5a02058dd84160245bc7baa",
+      "horizon_sessions": 5,
+      "lens": "USD",
+      "log_return": 0.042669,
+      "pit": 0.879763868779941,
+      "published_on": "2026-08-17",
+      "quantiles": {
+        "q05": 4149.1866,
+        "q25": 4297.697,
+        "q50": 4392.1732,
+        "q75": 4485.7077,
+        "q95": 4634.2734
+      },
+      "realised": 4582.1,
+      "realised_on": "2026-08-21"
     }
   ],
   "scope": "live",
-  "total_observations": 10
+  "total_observations": 16
 }
