@@ -1,0 +1,157 @@
+{
+  "code": null,
+  "date": "2026-08-23",
+  "detail": {
+    "policy": "A blocking series \u2014 the price series, and the exchange rate of any published lens \u2014 must reach the run date within its declared tolerance or the run publishes nothing and exits non-zero. Tolerances are calendar days and are stated per series with the publication calendar they were derived from. Non-blocking series are measured and reported here but never block: a stale factor moves a fitted loading, which is a smaller problem than a fabricated price.",
+    "publishable": false,
+    "run_date": "2026-08-23",
+    "series": [
+      {
+        "blocking": false,
+        "detail": "dxy: last observation 2026-08-14 is 9 days behind the run date, tolerance is 10 (US business days, published in arrears)",
+        "lag_days": 9,
+        "last_observation": "2026-08-14",
+        "series_id": "dxy",
+        "tolerance": {
+          "calendar": "US business days, published in arrears",
+          "max_lag_days": 10,
+          "rationale": "DTWEXBGS runs materially further behind than the other FRED series \u2014 six days behind on the 2026-07-30 run, which was an ordinary day. Ten days is set from that observed lag rather than from the market calendar; a tighter number would fire on healthy runs and train the reader to ignore it."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "gpr: last observation 2026-08-17 is 6 days behind the run date, tolerance is 10 (calendar days; the daily file is refreshed every Monday)",
+        "lag_days": 6,
+        "last_observation": "2026-08-17",
+        "series_id": "gpr",
+        "tolerance": {
+          "calendar": "calendar days; the daily file is refreshed every Monday",
+          "max_lag_days": 10,
+          "rationale": "The index itself is daily and covers weekends, but the workbook carrying it is rebuilt weekly \u2014 the authors state Monday, moving to the next business day when Monday is a federal holiday. So the last observation sits up to six days behind by Sunday, seven with the holiday shift. Ten days leaves room for one skipped update to be visible without a healthy Saturday run reading as a fault."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "ibja_gold: last observation 2026-08-21 is 2 days behind the run date, tolerance is 6 (Indian business days)",
+        "lag_days": 2,
+        "last_observation": "2026-08-21",
+        "series_id": "ibja_gold",
+        "tolerance": {
+          "calendar": "Indian business days",
+          "max_lag_days": 6,
+          "rationale": "Not blocking. IBJA closes for local holidays that cluster several days deep, and \u00a70's sixth rule already covers the consequence: where there is no observation the premium is NaN rather than computed. Six days keeps a Diwali week from reading as a fault while still surfacing a dead feed."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "local_cpi: last observation 2025-03-01 is 540 days behind the run date, tolerance is 45 (monthly, published in arrears)",
+        "lag_days": 540,
+        "last_observation": "2025-03-01",
+        "series_id": "local_cpi",
+        "tolerance": {
+          "calendar": "monthly, published in arrears",
+          "max_lag_days": 45,
+          "rationale": "A monthly index released a few weeks after the month it measures, so 45 days is the ordinary lag rather than a fault. THIS SERIES IS EXPECTED TO READ STALE: the OECD discontinued it upstream and its last observation is 2025-03. That is deliberately not papered over by widening the tolerance to swallow it \u2014 the chain is estimated to the last observation the publisher made, and the artifact should say so on every run rather than let a dead series look alive."
+        },
+        "verdict": "stale"
+      },
+      {
+        "blocking": false,
+        "detail": "local_policy_rate: last observation 2026-06-01 is 83 days behind the run date, tolerance is 75 (monthly, published in arrears)",
+        "lag_days": 83,
+        "last_observation": "2026-06-01",
+        "series_id": "local_policy_rate",
+        "tolerance": {
+          "calendar": "monthly, published in arrears",
+          "max_lag_days": 75,
+          "rationale": "The immediate-rate series runs a full month or more behind: on the 2026-08-12 read its last observation was 2026-05. Seventy-five days is set from that observed lag rather than from the monthly calendar alone, which would fire on every ordinary run."
+        },
+        "verdict": "stale"
+      },
+      {
+        "blocking": false,
+        "detail": "real_yield_10y: last observation 2026-08-20 is 3 days behind the run date, tolerance is 5 (US business days)",
+        "lag_days": 3,
+        "last_observation": "2026-08-20",
+        "series_id": "real_yield_10y",
+        "tolerance": {
+          "calendar": "US business days",
+          "max_lag_days": 5,
+          "rationale": "DFII10 is published each business day with about a one-day lag. Five days absorbs a Monday holiday landing on top of that lag."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": true,
+        "detail": "usdinr: last observation 2026-08-22 is 1 days behind the run date, tolerance is 4 (FX trading days)",
+        "lag_days": 1,
+        "last_observation": "2026-08-22",
+        "series_id": "usdinr",
+        "tolerance": {
+          "calendar": "FX trading days",
+          "max_lag_days": 4,
+          "rationale": "FX trades Sunday 22:00 to Friday 22:00 UTC, so the calendar matches the fix's. Blocking because the rupee lens converts through it: a stale rate over a fresh fix publishes a rupee price that was never quoted."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "vix: last observation 2026-08-21 is 2 days behind the run date, tolerance is 5 (US equity market days)",
+        "lag_days": 2,
+        "last_observation": "2026-08-21",
+        "series_id": "vix",
+        "tolerance": {
+          "calendar": "US equity market days",
+          "max_lag_days": 5,
+          "rationale": "Yahoo carries the previous session by the following morning; the FRED fallback lags a day further. Five days covers a long weekend plus the fallback's own lag without hiding a genuine multi-day outage."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "wti: last observation 2026-08-18 is 5 days behind the run date, tolerance is 7 (US business days, published in arrears)",
+        "lag_days": 5,
+        "last_observation": "2026-08-18",
+        "series_id": "wti",
+        "tolerance": {
+          "calendar": "US business days, published in arrears",
+          "max_lag_days": 7,
+          "rationale": "DCOILWTICO was three days behind on the 2026-07-30 run. Seven days covers that lag plus a holiday week."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": false,
+        "detail": "xau_futures: last observation 2026-08-21 is 2 days behind the run date, tolerance is 4 (COMEX trading days)",
+        "lag_days": 2,
+        "last_observation": "2026-08-21",
+        "series_id": "xau_futures",
+        "tolerance": {
+          "calendar": "COMEX trading days",
+          "max_lag_days": 4,
+          "rationale": "Not blocking \u2014 futures feed the realised-volatility estimators, never a published price. Declared and measured anyway so a Yahoo rate limit that silently degrades the vol layer to close-only is visible in the artifact."
+        },
+        "verdict": "fresh"
+      },
+      {
+        "blocking": true,
+        "detail": "xauusd: unavailable \u2014 xauusd: all sources failed and no cache. Tried:\n  LBMA:gold_pm:USD: NonJsonResponseError: Expecting value: line 1 column 1 (char 0) \u2014 HTTP 200; 12030 bytes; content-type=text/html; server=cloudflare; cf-ray=a2f6d89fd8d73451-SJC; cf-cache-status=DYNAMIC; body starts b'<!DOCTYPE html>\\n<html lang=\"en\">\\n<head>\\n  <meta charset=\"utf8\">\\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\\n  <script>\\n      (function(){\\n          setTimeout(function(){\\n '",
+        "lag_days": null,
+        "last_observation": null,
+        "series_id": "xauusd",
+        "tolerance": {
+          "calendar": "London business days (LBMA PM fix)",
+          "max_lag_days": 4,
+          "rationale": "The PM fix prints at 15:00 London, so it is available well before a 02:00 UTC run the next day. The longest ordinary gap is a 02:00 Tuesday run after a Monday holiday reading Friday's fix \u2014 four days. Anything beyond that is a multi-day closure or a broken source, and both must refuse: this series is the anchor every published price and every simulated path is built from."
+        },
+        "verdict": "unavailable"
+      }
+    ]
+  },
+  "note": "No forecast was published for this date. This file is the record of that decision: a night the engine refused is a visible hole, and a night it fabricated would not be.",
+  "reason": "xauusd: did not resolve: no source answered and nothing was cached",
+  "recorded_at": "2026-08-23T02:57:03.890397+00:00"
+}
