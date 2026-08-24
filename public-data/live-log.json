@@ -6,13 +6,13 @@
     "what_this_is": "Forecasts this engine published to a public git repository before the outcome existed, scored after it did. This is not the walk-forward backtest and is never pooled with it: the backtest simulates what the engine would have said, and this records what it did say.",
     "why_separate": "Pooling would make this sample look testable years earlier than it is, by diluting it with observations that carry a weaker guarantee. The counts are reported apart so a reader can see exactly how much of the evidence is of which kind."
   },
-  "generated_at": "2026-08-22T02:50:05.409418+00:00",
+  "generated_at": "2026-08-24T02:58:10.119300+00:00",
   "horizons": [
     {
       "censored": 2,
       "horizon_sessions": 5,
       "independent_observations": 2,
-      "mean_pit": 0.77811,
+      "mean_pit": 0.77923,
       "observations": 16,
       "test_note": "2 independent windows against a threshold of 30 fixed in advance: no test is possible yet, and none is reported.",
       "test_possible": false
@@ -237,8 +237,8 @@
       "commit": "87163cb2764045b8b6d6c5281ed4d62d6d3ebf52",
       "horizon_sessions": 5,
       "lens": "INR",
-      "log_return": 0.045547,
-      "pit": 0.8963043511364508,
+      "log_return": 0.046405,
+      "pit": 0.9016017871915192,
       "published_on": "2026-08-15",
       "quantiles": {
         "q05": 151133.8962,
@@ -247,7 +247,7 @@
         "q75": 163015.8263,
         "q95": 168431.1199
       },
-      "realised": 166977.2314,
+      "realised": 167120.6672,
       "realised_on": "2026-08-21"
     },
     {
@@ -279,8 +279,8 @@
       "commit": "aa841808baeedc0df5482b01d43bf58d57a78f89",
       "horizon_sessions": 5,
       "lens": "INR",
-      "log_return": 0.04539,
-      "pit": 0.8941645013659973,
+      "log_return": 0.046248,
+      "pit": 0.89937612705056,
       "published_on": "2026-08-16",
       "quantiles": {
         "q05": 151100.5152,
@@ -289,7 +289,7 @@
         "q75": 163009.4946,
         "q95": 168513.952
       },
-      "realised": 166977.2314,
+      "realised": 167120.6672,
       "realised_on": "2026-08-21"
     },
     {
@@ -321,8 +321,8 @@
       "commit": "901d0c87f2422ec4e5a02058dd84160245bc7baa",
       "horizon_sessions": 5,
       "lens": "INR",
-      "log_return": 0.045547,
-      "pit": 0.8951882496401067,
+      "log_return": 0.046405,
+      "pit": 0.9003959716552893,
       "published_on": "2026-08-17",
       "quantiles": {
         "q05": 151083.4671,
@@ -331,7 +331,7 @@
         "q75": 162978.3234,
         "q95": 168486.9069
       },
-      "realised": 166977.2314,
+      "realised": 167120.6672,
       "realised_on": "2026-08-21"
     },
     {
