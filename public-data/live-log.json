@@ -6,14 +6,14 @@
     "what_this_is": "Forecasts this engine published to a public git repository before the outcome existed, scored after it did. This is not the walk-forward backtest and is never pooled with it: the backtest simulates what the engine would have said, and this records what it did say.",
     "why_separate": "Pooling would make this sample look testable years earlier than it is, by diluting it with observations that carry a weaker guarantee. The counts are reported apart so a reader can see exactly how much of the evidence is of which kind."
   },
-  "generated_at": "2026-08-24T02:58:10.119300+00:00",
+  "generated_at": "2026-08-25T02:53:44.531354+00:00",
   "horizons": [
     {
-      "censored": 2,
+      "censored": 4,
       "horizon_sessions": 5,
       "independent_observations": 2,
       "mean_pit": 0.77923,
-      "observations": 16,
+      "observations": 18,
       "test_note": "2 independent windows against a threshold of 30 fixed in advance: no test is possible yet, and none is reported.",
       "test_possible": false
     }
@@ -354,8 +354,50 @@
       },
       "realised": 4582.1,
       "realised_on": "2026-08-21"
+    },
+    {
+      "anchor": 160388.2197,
+      "as_of": "2026-08-17",
+      "asset_id": "gold",
+      "censored": "above the published q95",
+      "commit": "904ce6761eb3f33d4783ef5811d01a3831387607",
+      "horizon_sessions": 5,
+      "lens": "INR",
+      "log_return": 0.05802,
+      "pit": null,
+      "published_on": "2026-08-18",
+      "quantiles": {
+        "q05": 152144.5164,
+        "q25": 157151.7508,
+        "q50": 160354.7511,
+        "q75": 163793.9752,
+        "q95": 169116.5187
+      },
+      "realised": 169969.1263,
+      "realised_on": "2026-08-24"
+    },
+    {
+      "anchor": 4405.8,
+      "as_of": "2026-08-17",
+      "asset_id": "gold",
+      "censored": "above the published q95",
+      "commit": "904ce6761eb3f33d4783ef5811d01a3831387607",
+      "horizon_sessions": 5,
+      "lens": "USD",
+      "log_return": 0.056887,
+      "pit": null,
+      "published_on": "2026-08-18",
+      "quantiles": {
+        "q05": 4172.4005,
+        "q25": 4314.2793,
+        "q50": 4406.7864,
+        "q75": 4500.5337,
+        "q95": 4644.3801
+      },
+      "realised": 4663.7,
+      "realised_on": "2026-08-24"
     }
   ],
   "scope": "live",
-  "total_observations": 16
+  "total_observations": 18
 }

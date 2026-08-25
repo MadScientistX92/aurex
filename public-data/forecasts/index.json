@@ -1,5 +1,5 @@
 {
-  "as_of_date": "2026-08-24",
+  "as_of_date": "2026-08-25",
   "conventions": {
     "expected": "Weekdays between the first record and today. Weekends carry no fix and are refused by the freshness guard by design, so they are not gaps.",
     "explained": "A gap is explained when a skip record says why no forecast was published. An unexplained gap is one nothing survives from \u2014 the job died, never ran, or was never scheduled \u2014 and is the weaker case.",
@@ -9,7 +9,7 @@
     "gaps": 5,
     "gaps_explained": 4,
     "gaps_unexplained": 1,
-    "published": 13
+    "published": 14
   },
   "forecasts": [
     {
@@ -133,7 +133,7 @@
       "as_of": "2026-08-18",
       "commit": "eb9a6c9775a95123073d72d035ae45def98da8b3",
       "date": "2026-08-19",
-      "frozen": false,
+      "frozen": true,
       "frozen_from": "2026-08-25",
       "horizons": [
         5,
@@ -180,6 +180,19 @@
         63
       ],
       "readable": true
+    },
+    {
+      "as_of": "2026-08-24",
+      "commit": "ad78f803a56b733499805b10d22c9a91ea79ae32",
+      "date": "2026-08-25",
+      "frozen": false,
+      "frozen_from": "2026-08-31",
+      "horizons": [
+        5,
+        21,
+        63
+      ],
+      "readable": true
     }
   ],
   "gaps": [
@@ -209,5 +222,5 @@
       "reason": "xauusd: did not resolve: no source answered and nothing was cached"
     }
   ],
-  "generated_at": "2026-08-24T02:57:49.402284+00:00"
+  "generated_at": "2026-08-25T02:53:24.238575+00:00"
 }
