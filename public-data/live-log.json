@@ -6,7 +6,7 @@
     "what_this_is": "Forecasts this engine published to a public git repository before the outcome existed, scored after it did. This is not the walk-forward backtest and is never pooled with it: the backtest simulates what the engine would have said, and this records what it did say.",
     "why_separate": "Pooling would make this sample look testable years earlier than it is, by diluting it with observations that carry a weaker guarantee. The counts are reported apart so a reader can see exactly how much of the evidence is of which kind."
   },
-  "generated_at": "2026-08-30T07:45:58.841185+00:00",
+  "generated_at": "2026-08-31T08:00:13.878633+00:00",
   "horizons": [
     {
       "censored": 4,
