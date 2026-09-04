@@ -6,19 +6,49 @@
     "what_this_is": "Forecasts this engine published to a public git repository before the outcome existed, scored after it did. This is not the walk-forward backtest and is never pooled with it: the backtest simulates what the engine would have said, and this records what it did say.",
     "why_separate": "Pooling would make this sample look testable years earlier than it is, by diluting it with observations that carry a weaker guarantee. The counts are reported apart so a reader can see exactly how much of the evidence is of which kind."
   },
-  "generated_at": "2026-09-03T06:46:46.258091+00:00",
+  "generated_at": "2026-09-04T06:51:27.633146+00:00",
   "horizons": [
     {
       "censored": 7,
       "horizon_sessions": 5,
       "independent_observations": 3,
-      "mean_pit": 0.69468,
-      "observations": 30,
+      "mean_pit": 0.64979,
+      "observations": 32,
       "test_note": "3 independent windows against a threshold of 30 fixed in advance: no test is possible yet, and none is reported.",
+      "test_possible": false
+    },
+    {
+      "censored": 0,
+      "horizon_sessions": 21,
+      "independent_observations": 1,
+      "mean_pit": 0.87352,
+      "observations": 2,
+      "test_note": "1 independent windows against a threshold of 30 fixed in advance: no test is possible yet, and none is reported.",
       "test_possible": false
     }
   ],
   "observations": [
+    {
+      "anchor": 147926.3772,
+      "as_of": "2026-08-04",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "70f18690aca3ddfaf86097364a0c9f5e3d5804e1",
+      "horizon_sessions": 21,
+      "lens": "INR",
+      "log_return": 0.083092,
+      "pit": 0.8637876653096594,
+      "published_on": "2026-08-05",
+      "quantiles": {
+        "q05": 132197.9133,
+        "q25": 141568.2931,
+        "q50": 147984.4746,
+        "q75": 154582.7979,
+        "q95": 165410.2575
+      },
+      "realised": 160742.9546,
+      "realised_on": "2026-09-03"
+    },
     {
       "anchor": 147926.3772,
       "as_of": "2026-08-04",
@@ -39,6 +69,27 @@
       },
       "realised": 159244.9318,
       "realised_on": "2026-08-11"
+    },
+    {
+      "anchor": 4084.2,
+      "as_of": "2026-08-04",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "70f18690aca3ddfaf86097364a0c9f5e3d5804e1",
+      "horizon_sessions": 21,
+      "lens": "USD",
+      "log_return": 0.089625,
+      "pit": 0.8832489196140205,
+      "published_on": "2026-08-05",
+      "quantiles": {
+        "q05": 3645.1613,
+        "q25": 3910.9094,
+        "q50": 4085.4184,
+        "q75": 4264.573,
+        "q95": 4568.631
+      },
+      "realised": 4467.15,
+      "realised_on": "2026-09-03"
     },
     {
       "anchor": 4084.2,
@@ -648,8 +699,50 @@
       },
       "realised": 4382.25,
       "realised_on": "2026-09-02"
+    },
+    {
+      "anchor": 168477.5716,
+      "as_of": "2026-08-26",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "db9a62bab63c99307c0805ad464b67f1500e5b92",
+      "horizon_sessions": 5,
+      "lens": "INR",
+      "log_return": -0.046996,
+      "pit": 0.11757027756701405,
+      "published_on": "2026-08-27",
+      "quantiles": {
+        "q05": 158787.5222,
+        "q25": 164575.3701,
+        "q50": 168449.3507,
+        "q75": 172422.4972,
+        "q95": 178768.452
+      },
+      "realised": 160742.9546,
+      "realised_on": "2026-09-03"
+    },
+    {
+      "anchor": 4631.5,
+      "as_of": "2026-08-26",
+      "asset_id": "gold",
+      "censored": null,
+      "commit": "db9a62bab63c99307c0805ad464b67f1500e5b92",
+      "horizon_sessions": 5,
+      "lens": "USD",
+      "log_return": -0.03613,
+      "pit": 0.149468945671907,
+      "published_on": "2026-08-27",
+      "quantiles": {
+        "q05": 4394.6631,
+        "q25": 4540.4109,
+        "q50": 4635.4035,
+        "q75": 4728.0884,
+        "q95": 4874.2577
+      },
+      "realised": 4467.15,
+      "realised_on": "2026-09-03"
     }
   ],
   "scope": "live",
-  "total_observations": 30
+  "total_observations": 34
 }
