@@ -1,13 +1,13 @@
 {
-  "as_of_date": "2026-11-01",
+  "as_of_date": "2026-11-02",
   "conventions": {
     "expected": "Weekdays between the first record and today. Weekends carry no fix and are refused by the freshness guard by design, so they are not gaps.",
     "explained": "A gap is explained when a skip record says why no forecast was published. An unexplained gap is one nothing survives from \u2014 the job died, never ran, or was never scheduled \u2014 and is the weaker case.",
     "frozen": "A forecast freezes once its shortest horizon could have elapsed. Frozen forecasts may not be rewritten; live ones may, and git carries every version of both."
   },
   "counts": {
-    "gaps": 27,
-    "gaps_explained": 26,
+    "gaps": 28,
+    "gaps_explained": 27,
     "gaps_unexplained": 1,
     "published": 49
   },
@@ -785,7 +785,12 @@
       "date": "2026-10-30",
       "explained": true,
       "reason": "xauusd: did not resolve: no source answered and nothing was cached"
+    },
+    {
+      "date": "2026-11-02",
+      "explained": true,
+      "reason": "xauusd: did not resolve: no source answered and nothing was cached"
     }
   ],
-  "generated_at": "2026-11-01T08:35:26.690948+00:00"
+  "generated_at": "2026-11-02T08:44:37.879438+00:00"
 }
